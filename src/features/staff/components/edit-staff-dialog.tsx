@@ -44,7 +44,7 @@ interface EditStaffDialogProps {
   staff: any
   storeId: string
   canManage: boolean
-  onSuccess?: (action: 'approve' | 'reject' | 'remove', staffId: string) => void
+  onSuccess?: (action: 'approve' | 'reject' | 'remove' | 'update', staffId: string, updatedData?: any) => void
 }
 
 const DEFAULT_SCHEDULES = Array.from({ length: 7 }, (_, i) => ({
@@ -248,6 +248,44 @@ export function EditStaffDialog({
         toast.error('정보 수정 실패', { description: result.error })
       } else {
         toast.success('정보 수정 완료')
+        // Update local state to reflect saved changes instantly
+        if (staff) {
+          const updatedData = {
+            work_schedules: formData.workSchedules,
+            custom_wage_settings: formData.customWageSettings,
+            insurance_status: {
+              employment: isOver15Hours ? true : formData.insuranceStatus.employment,
+              industrial: true,
+              national: isOver15Hours ? true : formData.insuranceStatus.national,
+              health: isOver15Hours ? true : formData.insuranceStatus.health,
+            },
+            employment_type: formData.employmentType,
+            wage_type: formData.wageType,
+            base_wage: Number(formData.baseWage),
+            role_id: formData.roleId,
+            contract_end_date: formData.contractEndDate,
+            hired_at: formData.hiredAt,
+            // Update profile info for display purposes (especially for unlinked accounts)
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            role_info: roles.find(r => r.id === formData.roleId) || staff.role_info,
+            // Missing fields for local sync
+            memo: formData.memo,
+            address: formData.address,
+            birth_date: formData.birthDate,
+            emergency_contact: formData.emergencyContact,
+            custom_pay_day: formData.customPayDay,
+            weekly_holiday: formData.weeklyHoliday,
+          }
+          
+          Object.assign(staff, updatedData)
+          
+          if (onSuccess) {
+            onSuccess('update', staff.id, updatedData)
+          }
+        }
+        setIsDirty(false)
         router.refresh()
         onOpenChange(false)
       }

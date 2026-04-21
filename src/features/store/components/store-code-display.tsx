@@ -38,7 +38,7 @@ export function StoreCodeDisplay({ code, className }: StoreCodeDisplayProps) {
   const handleCopyCode = () => {
     navigator.clipboard.writeText(code)
     setCopiedCode(true)
-    toast.success('매장 6자리 코드가 복사되었습니다.')
+    toast.success('매장 8자리 코드가 복사되었습니다.')
     setTimeout(() => setCopiedCode(false), 2000)
   }
 
@@ -72,7 +72,7 @@ export function StoreCodeDisplay({ code, className }: StoreCodeDisplayProps) {
       <DialogTrigger asChild>
         <Button variant="outline" className={`h-[34px] gap-1.5 shadow-sm bg-primary text-primary-foreground font-semibold border-none hover:bg-primary/90 px-4 ${className}`}>
           <Share2 className="w-4 h-4" />
-          직원 초대하기
+          직원 초대
         </Button>
       </DialogTrigger>
 

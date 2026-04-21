@@ -475,14 +475,14 @@ export function LeaveClientPage({
                   </thead>
                   <tbody className="divide-y">
                     {staffList.filter(s => isManager || s.user_id === currentUserId).map(staff => {
-                      if (staff.role === 'owner') return null
+                      const roleInfo = getStaffRoleInfo(staff)
+                      if (staff.role === 'owner' || (roleInfo && roleInfo.hierarchy_level >= 100)) return null
                       const balance = balances.find(b => b.member_id === staff.id)
                       const hireDate = staff.hired_at || staff.join_date ? new Date(staff.hired_at || staff.join_date).toISOString().split('T')[0] : null
                       const calcTotal = hireDate ? calculateAnnualLeave(hireDate, referenceDate, leaveCalcType) : 0
                       const total = balance?.total_days ?? calcTotal
                       const used = balance?.used_days || 0
                       const remain = total - used
-                      const roleInfo = getStaffRoleInfo(staff)
                       return (
                         <tr key={staff.id} className="hover:bg-muted/20">
                           <td className="px-4 py-3 text-center">
@@ -513,14 +513,14 @@ export function LeaveClientPage({
                 {/* Mobile View Card Layout */}
                 <div className="md:hidden divide-y">
                   {staffList.filter(s => isManager || s.user_id === currentUserId).map(staff => {
-                    if (staff.role === 'owner') return null
+                    const roleInfo = getStaffRoleInfo(staff)
+                    if (staff.role === 'owner' || (roleInfo && roleInfo.hierarchy_level >= 100)) return null
                     const balance = balances.find(b => b.member_id === staff.id)
                     const hireDate = staff.hired_at || staff.join_date ? new Date(staff.hired_at || staff.join_date).toISOString().split('T')[0] : null
                     const calcTotal = hireDate ? calculateAnnualLeave(hireDate, referenceDate, leaveCalcType) : 0
                     const total = balance?.total_days ?? calcTotal
                     const used = balance?.used_days || 0
                     const remain = total - used
-                    const roleInfo = getStaffRoleInfo(staff)
                     
                     return (
                       <div key={staff.id} className="p-5 flex flex-col items-center">
@@ -592,7 +592,12 @@ export function LeaveClientPage({
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">대상 직원</Label>
                 <Select value={requestDraft.memberId} onValueChange={(v) => setRequestDraft(prev => ({...prev, memberId: v}))}>
                   <SelectTrigger className="h-9 bg-slate-50/50 border-slate-100 text-xs"><SelectValue placeholder="직원 선택" /></SelectTrigger>
-                  <SelectContent className="rounded-xl shadow-xl border-slate-100">{staffList.map(s => <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>)}</SelectContent>
+                  <SelectContent className="rounded-xl shadow-xl border-slate-100">
+                    {staffList.filter(s => {
+                      const rInfo = getStaffRoleInfo(s);
+                      return s.role !== 'owner' && (!rInfo || rInfo.hierarchy_level < 100);
+                    }).map(s => <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
             ) : (

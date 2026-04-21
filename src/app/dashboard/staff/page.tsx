@@ -44,6 +44,13 @@ export default async function StaffManagementPage() {
   // 직원 목록 조회
   const staffList = await getStaffList(member.store_id)
 
+  // 매장 초대 코드 조회
+  const { data: store } = await supabase
+    .from('stores')
+    .select('invite_code')
+    .eq('id', member.store_id)
+    .single()
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -59,7 +66,7 @@ export default async function StaffManagementPage() {
         initialData={staffList || []} 
         storeId={member.store_id} 
         canManage={canManage}
-        inviteCode={undefined}
+        inviteCode={store?.invite_code}
       />
     </div>
   )

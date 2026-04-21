@@ -21,7 +21,7 @@ import { joinStoreByCode, verifyInviteCode } from '@/features/onboarding/actions
 import { Loader2, Store } from 'lucide-react'
 
 const formSchema = z.object({
-  inviteCode: z.string().min(6, '매장 코드는 6자리입니다.').max(6),
+  inviteCode: z.string().min(8, '매장 코드는 8자리입니다.').max(8),
   name: z.string().min(2, '이름을 입력해주세요.'),
   phone: z.string().min(10, '전화번호를 올바르게 입력해주세요.'),
 })
@@ -43,8 +43,8 @@ export default function StaffOnboardingPage() {
   // 매장 코드 검증 핸들러
   const handleVerifyCode = async () => {
     const code = form.getValues('inviteCode')
-    if (code.length !== 6) {
-      form.setError('inviteCode', { message: '매장 코드는 6자리여야 합니다.' })
+    if (code.length !== 8) {
+      form.setError('inviteCode', { message: '매장 코드는 8자리여야 합니다.' })
       return
     }
 
@@ -99,7 +99,7 @@ export default function StaffOnboardingPage() {
                 name="inviteCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>매장 초대 코드 (6자리)</FormLabel>
+                    <FormLabel>매장 초대 코드 (8자리)</FormLabel>
                     <div className="flex gap-2">
                       <FormControl>
                         <Input 
@@ -109,7 +109,7 @@ export default function StaffOnboardingPage() {
                             field.onChange(e.target.value.toUpperCase())
                             if (storeInfo) setStoreInfo(null) // 코드가 바뀌면 매장 정보 초기화
                           }}
-                          maxLength={6}
+                          maxLength={8}
                         />
                       </FormControl>
                       <Button 

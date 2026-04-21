@@ -159,14 +159,20 @@ export function StaffTableRow({
   const expectedPay = getExpectedMonthlyPay(staff)
   const wageText = staff.wage_type === 'monthly' ? '월급' : staff.wage_type === 'yearly' ? '연봉' : staff.wage_type === 'daily' ? '일급' : '시급'
   
+  const isOwner = staff.role === 'owner' || (staff.role_info?.is_system && staff.role_info?.hierarchy_level === 100)
+
   return (
     <TableRow 
       className={cn(
         "group transition-all duration-200 border-b relative",
-        canManage && !isResigned ? "cursor-pointer hover:bg-slate-50 hover:shadow-sm" : "",
+        canManage && !isResigned && !isOwner ? "cursor-pointer hover:bg-slate-50 hover:shadow-sm" : "",
         isResigned ? "bg-muted/10 opacity-70" : "bg-card"
       )}
-      onClick={onClick}
+      onClick={() => {
+        if (!isOwner) {
+          onClick()
+        }
+      }}
     >
       {/* 1. 상태 */}
       <TableCell className="w-[80px] align-middle text-center px-2">
@@ -242,7 +248,7 @@ export function StaffTableRow({
 
       {/* 4. 근로 조건 및 스케줄 (텍스트 + 알약 디자인) */}
       <TableCell className="w-[280px] align-middle py-3 px-4">
-        {staff.role === 'owner' ? (
+        {isOwner ? (
           <div className="flex items-center justify-center text-muted-foreground/50 font-medium w-full">
             -
           </div>
@@ -281,7 +287,7 @@ export function StaffTableRow({
       {/* 4. 근로계약서 상태 뱃지 (미니멀리즘) */}
       {showContract !== false && (
         <TableCell className="w-[120px] align-middle text-center py-3 px-4">
-          {staff.role === 'owner' ? (
+          {isOwner ? (
             <div className="flex items-center justify-center text-muted-foreground/50 font-medium">
               -
             </div>
@@ -372,7 +378,7 @@ export function StaffTableRow({
             </div>
           )}
           
-          {canManage && !isResigned && staff.status !== 'pending_approval' && (
+          {canManage && !isResigned && !isOwner && staff.status !== 'pending_approval' && (
             <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-muted-foreground">
               <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                 <ChevronRight className="w-4 h-4" />

@@ -14,7 +14,7 @@ export async function getLeaveBalances(storeId: string, year: number) {
     .from('leave_balances')
     .select(`
       *,
-      member:store_members!inner(id, name, role, profile:profiles(full_name))
+      member:store_members!inner(id, user_id, profile:profiles(full_name), role:store_roles(name))
     `)
     .eq('store_id', storeId)
     .eq('year', year)
@@ -35,7 +35,7 @@ export async function getLeaveRequests(storeId: string) {
     .from('leave_requests')
     .select(`
       *,
-      member:store_members!inner(id, name, role, user_id, profile:profiles(full_name))
+      member:store_members!leave_requests_member_id_fkey!inner(id, user_id, profile:profiles(full_name), role:store_roles(name))
     `)
     .eq('store_id', storeId)
     .order('created_at', { ascending: false })

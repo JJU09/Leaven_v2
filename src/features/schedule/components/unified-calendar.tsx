@@ -543,13 +543,6 @@ export function UnifiedCalendar({
   // 직원 객체의 역할 정보를 확실하게 찾아주는 헬퍼
   const getStaffRoleInfo = (staff: any) => {
     if (staff?.role_info) return staff.role_info
-    
-    // role_info가 없을 경우 (예: role_id가 비어있고 레거시 role 텍스트만 있는 경우)
-    if (staff?.role) {
-      const legacyRoleName = staff.role === 'owner' ? '점주' : staff.role === 'manager' ? '매니저' : '직원'
-      const foundRole = roles?.find(r => r.name === legacyRoleName)
-      if (foundRole) return foundRole
-    }
     return null
   }
 

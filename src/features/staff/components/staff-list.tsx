@@ -128,7 +128,26 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
   }, [])
 
   useEffect(() => {
-    setStaffList(initialData)
+    // router.refresh()로 인해 새로운 initialData가 들어왔을 때, 
+    // 방금 로컬에서 업데이트하여 상태가 더 최신일 가능성이 높음.
+    // 따라서 기존 로컬 리스트에 있는 항목(id 기준)은 유지하되, 새로 추가/삭제된 항목만 반영하도록 개선
+    setStaffList(prev => {
+      // 로컬에서 삭제된 것은 이미 prev에 없으므로, initialData의 최신화된 목록과 매핑
+      // 다만, initialData에만 존재하고 prev에 없는 항목은 새로 추가된 것
+      // initialData에 있고 prev에도 있는 항목은 prev의 상태(방금 수정된 상태)를 우선으로 덮어씀 (단순 덮어쓰기 문제 해결)
+      if (prev.length === 0) return initialData
+      
+      const newStaffList = initialData.map(serverItem => {
+        const localItem = prev.find(p => p.id === serverItem.id)
+        if (localItem) {
+          // 로컬 항목이 서버 항목보다 최신일 수 있으므로 로컬 항목 유지 (이름 등 즉시 변경된 필드)
+          return { ...serverItem, ...localItem }
+        }
+        return serverItem
+      })
+      
+      return newStaffList
+    })
   }, [initialData])
 
   // 정렬 및 필터 함수
@@ -176,7 +195,7 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
 
   // Dashboard Stats
   const totalActive = staffList.filter(s => !s.resigned_at && s.status === 'active').length
-  const totalPendingContracts = staffList.filter(s => !s.resigned_at && s.status === 'active' && s.role !== 'owner' && s.contract_status !== 'signed').length
+  const totalPendingContracts = staffList.filter(s => !s.resigned_at && s.status === 'active' && s.role !== 'owner' && s.role_info?.is_system !== true && s.contract_status !== 'signed').length
   const totalPendingApprovals = staffList.filter(s => !s.resigned_at && (s.status === 'pending_approval' || s.status === 'invited')).length
 
   // Unique Roles for Filter Dropdown
@@ -481,7 +500,7 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
         staff={editingStaff}
         storeId={storeId}
         canManage={canManage}
-        onSuccess={(action: 'approve' | 'reject' | 'remove', staffId: string) => {
+        onSuccess={(action: 'approve' | 'reject' | 'remove' | 'update', staffId: string, updatedData?: any) => {
           if (action === 'approve') {
             setStaffList(prev => prev.map(s => s.id === staffId ? { ...s, status: 'active' } : s))
           } else if (action === 'reject') {
@@ -500,6 +519,13 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
                   phone: s.phone || s.profile?.phone || '',
                   details: { ...s.details, last_role_name: lastRoleName }
                 } as StaffMember
+              }
+              return s
+            }))
+          } else if (action === 'update' && updatedData) {
+            setStaffList(prev => prev.map(s => {
+              if (s.id === staffId) {
+                return { ...s, ...updatedData }
               }
               return s
             }))
