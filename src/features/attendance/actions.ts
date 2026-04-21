@@ -33,8 +33,6 @@ export async function getDailyAttendanceOverview(storeId: string, date: string, 
       *,
       member:store_members(
         id,
-        name,
-        role,
         role_info:store_roles(name, color),
         profile:profiles(full_name)
       )
@@ -49,15 +47,9 @@ export async function getDailyAttendanceOverview(storeId: string, date: string, 
   // 2. Get schedules for the given date
   const { data: schedulesData, error: schedulesError } = await supabase
     .from('schedules')
-    .select(`
-      *,
-      schedule_members(
-        member_id
-      )
-    `)
+    .select('*')
     .eq('store_id', storeId)
-    .gte('start_time', new Date(new Date(date).getTime() - 24 * 60 * 60 * 1000).toISOString())
-    .lte('start_time', new Date(new Date(date).getTime() + 48 * 60 * 60 * 1000).toISOString())
+    .eq('plan_date', date)
 
   if (schedulesError) {
     console.error('Error fetching schedules:', schedulesError)
@@ -298,8 +290,6 @@ export async function getAttendanceRequests(storeId: string, _ts?: number) {
       *,
       member:store_members!store_attendance_requests_member_id_fkey(
         id,
-        name,
-        role,
         role_info:store_roles(name, color),
         profile:profiles(full_name)
       ),

@@ -42,17 +42,6 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
   const searchParams = await props.searchParams
   const isBypass = searchParams?.bypass === 'true'
 
-  // Phase 3: 직행 버스 (Auto-Redirect)
-  // 조건: 소속된 매장이 1개뿐이고, 받은 초대장이 없으며, 사용자가 의도적으로 홈으로 오지 않은 경우
-  if (stores.length === 1 && invitations.length === 0 && !isBypass) {
-    const member = stores[0]
-    if (member.status === 'active') {
-      // 대시보드 쪽에서 쿠키가 없을 경우 첫 번째 활성 매장을 자동으로 띄우도록 방어 로직이 있으므로,
-      // 서버 컴포넌트 단에서 불가능한(에러 유발) cookieStore.set()을 생략하고 단순히 이동만 시킵니다.
-      redirect('/dashboard')
-    }
-  }
-
   // 사용자 프로필 조회 (환영 메시지용)
   const { data: profile } = await supabase
     .from('profiles')
@@ -60,7 +49,7 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
     .eq('id', user.id)
     .single()
 
-  const userName = profile?.full_name || user.email?.split('@')[0] || '사용자'
+  const userName = user.user_metadata?.full_name
   const userPhone = profile?.phone || ''
   const userEmail = profile?.email || user.email || ''
   const userAvatar = profile?.avatar_url || ''
@@ -275,7 +264,8 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
                     {/* Background decoration - subtle on mobile */}
                     <div className={cn(
                       "absolute top-0 right-0 p-6 sm:p-8 -mr-4 -mt-4 opacity-[0.02] sm:opacity-[0.03] transition-transform duration-500 group-hover/card:scale-110",
-                      member.role === 'owner' ? "text-purple-600" : "text-emerald-600"
+                      // @ts-ignore
+                      (Array.isArray(member.role) ? member.role[0]?.name : member.role?.name) === 'owner' ? "text-purple-600" : "text-emerald-600"
                     )}>
                       <Building className="w-16 h-16 sm:w-24 sm:h-24 rotate-12" />
                     </div>
@@ -293,7 +283,8 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
                         </div>
                       </div>
                       
-                      {member.role === 'owner' ? (
+                      {/* @ts-ignore */}
+                      {(Array.isArray(member.role) ? member.role[0]?.name : member.role?.name) === 'owner' ? (
                         <Badge className="bg-purple-50 text-purple-700 border-purple-200/50 shadow-none hover:bg-purple-100 transition-colors shrink-0 px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 flex gap-1 items-center">
                           <ShieldCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                           <span className="text-[10px] sm:text-[11px] font-bold">점주</span>

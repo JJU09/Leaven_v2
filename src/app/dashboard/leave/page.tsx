@@ -15,7 +15,7 @@ export default async function LeavePage() {
   // Get user's store
   const { data: members } = await supabase
     .from('store_members')
-    .select('store_id, role, status, store:stores(leave_calc_type)')
+    .select('store_id, status')
     .eq('user_id', user.id)
 
   const cookieStore = await cookies()
@@ -29,10 +29,16 @@ export default async function LeavePage() {
 
   if (!member) redirect('/onboarding')
 
-  // For now, let's assume basic staff view is allowed, and manager view is fully featured.
+  try {
+    await requirePermission(user.id, member.store_id, 'view_leave')
+  } catch (error) {
+    return <div>접근 권한이 없습니다.</div>
+  }
+
+  // 매니저 권한 확인
   let isManager = false
   try {
-    await requirePermission(user.id, member.store_id, 'manage_schedule')
+    await requirePermission(user.id, member.store_id, 'manage_leave')
     isManager = true
   } catch (error) {}
 
@@ -42,10 +48,12 @@ export default async function LeavePage() {
   const allStaff = await getStaffList(member.store_id)
   
   // 가입 대기, 재직, 퇴사자 모두 포함 (단, 초대 중인 경우 및 점주 제외)
-  const staffList = allStaff.filter(s => s.status !== 'invited' && s.role !== 'owner')
+  const staffList = allStaff.filter(s => {
+    const roleInfo = Array.isArray(s.role_info) ? s.role_info[0] : s.role_info;
+    return s.status !== 'invited' && roleInfo?.name !== 'owner';
+  })
 
-  const storeObj = Array.isArray(member.store) ? member.store[0] : member.store
-  const leaveCalcType = storeObj?.leave_calc_type || 'hire_date'
+  const leaveCalcType = 'hire_date' // 임시로 기본값 사용
 
   return (
     <div className="flex flex-col h-full overflow-hidden w-full max-w-full">

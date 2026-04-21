@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   // 사용자의 매장 정보 조회 (Store Member 테이블 조인)
   const { data: members, error } = await supabase
     .from('store_members')
-    .select('role, role_id, status, store:stores(*)')
+    .select('role_id, status, store:stores(*)')
     .eq('user_id', user.id)
 
   if (error) {

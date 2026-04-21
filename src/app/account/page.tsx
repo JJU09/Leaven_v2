@@ -37,13 +37,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   if (selectedStoreId) {
     const { data: memberDetail } = await supabase
       .from('store_members')
-      .select('role')
+      .select('role_id, role_info:store_roles(name)')
       .eq('user_id', user.id)
       .eq('store_id', selectedStoreId)
       .single()
 
     if (memberDetail) {
-      role = memberDetail.role
+      const roleInfo = Array.isArray(memberDetail.role_info) ? memberDetail.role_info[0] : memberDetail.role_info;
+      role = roleInfo?.name || 'staff'
       permissions = {
         view_staff: await hasPermission(user.id, selectedStoreId, 'view_staff'),
         view_schedule: await hasPermission(user.id, selectedStoreId, 'view_schedule'),

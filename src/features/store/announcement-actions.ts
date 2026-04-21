@@ -10,13 +10,13 @@ export async function getStoreAnnouncements(storeId: string) {
     .from('store_announcements')
     .select(`
       *,
-      author:author_id (
+      author:store_members!author_id (
         id,
-        full_name
+        profile:profiles(full_name)
       )
     `)
     .eq('store_id', storeId)
-    .order('is_important', { ascending: false })
+    .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -26,29 +26,10 @@ export async function getStoreAnnouncements(storeId: string) {
 
   if (!data || data.length === 0) return []
 
-  // Extract unique author IDs to fetch their store member details
-  const authorIds = Array.from(new Set(data.map((item) => item.author_id).filter(Boolean)))
-
-  // Fetch store members data for these authors in the current store
-  const { data: memberData, error: memberError } = await supabase
-    .from('store_members')
-    .select('user_id, name')
-    .eq('store_id', storeId)
-    .in('user_id', authorIds)
-
-  if (memberError) {
-    console.error('Error fetching store members for announcements:', memberError)
-    // If error occurs, gracefully fallback to the original query data
-    return data
-  }
-
-  // Create a map of user_id to store member name for quick lookup
-  const memberNameMap = new Map(memberData?.map(m => [m.user_id, m.name]) || [])
-
   // Map the announcements to include the correct author name
-  return data.map((item) => {
-    const storeMemberName = memberNameMap.get(item.author_id)
-    const displayName = storeMemberName || item.author?.full_name || '이름 없음'
+  return data.map((item: any) => {
+    const profile = Array.isArray(item.author?.profile) ? item.author.profile[0] : item.author?.profile
+    const displayName = profile?.full_name || '이름 없음'
 
     return {
       ...item,
@@ -70,7 +51,7 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
 
   const title = formData.get('title') as string
   const content = formData.get('content') as string
-  const isImportant = formData.get('is_important') === 'true'
+  const isPinned = formData.get('is_pinned') === 'true'
 
   if (!title) {
     return { error: 'Title is required' }
@@ -82,7 +63,7 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
       store_id: storeId,
       title,
       content,
-      is_important: isImportant,
+      is_pinned: isPinned,
       author_id: user.id
     })
 
@@ -106,7 +87,7 @@ export async function updateAnnouncement(id: string, storeId: string, formData: 
 
   const title = formData.get('title') as string
   const content = formData.get('content') as string
-  const isImportant = formData.get('is_important') === 'true'
+  const isPinned = formData.get('is_pinned') === 'true'
 
   if (!title) {
     return { error: 'Title is required' }
@@ -117,7 +98,7 @@ export async function updateAnnouncement(id: string, storeId: string, formData: 
     .update({
       title,
       content,
-      is_important: isImportant,
+      is_pinned: isPinned,
     })
     .eq('id', id)
     .eq('store_id', storeId) // Security check

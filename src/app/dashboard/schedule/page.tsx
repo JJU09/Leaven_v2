@@ -14,7 +14,7 @@ export default async function UnifiedSchedulePage() {
   // Get user's store
   const { data: members } = await supabase
     .from('store_members')
-    .select('id, store_id, role, status, store:stores(opening_hours)')
+    .select('id, store_id, status, store:stores(operating_hours)')
     .eq('user_id', user.id)
 
   const cookieStore = await cookies()
@@ -28,10 +28,14 @@ export default async function UnifiedSchedulePage() {
 
   if (!member) redirect('/onboarding')
 
+  console.log(`[Schedule Page] User: ${user.id}, Store: ${member.store_id}, Status: ${member.status}`)
+
   // Check permissions (reusing schedule viewing permission for now)
   try {
     await requirePermission(user.id, member.store_id, 'view_schedule')
+    console.log(`[Schedule Page] Permission check passed for view_schedule`)
   } catch (error) {
+    console.error(`[Schedule Page] Permission check failed:`, error)
     return <div>접근 권한이 없습니다.</div>
   }
 
@@ -52,10 +56,8 @@ export default async function UnifiedSchedulePage() {
     .select(`
       id,
       user_id,
-      role,
       name,
-      work_schedules,
-      role_info:store_roles(id, name, color, priority)
+      role_info:store_roles(id, name, color, hierarchy_level)
     `)
     .eq('store_id', member.store_id)
     .neq('status', 'invited')
@@ -66,7 +68,7 @@ export default async function UnifiedSchedulePage() {
   })) || []
 
   // 스케줄 데이터 및 연관 업무(체크리스트) 조회
-  const { data: schedules } = await supabase
+  const { data: rawSchedules } = await supabase
     .from('schedules')
     .select(`
       id,
@@ -80,18 +82,40 @@ export default async function UnifiedSchedulePage() {
         member_id,
         member:store_members (name, user_id)
       ),
-      tasks!schedule_id(
+      task_assignments (
         id,
-        title,
-        description,
         status,
-        checklist,
+        assigned_date,
         start_time,
         end_time,
-        task_type
+        task:tasks (
+          id,
+          title,
+          description,
+          category,
+          is_routine
+        )
       )
     `)
     .eq('store_id', member.store_id)
+
+  const schedules = rawSchedules?.map((sch: any) => ({
+    ...sch,
+    tasks: sch.task_assignments?.map((ta: any) => {
+      const taskObj = Array.isArray(ta.task) ? ta.task[0] : ta.task;
+      return {
+        id: ta.id,
+        status: ta.status,
+        assigned_date: ta.assigned_date,
+        start_time: ta.start_time,
+        end_time: ta.end_time,
+        title: taskObj?.title,
+        description: taskObj?.description,
+        task_type: taskObj?.category,
+        is_routine: taskObj?.is_routine
+      }
+    }) || []
+  })) || []
 
   // 승인된 휴가 데이터 조회
   const { data: approvedLeaves } = await supabase
@@ -118,7 +142,7 @@ export default async function UnifiedSchedulePage() {
         roles={roles || []}
         staffList={staffList}
         schedules={schedules || []}
-        storeOpeningHours={Array.isArray(member.store) ? member.store[0]?.opening_hours : (member.store as any)?.opening_hours}
+        storeOpeningHours={Array.isArray(member.store) ? member.store[0]?.operating_hours : (member.store as any)?.operating_hours}
         approvedLeaves={approvedLeaves || []}
         isManager={isManager}
         currentUserId={user.id}

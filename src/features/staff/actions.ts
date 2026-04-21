@@ -9,15 +9,16 @@ export async function getStaffList(storeId: string) {
   const supabase = await createClient()
 
   // 1. 직원 목록 조회 (역할 정보 포함)
+  // v2 마이그레이션 적용: role 제외
   const { data, error } = await supabase
     .from('store_members')
     .select(`
-      *,
+      id, user_id, role_id, status, store_id, wage_type,
+      base_hourly_wage, base_monthly_wage, joined_at,
       profile:profiles(full_name, email, avatar_url),
-      role_info:store_roles(id, name, color, priority, is_system)
+      role_info:store_roles(id, name, color, hierarchy_level, is_system)
     `)
     .eq('store_id', storeId)
-    .neq('role', 'owner') // 점주 제외
     
   if (error) {
     console.error('Error fetching staff list:', error)
@@ -31,13 +32,13 @@ export async function getStaffList(storeId: string) {
     role_info: Array.isArray(member.role_info) ? member.role_info[0] : member.role_info
   })).sort((a, b) => {
     // 1. Priority (Descending)
-    const priorityA = a.role_info?.priority ?? -1
-    const priorityB = b.role_info?.priority ?? -1
+    const priorityA = a.role_info?.hierarchy_level ?? -1
+    const priorityB = b.role_info?.hierarchy_level ?? -1
     if (priorityA !== priorityB) return priorityB - priorityA
     
     // 2. Name (Ascending)
-    const nameA = a.profile?.full_name || a.name || ''
-    const nameB = b.profile?.full_name || b.name || ''
+    const nameA = a.profile?.full_name || ''
+    const nameB = b.profile?.full_name || ''
     return nameA.localeCompare(nameB)
   })
 
@@ -309,32 +310,32 @@ export async function updateStaffInfo(storeId: string, targetMemberId: string, f
   // 추가: 대상 멤버가 점주인지 확인 (점주 역할 변경 불가)
   const { data: targetMember } = await supabase
     .from('store_members')
-    .select('role, role_id, role_info:store_roles(is_system, name)') // role_info 조인
+    .select('role_id, role_info:store_roles(is_system, name)') // role_info 조인
     .eq('id', targetMemberId)
     .single()
   
   // 점주는 역할 변경 불가 (항상 owner 유지)
   // role_info가 배열일 수 있으므로 처리 필요
-  const roleInfo = Array.isArray(targetMember?.role_info) ? targetMember?.role_info[0] : targetMember?.role_info
+  const roleInfo2 = Array.isArray(targetMember?.role_info) ? targetMember?.role_info[0] : targetMember?.role_info
   
-  // role 컬럼이 'owner'이거나, system role 이름이 '점주'인 경우 등
+  // system role 이름이 '점주'이거나 'owner'인 경우
   let newRoleId = roleId
-  if (targetMember?.role === 'owner') {
+  if (roleInfo2?.name === 'owner' || roleInfo2?.name === '점주') {
     // 점주는 역할 변경 불가 -> 기존 role_id 유지
-    newRoleId = targetMember.role_id
+    newRoleId = targetMember?.role_id || roleId
   }
 
   // 2-1. 점주 역할(시스템 역할) 부여 제한 체크
   if (roleId) {
     const { data: targetRole } = await supabase
       .from('store_roles')
-      .select('is_system, priority')
+      .select('is_system, hierarchy_level')
       .eq('id', roleId)
       .single()
 
-    if (targetRole && targetRole.is_system && targetRole.priority === 100) {
+    if (targetRole && targetRole.is_system && targetRole.hierarchy_level === 100) {
       // 일반 직원을 점주로 변경하려는 시도 차단
-      if (targetMember?.role !== 'owner') {
+      if (roleInfo2?.name !== 'owner' && roleInfo2?.name !== '점주') {
         return { error: '시스템 관리자 역할은 부여할 수 없습니다.' }
       }
     }
@@ -507,7 +508,6 @@ export async function removeStaff(storeId: string, memberId: string) {
     .from('store_members')
     .select(`
       user_id,
-      role, 
       name, email, phone, 
       role_info:store_roles(name),
       details
@@ -529,7 +529,7 @@ export async function removeStaff(storeId: string, memberId: string) {
     if (prof) profileInfo = prof
   }
   
-  const lastRoleName = roleInfo?.name || (member?.role === 'owner' ? '점주' : member?.role === 'manager' ? '매니저' : '알 수 없는 역할')
+  const lastRoleName = roleInfo?.name || '알 수 없는 역할'
   
   // 우선순위: 1. 기존 store_members 컬럼 값 (수기 등록 또는 이미 박제된 값) 2. profiles 테이블 값 3. 기본값
   const snapshotName = member?.name || profileInfo?.full_name || '이름 없음'

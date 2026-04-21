@@ -17,7 +17,7 @@ export default async function StaffManagementPage() {
   // 사용자의 매장 정보 조회
   const { data: members } = await supabase
     .from('store_members')
-    .select('store_id, role, status, store:stores(invite_code)')
+    .select('store_id, status')
     .eq('user_id', user.id)
 
   // 쿠키에서 선택된 매장 ID 가져오기
@@ -34,10 +34,12 @@ export default async function StaffManagementPage() {
 
   if (!member) redirect('/onboarding')
 
-  // 권한 체크
-  // 일반 직원도 목록은 볼 수 있게 허용하되, canManage 값으로 컴포넌트 내부 기능을 제한함
+  // 권한 체크: 목록 접근은 view_staff, 관리 기능은 manage_staff
+  const canView = await hasPermission(user.id, member.store_id, 'view_staff')
+  if (!canView) {
+    return <div>접근 권한이 없습니다.</div>
+  }
   const canManage = await hasPermission(user.id, member.store_id, 'manage_staff')
-  const store = member.store as any
 
   // 직원 목록 조회
   const staffList = await getStaffList(member.store_id)
@@ -57,7 +59,7 @@ export default async function StaffManagementPage() {
         initialData={staffList || []} 
         storeId={member.store_id} 
         canManage={canManage}
-        inviteCode={store?.invite_code}
+        inviteCode={undefined}
       />
     </div>
   )

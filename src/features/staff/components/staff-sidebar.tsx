@@ -8,7 +8,7 @@ interface RoleInfo {
   id: string
   name: string
   color: string
-  priority: number
+  hierarchy_level: number
   is_system: boolean
 }
 
@@ -46,7 +46,7 @@ export function StaffSidebar({ staffList, onClose }: StaffSidebarProps) {
         id: member.role, // 임시 ID
         name: fallbackName,
         color: fallbackColor,
-        priority: fallbackPriority,
+        hierarchy_level: fallbackPriority,
         is_system: true
       }
       
@@ -59,7 +59,7 @@ export function StaffSidebar({ staffList, onClose }: StaffSidebarProps) {
     })
     
     // 우선순위 높은 순으로 정렬 (내림차순)
-    return Object.values(groups).sort((a, b) => b.role.priority - a.role.priority)
+    return Object.values(groups).sort((a, b) => b.role.hierarchy_level - a.role.hierarchy_level)
   }, [staffList])
 
   const getRoleIcon = (roleName: string, isSystem: boolean) => {

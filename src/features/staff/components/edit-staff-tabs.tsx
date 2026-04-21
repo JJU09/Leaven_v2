@@ -185,7 +185,7 @@ export function BasicWorkInfoTab({ formData, onChange, canEdit, isLinked, roles,
                     <span className="text-muted-foreground">미설정</span>
                   </SelectItem>
                   {roles
-                    .filter(role => !(role.is_system && role.priority === 100))
+                    .filter(role => !(role.is_system && role.hierarchy_level === 100))
                     .map((role) => (
                       <SelectItem key={role.id} value={role.id}>
                         <div className="flex items-center gap-2">

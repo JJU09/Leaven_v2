@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Store } from 'lucide-react'
 
-export function LoginForm({ nextUrl = '/home' }: { nextUrl?: string }) {
+export function LoginForm({ nextUrl = '/home', defaultEmail = '' }: { nextUrl?: string, defaultEmail?: string }) {
   const [error, setError] = useState<string | null>(null)
 
   async function handleLogin(formData: FormData) {
@@ -67,6 +67,7 @@ export function LoginForm({ nextUrl = '/home' }: { nextUrl?: string }) {
               name="email"
               type="email"
               placeholder="m@example.com"
+              defaultValue={defaultEmail}
               required
             />
           </div>

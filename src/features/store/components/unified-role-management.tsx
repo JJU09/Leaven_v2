@@ -171,7 +171,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
     
     const isNameChanged = selectedRole.name !== editName
     const isColorChanged = (selectedRole.color || '#808080') !== editColor
-    const isParentChanged = selectedRole.parent_id !== editParentId
+    const isParentChanged = (selectedRole.parent_id || null) !== (editParentId || null)
     
     const sortedInitial = [...initialRolePermissions].sort()
     const sortedCurrent = [...rolePermissions].sort()
@@ -319,7 +319,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
   }
 
   const handleDeleteClick = async () => {
-    if (!selectedRole || selectedRole.priority >= 100) return
+    if (!selectedRole || selectedRole.hierarchy_level >= 100) return
     
     setLoading(true)
     // 역할 삭제 전 해당 역할을 사용하는 직원이 있는지 확인
@@ -339,7 +339,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
   }
 
   const handleConfirmDelete = async () => {
-    if (!selectedRole || selectedRole.priority >= 100) return
+    if (!selectedRole || selectedRole.hierarchy_level >= 100) return
 
     setLoading(true)
     // 모달에서 최종 확인을 눌렀으므로 삭제 진행
@@ -389,10 +389,14 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
     if (!hasError) {
       toast.success('변경사항이 저장되었습니다.')
       // Update initial state to reflect saved changes
-      // In reality, the roles prop will update due to revalidatePath, causing useEffect to run
-      // But we can optimistically update initialPermissions here if needed
       setInitialRolePermissions([...rolePermissions])
-      // selectedRole will be updated via useEffect when parent re-renders with new data
+      setSelectedRole({
+        ...selectedRole,
+        name: editName,
+        color: editColor,
+        parent_id: editParentId
+      })
+      router.refresh()
     }
   }
 
@@ -407,7 +411,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
   }
 
   const togglePermission = (code: string, categoryId?: string) => {
-    if (selectedRole && selectedRole.priority >= 100) return // Owner permissions cannot be changed
+    if (selectedRole && selectedRole.hierarchy_level >= 100) return // Owner permissions cannot be changed
     
     setRolePermissions(prev => {
       const isCurrentlyEnabled = prev.includes(code)
@@ -435,7 +439,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
     })
   }
 
-  const isOwner = selectedRole ? selectedRole.priority >= 100 : false
+  const isOwner = selectedRole ? selectedRole.hierarchy_level >= 100 : false
 
   // Filter tasks for the selected role
   // 상시 업무(always)는 제외하고, 시간 지정 업무(scheduled)만 가져옴
@@ -517,7 +521,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
             </div>
             <div className="flex flex-col">
               <span className="font-semibold text-sm truncate">{role.name}</span>
-              {role.priority >= 100 ? (
+              {role.hierarchy_level >= 100 ? (
                 <span className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" /> 시스템 관리자
                 </span>

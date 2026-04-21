@@ -19,21 +19,34 @@ export async function createStore(formData: FormData) {
   const businessNumber = formData.get('business_number') as string
   const description = formData.get('description') as string
 
-  // Call RPC function to create store and assign owner in a single transaction
-  // This RPC creates the store and adds the current user as an 'owner' member.
-  const { data: storeId, error } = await supabase.rpc('create_store_with_owner', {
-    name_param: name,
-    description_param: description,
-    address_param: address,
-    business_number_param: businessNumber,
-  })
+  // 1. 매장 생성
+  const { data: newStore, error: storeError } = await supabase
+    .from('stores')
+    .insert({
+      name,
+      description,
+      address,
+      business_number: businessNumber,
+    })
+    .select('id')
+    .single()
 
-  if (error || !storeId) {
-    console.error('Store creation error:', error)
-    return { error: error?.message || '매장 생성에 실패했습니다.' }
+  if (storeError || !newStore) {
+    console.error('Store creation error:', storeError)
+    return { error: storeError?.message || '매장 생성에 실패했습니다.' }
   }
 
-  // 1.5 점주의 이름 가져오기 및 업데이트
+  const storeId = newStore.id
+
+  // 2. 기본 직급(역할) 생성 및 점주 역할 ID 가져오기
+  const { ownerRoleId } = await ensureDefaultRoles(storeId)
+  
+  if (!ownerRoleId) {
+    console.error('Failed to create or retrieve owner role')
+    return { error: '기본 직급 생성에 실패했습니다.' }
+  }
+
+  // 3. 점주 이름 가져오기
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name')
@@ -42,21 +55,20 @@ export async function createStore(formData: FormData) {
 
   const ownerName = profile?.full_name || user.user_metadata?.full_name || '점주'
 
-  await supabase
+  // 4. 매장 멤버로 점주 등록
+  const { error: memberError } = await supabase
     .from('store_members')
-    .update({ name: ownerName })
-    .eq('store_id', storeId)
-    .eq('user_id', user.id)
+    .insert({
+      store_id: storeId,
+      user_id: user.id,
+      role_id: ownerRoleId,
+      status: 'active',
+      wage_type: 'monthly', // 점주 기본값
+    })
 
-  // 2. 기본 직급 생성 및 점주 권한 연결 보정
-  const { ownerRoleId } = await ensureDefaultRoles(storeId)
-  
-  if (ownerRoleId) {
-    await supabase
-      .from('store_members')
-      .update({ role_id: ownerRoleId })
-      .eq('store_id', storeId)
-      .eq('user_id', user.id)
+  if (memberError) {
+    console.error('Owner member creation error:', memberError)
+    return { error: '점주 계정 등록에 실패했습니다.' }
   }
 
   revalidatePath('/', 'layout')
@@ -70,11 +82,11 @@ export async function getInvitationStatus() {
 
   if (!user) return { status: 'none' as const }
 
-  const { data: member } = await supabase
+  const { data: members, error } = await supabase
     .from('store_members')
     .select(`
       id,
-      role,
+      role_info:store_roles(name),
       status,
       store:stores (
         id,
@@ -83,7 +95,14 @@ export async function getInvitationStatus() {
       )
     `)
     .eq('user_id', user.id)
-    .single()
+
+  if (error || !members || members.length === 0) return { status: 'none' as const }
+
+  // active인 멤버가 있으면 우선 반환, 없으면 invited, 없으면 pending_approval
+  const member = members.find(m => m.status === 'active') 
+    || members.find(m => m.status === 'invited')
+    || members.find(m => m.status === 'pending_approval')
+    || members[0]
 
   if (!member) return { status: 'none' as const }
 
@@ -92,7 +111,8 @@ export async function getInvitationStatus() {
   return {
     status: member.status,
     store: store as { id: string; name: string; description: string },
-    role: member.role,
+    // @ts-ignore - Supabase type inference issue with nested join
+    role: Array.isArray(member.role_info) ? member.role_info[0]?.name : member.role_info?.name,
   }
 }
 
@@ -107,7 +127,7 @@ export async function getUserInvitations() {
     .from('store_members')
     .select(`
       id,
-      role,
+      role_info:store_roles(name),
       status,
       invited_at:joined_at,
       store:stores (
@@ -275,14 +295,12 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
   }
 
   // 5. 가입 요청 (Pending Approval) - 매칭된 직원이 없을 경우
+  // V2 스키마: name, phone, email, role 등은 profiles/roles 테이블에 의존하거나 컬럼명이 변경됨.
+  // 주의: role_id가 필수값일 수 있음. 기본 역할 ID가 필요할 수 있으나 임시 조치.
   const { error } = await supabase.from('store_members').insert({
     store_id: storeId,
     user_id: user.id,
-    role: 'staff',
     status: 'pending_approval',
-    name,
-    phone,
-    email: user.email,
     joined_at: new Date().toISOString(),
   })
 

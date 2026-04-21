@@ -17,7 +17,7 @@ export default async function MyTasksPage() {
 
   const { data: members, error } = await supabase
     .from('store_members')
-    .select('id, role, role_id, status, store:stores(*)')
+    .select('id, role_id, status, store:stores(*)')
     .eq('user_id', user.id)
 
   if (error || !members || members.length === 0) redirect('/home')

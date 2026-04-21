@@ -21,23 +21,16 @@ export async function getTodayDashboardStats(storeId: string) {
   // 1. 금일 스케줄이 있는 직원 수 (고유 member_id)
   const { data: scheduleData, error: scheduleError } = await supabase
     .from('schedules')
-    .select(`
-      id,
-      schedule_members!inner(member_id)
-    `)
+    .select('id, member_id')
     .eq('store_id', storeId)
-    .gte('end_time', kstMidnightUTC) // 시작/종료 시간이 오늘에 조금이라도 걸치면 포함
-    .lte('start_time', kstEndUTC)
+    .eq('plan_date', todayStr)
 
   let scheduledMembersCount = 0
   if (!scheduleError && scheduleData) {
     const memberSet = new Set<string>()
     scheduleData.forEach((schedule: any) => {
-      if (schedule.schedule_members) {
-        const members = Array.isArray(schedule.schedule_members) ? schedule.schedule_members : [schedule.schedule_members]
-        members.forEach((m: any) => {
-          if (m.member_id) memberSet.add(m.member_id)
-        })
+      if (schedule.member_id) {
+        memberSet.add(schedule.member_id)
       }
     })
     scheduledMembersCount = memberSet.size

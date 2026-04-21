@@ -182,7 +182,7 @@ export function EditStaffDialog({
     if (staff && roles.length > 0 && !staff.role_id && formData.roleId === '') {
        let matchingRole = null;
        if (staff.role === 'owner') {
-          matchingRole = roles.find(r => r.name === '점주' || r.name === 'Owner' || (r.is_system && r.priority === 100))
+          matchingRole = roles.find(r => r.name === '점주' || r.name === 'Owner' || (r.is_system && r.hierarchy_level === 100))
        } else if (staff.role === 'manager') {
           matchingRole = roles.find(r => r.name === '매니저' || r.name === 'Manager')
        }

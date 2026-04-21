@@ -44,7 +44,7 @@ interface RoleInfo {
   id: string
   name: string
   color: string
-  priority: number
+  hierarchy_level: number
   is_system: boolean
 }
 
@@ -161,8 +161,8 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
     if (!isPendingA && isPendingB) return 1
 
     // 2. Priority (Descending)
-    const priorityA = a.role_info?.priority ?? (a.role === 'owner' ? 100 : (a.role === 'manager' ? 50 : 0))
-    const priorityB = b.role_info?.priority ?? (b.role === 'owner' ? 100 : (b.role === 'manager' ? 50 : 0))
+    const priorityA = a.role_info?.hierarchy_level ?? (a.role === 'owner' ? 100 : (a.role === 'manager' ? 50 : 0))
+    const priorityB = b.role_info?.hierarchy_level ?? (b.role === 'owner' ? 100 : (b.role === 'manager' ? 50 : 0))
     if (priorityA !== priorityB) return priorityB - priorityA
     
     // 3. Name (Ascending)

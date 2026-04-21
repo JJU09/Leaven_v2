@@ -40,7 +40,13 @@ export function SignupForm({ nextUrl = '/home' }: { nextUrl?: string }) {
       setError(null)
       
       setTimeout(() => {
-        router.push('/login' + (nextUrl !== '/home' ? `?next=${encodeURIComponent(nextUrl)}` : ''))
+        const email = formData.get('email') as string
+        const params = new URLSearchParams()
+        if (nextUrl !== '/home') params.set('next', nextUrl)
+        if (email) params.set('email', email)
+        
+        const queryString = params.toString()
+        router.push(`/login${queryString ? `?${queryString}` : ''}`)
       }, 3000)
     }
   }

@@ -20,7 +20,7 @@ export default async function RolesPage() {
   // 사용자의 매장 정보 조회 (Store Member 테이블 조인)
   const { data: members } = await supabase
     .from('store_members')
-    .select('role, status, store:stores(*)')
+    .select('status, store:stores(*)')
     .eq('user_id', user.id)
 
   // 쿠키에서 선택된 매장 ID 가져오기
@@ -47,7 +47,7 @@ export default async function RolesPage() {
 
   const hasManageRolesPermission = await hasPermission(user.id, store.id, 'manage_roles')
 
-  if (!hasManageRolesPermission && member?.role !== 'owner') {
+  if (!hasManageRolesPermission) {
     return (
       <div className="flex flex-col gap-6 h-[calc(100vh-4rem)]">
         <div className="flex items-center justify-between shrink-0">

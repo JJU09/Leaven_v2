@@ -6,6 +6,7 @@ import { Lock, Settings, Users, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { hasPermission } from '@/features/auth/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,7 @@ export default async function StoreSettingsPage({ searchParams }: SettingsPagePr
   // 사용자의 매장 정보 조회 (Store Member 테이블 조인)
   const { data: members } = await supabase
     .from('store_members')
-    .select('role, status, store:stores(*)')
+    .select('status, role_info:store_roles(name), store:stores(*)')
     .eq('user_id', user.id)
 
   // 쿠키에서 선택된 매장 ID 가져오기
@@ -52,7 +53,9 @@ export default async function StoreSettingsPage({ searchParams }: SettingsPagePr
     return <div>매장 정보를 찾을 수 없습니다.</div>
   }
 
-  if (member?.role !== 'owner') {
+  const hasManageStorePermission = await hasPermission(user.id, store.id, 'manage_store')
+  
+  if (!hasManageStorePermission) {
     return (
       <div className="flex flex-col gap-6 h-[calc(100vh-4rem)]">
         <div className="flex items-center justify-between shrink-0">

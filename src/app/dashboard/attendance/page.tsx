@@ -15,7 +15,7 @@ export default async function AttendancePage() {
   // Get user's store
   const { data: members } = await supabase
     .from('store_members')
-    .select('store_id, role, status')
+    .select('store_id, status')
     .eq('user_id', user.id)
 
   const cookieStore = await cookies()
@@ -50,9 +50,8 @@ export default async function AttendancePage() {
     .select(`
       id,
       user_id,
-      role,
       name,
-      role_info:store_roles(id, name, color, priority)
+      role_info:store_roles(id, name, color, hierarchy_level)
     `)
     .eq('store_id', member.store_id)
     .neq('status', 'invited')

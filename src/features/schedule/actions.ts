@@ -21,10 +21,8 @@ export async function getSchedules(storeId: string, startDate: string, endDate: 
       title,
       color,
       schedule_type,
-      schedule_members (
-        member_id,
-        member:store_members (name, user_id, profile:profiles(full_name, avatar_url))
-      ),
+      member_id,
+      member:store_members!schedules_member_id_fkey (name, user_id, profile:profiles(full_name, avatar_url)),
       tasks!schedule_id(
         id,
         title,
@@ -142,11 +140,12 @@ export async function createSchedule(storeId: string, formData: FormData) {
        finalEndDateTime = toUTCISOString(nextDate, endTimeStr)
     }
 
-    // 1. 스케줄 본체 생성
+    // 1. 스케줄 본체 생성 (현재 스키마에선 member_id 필요)
     const { data: schedule, error: scheduleError } = await supabase
         .from('schedules')
         .insert({
             store_id: storeId,
+            member_id: userIds[0],
             start_time: startDateTime,
             end_time: finalEndDateTime,
             memo: memo || null,
@@ -160,20 +159,8 @@ export async function createSchedule(storeId: string, formData: FormData) {
         return { error: scheduleError.message }
     }
 
-    // 2. 멤버 연결
-    const membersToInsert = userIds.map(memberId => ({
-        schedule_id: schedule.id,
-        member_id: memberId
-    }))
-
-    const { error: membersError } = await supabase
-        .from('schedule_members')
-        .insert(membersToInsert)
-    
-    if (membersError) {
-        // 롤백 필요하지만 일단 에러 반환 (실제로는 트랜잭션 필요)
-        return { error: membersError.message }
-    }
+    // 2. 스케줄을 단일 담당자로 생성하였으므로 member 연결 로직 생략
+    // (다중 할당이 필요한 경우 스케줄 row를 각각 생성해야 함)
 
     createdCount++
   }
@@ -345,19 +332,28 @@ export async function updateSchedule(storeId: string, scheduleId: string, formDa
     return { error: updateError.message }
   }
 
-  // 날짜가 변경되었거나 직원이 변경되었을 경우 해당 스케줄에 속한 task_assignments 업데이트
+  // 날짜가 변경되었거나 직원이 변경되었을 경우 해당 스케줄에 속한 tasks 업데이트
   
   // 1. 기존 멤버 파악 (기존 스케줄의 담당자를 알아내서 새 userIds와 비교)
-  const { data: oldMembersData } = await supabase
-    .from('schedule_members')
-    .select('member_id')
-    .eq('schedule_id', scheduleId)
-
-  const oldMemberIds = oldMembersData?.map(m => m.member_id) || []
+  // 새 스키마에서는 schedules 테이블에 member_id가 있습니다.
+  // oldSchedule이 위에서 조회되었으므로 다시 쓸 수 있습니다. (select에 member_id 추가 필요)
   
-  // 단일 담당자 변경 체크 (여러 명일 수 있지만 보통 드래그앤드롭은 1명만 선택됨)
-  // userIds: 새로 할당될 member_id들의 배열
+  const { data: currentSchedule } = await supabase
+    .from('schedules')
+    .select('start_time, member_id')
+    .eq('id', scheduleId)
+    .single()
+
+  const oldMemberIds = currentSchedule?.member_id ? [currentSchedule.member_id] : []
+  
+  // 단일 담당자 변경 체크
   const isMemberChanged = userIds.length > 0 && (oldMemberIds.length !== userIds.length || !oldMemberIds.includes(userIds[0]))
+
+  // schedules 정보 업데이트 시 member_id도 업데이트 (update 구문 덮어쓰기)
+  await supabase
+    .from('schedules')
+    .update({ member_id: userIds[0] })
+    .eq('id', scheduleId)
 
   // 날짜가 변경되었거나 직원이 변경되었을 경우 해당 스케줄에 속한 tasks 업데이트
   if (oldDateStr !== date || isMemberChanged) {
@@ -432,30 +428,7 @@ export async function updateSchedule(storeId: string, scheduleId: string, formDa
     }
   }
 
-  // 2. 멤버 동기화 (기존 멤버 삭제 후 재등록)
-  // 2-1. 기존 멤버 삭제
-  const { error: deleteError } = await supabase
-    .from('schedule_members')
-    .delete()
-    .eq('schedule_id', scheduleId)
-
-  if (deleteError) {
-    return { error: deleteError.message }
-  }
-
-  // 2-2. 새 멤버 등록
-  const membersToInsert = userIds.map(memberId => ({
-    schedule_id: scheduleId,
-    member_id: memberId
-  }))
-
-  const { error: insertError } = await supabase
-    .from('schedule_members')
-    .insert(membersToInsert)
-
-  if (insertError) {
-    return { error: insertError.message }
-  }
+  // 2. 멤버 동기화 로직은 단일 member_id 업데이트로 대체되었으므로 삭제
 
   revalidatePath('/dashboard/schedule')
   revalidatePath('/dashboard/my-tasks')
@@ -469,8 +442,13 @@ export async function getCurrentSchedule(storeId: string) {
 
   if (!user) return null
 
-  const now = getCurrentISOString()
-  console.log(`[getCurrentSchedule] Checking for user ${user.id} at ${now}`)
+  // KST 기준 현재 날짜와 시간
+  const now = new Date()
+  const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000))
+  const todayStr = kstNow.toISOString().split('T')[0] // YYYY-MM-DD
+  const currentTimeStr = kstNow.toISOString().split('T')[1].substring(0, 8) // HH:mm:ss
+
+  console.log(`[getCurrentSchedule] Checking for user ${user.id} at date: ${todayStr}, time: ${currentTimeStr}`)
 
   // First get the member_id for the current user in this store
   const { data: memberData } = await supabase
@@ -482,22 +460,21 @@ export async function getCurrentSchedule(storeId: string) {
     
   if (!memberData) return null
 
-  // schedule_members를 통해 내 member_id가 포함된 스케줄 중
-  // 현재 시간이 start_time과 end_time 사이에 있는 것 조회
+  // member_id가 일치하고 현재 날짜가 plan_date이며 시간이 start_time과 end_time 사이에 있는 스케줄 조회
   const { data, error } = await supabase
     .from('schedules')
     .select(`
       id,
+      plan_date,
       start_time,
       end_time,
-      title,
-      memo,
-      schedule_members!inner (member_id)
+      member_id
     `)
     .eq('store_id', storeId)
-    .eq('schedule_members.member_id', memberData.id)
-    .lte('start_time', now)
-    .gte('end_time', now)
+    .eq('member_id', memberData.id)
+    .eq('plan_date', todayStr)
+    .lte('start_time', currentTimeStr)
+    .gte('end_time', currentTimeStr)
     .limit(1)
     .maybeSingle() // 여러 개 겹칠 경우 하나만
 

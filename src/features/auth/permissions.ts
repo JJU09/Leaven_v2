@@ -25,18 +25,35 @@ export type PermissionCode =
   | 'manage_inventory'
   | 'manage_menu'
 
+export const DEFAULT_ROLE_PERMISSIONS: Record<string, PermissionCode[]> = {
+  점주: [
+    'manage_store', 'manage_roles', 'view_dashboard', 
+    'view_staff', 'manage_staff', 'view_salary', 'manage_payroll',
+    'view_schedule', 'manage_schedule', 'view_attendance', 'manage_attendance',
+    'view_leave', 'manage_leave', 'view_tasks', 'manage_tasks',
+    'view_sales', 'manage_inventory', 'manage_menu'
+  ],
+  매니저: [
+    'view_dashboard', 'view_staff', 'view_schedule', 'manage_schedule',
+    'view_attendance', 'manage_attendance', 'view_leave', 'manage_leave', 'view_tasks', 'manage_tasks'
+  ],
+  직원: [
+    'view_staff', 'view_schedule', 'view_attendance', 'view_leave', 'view_tasks'
+  ]
+}
+
 // 캐싱을 통해 동일한 요청 내에서 중복 DB 조회를 방지
 export const getStoreMemberRole = cache(async (userId: string, storeId: string) => {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('store_members')
-    .select('role, role_id, status')
+    .select('role_id, status, role_info:store_roles(name, permissions)')
     .eq('user_id', userId)
     .eq('store_id', storeId)
     .single()
   
   if (error || !data) return null
-  return data // Returns { role: string, role_id: string | null, status: string }
+  return data // Returns { role_id: string | null, status: string, role_info: any }
 })
 
 export async function hasPermission(
@@ -56,38 +73,19 @@ export async function hasPermission(
     }
   }
   
+  // role 값을 안전하게 추출 (role_info 기반)
+  const roleInfo = Array.isArray(member.role_info) ? member.role_info[0] : member.role_info
+  const roleName = roleInfo?.name || 'staff'
+
   // 1. Owner always has full permissions (활성 상태일 때만 위에서 통과됨. owner가 active가 아닌 경우는 드물지만 방어적 프로그래밍)
-  if (member.role === 'owner') return true 
+  if (roleName === '점주' || roleName === 'owner') return true 
 
-  const supabase = await createClient()
-  
-  // 2. Check permission via new store_role_permissions table (if role_id exists)
-  if (member.role_id) {
-    const { data } = await supabase
-      .from('store_role_permissions')
-      .select('permission_code')
-      .eq('role_id', member.role_id)
-      .eq('permission_code', permission)
-      .single()
-
-    if (data) return true
-    
-    // role_id가 있다면 커스텀 직급 및 권한 설정이 적용된 것이므로, 
-    // 레거시 role_permissions로 폴백하지 않고 해당 권한이 없음을 반환 (토글 끔 동작을 위해)
-    return false
-  }
-
-  // 3. Fallback: Check legacy role_permissions table
-  // This ensures backward compatibility if migration hasn't run fully or for system roles
-  if (member.role) {
-    const { data } = await supabase
-      .from('role_permissions')
-      .select('permission_code')
-      .eq('role', member.role)
-      .eq('permission_code', permission)
-      .single()
-
-    if (data) return true
+  // 2. Check JSONB permissions from store_roles
+  if (roleInfo && roleInfo.permissions) {
+    const perms = roleInfo.permissions;
+    if (Array.isArray(perms) && perms.includes(permission)) {
+      return true;
+    }
   }
 
   return false

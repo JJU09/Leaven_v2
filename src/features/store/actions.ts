@@ -21,11 +21,14 @@ export async function updateStore(formData: FormData) {
   // 사용자의 매장 ID 조회
   const { data: member } = await supabase
     .from('store_members')
-    .select('store_id, role')
+    .select('store_id, role_info:store_roles(name)')
     .eq('user_id', user.id)
     .single()
 
-  if (!member || member.role !== 'owner') {
+  // @ts-ignore - PostgREST response typing for relations
+  const roleName = Array.isArray(member?.role_info) ? member?.role_info[0]?.name : member?.role_info?.name
+
+  if (!member || roleName !== 'owner') {
     return { error: 'Permission denied' }
   }
 
@@ -113,7 +116,8 @@ export async function getUserStores() {
   const { data: stores, error } = await supabase
     .from('store_members')
     .select(`
-      role,
+      role_info:store_roles(name),
+      role_id,
       status,
       store:stores (
         id,
@@ -131,8 +135,9 @@ export async function getUserStores() {
 
   if (!stores) return []
 
-  return stores.map(member => ({
+  return stores.map((member: any) => ({
     ...member,
+    role: Array.isArray(member.role_info) ? member.role_info[0] : member.role_info,
     store: Array.isArray(member.store) ? member.store[0] : member.store
   }))
 }
@@ -170,7 +175,7 @@ export async function getStoreRoles(storeId: string) {
     .from('store_roles')
     .select('*')
     .eq('store_id', storeId)
-    .order('priority', { ascending: true })
+    .order('hierarchy_level', { ascending: true })
 
   if (error) {
     console.error('Error fetching store roles:', error)

@@ -74,8 +74,8 @@ export function StaffScheduleMatrix({
         const roleB = getStaffRoleInfo(b)
         
         // 1. 직급 우선순위 (내림차순)
-        const priorityA = roleA?.priority ?? -1
-        const priorityB = roleB?.priority ?? -1
+        const priorityA = roleA?.hierarchy_level ?? -1
+        const priorityB = roleB?.hierarchy_level ?? -1
         if (priorityA !== priorityB) return priorityB - priorityA
         
         // 2. 이름 (오름차순)

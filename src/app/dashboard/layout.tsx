@@ -41,6 +41,13 @@ export default async function DashboardLayout({
     currentMember = members.find(m => m.status === 'active') || members[0]
   }
 
+  // Set the fallback current store to the cookie if it wasn't matched
+  if (currentMember && (!selectedStoreId || (currentMember.store as any)?.id !== selectedStoreId)) {
+    // Next.js Server Components cannot set cookies directly via cookies().set in a layout.
+    // However, we rely on the sub-pages using the same fallback logic, or we let the client
+    // set the cookie when navigating. For now, just rely on consistent fallback logic.
+  }
+
   // 상세 정보 조회를 위해 currentMember를 다시 한 번 정확하게 가져옴 (role_info 등 포함)
   // getUserStores에서 가져온 currentMember는 name과 role_info가 없으므로 다시 조회함
   const { data: memberDetail } = await supabase
@@ -49,10 +56,9 @@ export default async function DashboardLayout({
       id,
       user_id,
       store_id,
-      role,
       status,
       name,
-      role_info:store_roles(id, name, color, priority, is_system)
+      role_info:store_roles(id, name, color, hierarchy_level, is_system)
     `)
     .eq('user_id', user.id)
     .eq('store_id', (currentMember.store as any).id)
@@ -62,13 +68,19 @@ export default async function DashboardLayout({
   const currentStore = currentMember.store as any // 타입 단언 필요할 수 있음
   const storeName = currentStore?.name || 'Leaven'
   
+  const finalRoleString = finalMember.role_info?.name 
+    || (Array.isArray(finalMember.role) ? finalMember.role[0]?.name : (typeof finalMember.role === 'object' ? finalMember.role?.name : finalMember.role))
+    || 'staff';
+  
   // 매장 리스트 데이터 가공
   const storeList = members.map(m => {
     const store = m.store as any
+    // role이 string이거나 객체 배열일 수 있으므로 처리
+    const roleName = Array.isArray(m.role) ? m.role[0]?.name : (typeof m.role === 'object' ? (m.role as any)?.name : m.role)
     return {
-      id: store?.id,
-      name: store?.name,
-      role: m.role
+      id: store?.id as string,
+      name: store?.name as string,
+      role: roleName as string
     }
   }).filter(s => s.id)
 
@@ -83,11 +95,10 @@ export default async function DashboardLayout({
     .from('store_members')
     .select(`
       id,
-      role,
       status,
       name,
       profile:profiles(full_name, email, avatar_url),
-      role_info:store_roles(id, name, color, priority, is_system)
+      role_info:store_roles(id, name, color, hierarchy_level, is_system)
     `)
     .eq('store_id', currentStoreId)
     
@@ -126,8 +137,8 @@ export default async function DashboardLayout({
         avatar_url: user.user_metadata.avatar_url,
       }}
       memberId={finalMember.id}
-      role={finalMember.role}
-      roleName={finalMember.role_info?.name || finalMember.role}
+      role={finalRoleString}
+      roleName={finalMember.role_info?.name || finalRoleString}
       roleColor={finalMember.role_info?.color}
       storeName={storeName}
       storeList={storeList}

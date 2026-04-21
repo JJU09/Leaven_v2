@@ -88,6 +88,9 @@ export async function signup(formData: FormData) {
     return { error: '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.' }
   }
 
+  // 회원가입 직후 자동 로그인 방지를 위해 명시적 로그아웃 처리
+  await supabase.auth.signOut()
+
   revalidatePath('/', 'layout')
   return { message: '회원가입이 완료되었습니다. 로그인해주세요.' }
 }

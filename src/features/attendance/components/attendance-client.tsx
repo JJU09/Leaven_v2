@@ -101,9 +101,9 @@ export function AttendanceClientPage({
     const roleA = getStaffRoleInfo(a)
     const roleB = getStaffRoleInfo(b)
     
-    const priorityA = roleA?.priority ?? -1
-    const priorityB = roleB?.priority ?? -1
-    
+    const priorityA = roleA?.hierarchy_level ?? -1
+    const priorityB = roleB?.hierarchy_level ?? -1
+
     if (priorityB !== priorityA) {
       return priorityB - priorityA
     }

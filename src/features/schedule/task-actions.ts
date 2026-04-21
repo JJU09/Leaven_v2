@@ -160,7 +160,7 @@ export async function getTaskTemplates(storeId: string) {
     .from('tasks')
     .select('*')
     .eq('store_id', storeId)
-    .eq('is_template', true)
+    .eq('is_routine', true)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -773,9 +773,9 @@ export async function createPersonalDashboardTask(input: {
   
   const { data: scheduleData } = await supabase
       .from('schedules')
-      .select('id, schedule_members!inner(member_id)')
+      .select('id, member_id')
       .eq('store_id', input.store_id)
-      .eq('schedule_members.member_id', member.id)
+      .eq('member_id', member.id)
       .gte('start_time', startIso)
       .lt('start_time', endIso)
       .limit(1)
@@ -870,7 +870,7 @@ export async function getDashboardTasks(storeId: string, date: string) {
     // 1. 현재 직원의 member_id와 role(점주 여부 확인)을 가져옵니다.
     const { data: memberData } = await supabase
         .from('store_members')
-        .select('id, role')
+        .select('id, role_info:store_roles(name)')
         .eq('store_id', storeId)
         .eq('user_id', user.id)
         .single()
@@ -878,7 +878,9 @@ export async function getDashboardTasks(storeId: string, date: string) {
     if (!memberData) return []
 
     const member = await getStoreMemberRole(user.id, storeId)
-    const isOwner = memberData.role === 'owner' || member?.role === 'owner'
+    const roleInfo = Array.isArray(memberData.role_info) ? memberData.role_info[0] : memberData.role_info;
+    const memberRoleInfo = Array.isArray(member?.role_info) ? member?.role_info[0] : member?.role_info;
+    const isOwner = roleInfo?.name === 'owner' || memberRoleInfo?.name === 'owner'
 
     // 2. 해당 직원의 오늘 날짜 근무 스케줄이 존재하는지 확인합니다.
     // 점주(Owner)는 스케줄 표 등록 여부와 무관하게 대시보드 가이드를 항상 열람할 수 있도록 예외(Bypass) 처리합니다.
@@ -889,9 +891,9 @@ export async function getDashboardTasks(storeId: string, date: string) {
         
         const { data: scheduleData } = await supabase
             .from('schedules')
-            .select('id, schedule_members!inner(member_id)')
+            .select('id, member_id')
             .eq('store_id', storeId)
-            .eq('schedule_members.member_id', memberData.id)
+            .eq('member_id', memberData.id)
             .gte('start_time', startIso)
             .lt('start_time', endIso)
             .limit(1)
@@ -952,16 +954,14 @@ export async function getDashboardTasks(storeId: string, date: string) {
       // memberData (store_members 테이블 조회 결과)에는 role_id 필드가 있을 수 있음
       const { data: fullMemberData } = await supabase
         .from('store_members')
-        .select('id, role, role_id')
+        .select('id, role_id')
         .eq('store_id', storeId)
         .eq('user_id', user.id)
         .single()
         
       const userRoles = [
         fullMemberData?.role_id,
-        fullMemberData?.role,
-        member?.role_id,
-        member?.role
+        member?.role_id
       ].filter(Boolean);
 
       // 1. 메모리 상에서 안전하게 현재 로그인한 사람의 역할에 맞는 플레이북만 필터링
