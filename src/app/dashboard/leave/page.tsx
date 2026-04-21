@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { requirePermission } from '@/features/auth/permissions'
+import { hasPermission } from '@/features/auth/permissions'
 import { cookies } from 'next/headers'
 import { getStoreRoles } from '@/features/store/actions'
 import { getStaffList } from '@/features/staff/actions'
@@ -29,18 +29,12 @@ export default async function LeavePage() {
 
   if (!member) redirect('/onboarding')
 
-  try {
-    await requirePermission(user.id, member.store_id, 'view_leave')
-  } catch (error) {
+  const canViewLeave = await hasPermission(user.id, member.store_id, 'view_leave')
+  const isManager = await hasPermission(user.id, member.store_id, 'manage_leave')
+
+  if (!canViewLeave && !isManager) {
     return <div>접근 권한이 없습니다.</div>
   }
-
-  // 매니저 권한 확인
-  let isManager = false
-  try {
-    await requirePermission(user.id, member.store_id, 'manage_leave')
-    isManager = true
-  } catch (error) {}
 
   const roles = await getStoreRoles(member.store_id)
   

@@ -315,6 +315,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
       if (result.data) {
         setSelectedRole(result.data)
       }
+      router.refresh()
     }
   }
 
@@ -352,6 +353,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
       toast.success('역할이 삭제되었습니다.')
       setDeleteConfirmDialog({ open: false, affectedMembers: [] })
       setSelectedRole(null)
+      router.refresh()
     }
   }
 

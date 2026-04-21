@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { requirePermission } from '@/features/auth/permissions'
+import { hasPermission } from '@/features/auth/permissions'
 import { getStoreRoles } from '@/features/store/actions'
 import { cookies } from 'next/headers'
 import { UnifiedCalendar } from '@/features/schedule/components/unified-calendar'
@@ -31,22 +31,15 @@ export default async function UnifiedSchedulePage() {
   console.log(`[Schedule Page] User: ${user.id}, Store: ${member.store_id}, Status: ${member.status}`)
 
   // Check permissions (reusing schedule viewing permission for now)
-  try {
-    await requirePermission(user.id, member.store_id, 'view_schedule')
-    console.log(`[Schedule Page] Permission check passed for view_schedule`)
-  } catch (error) {
-    console.error(`[Schedule Page] Permission check failed:`, error)
+  const canViewSchedule = await hasPermission(user.id, member.store_id, 'view_schedule')
+  if (!canViewSchedule) {
+    console.error(`[Schedule Page] Permission check failed`)
     return <div>접근 권한이 없습니다.</div>
   }
+  console.log(`[Schedule Page] Permission check passed for view_schedule`)
 
   // 관리자 권한 확인 (manage_schedule)
-  let isManager = false
-  try {
-    await requirePermission(user.id, member.store_id, 'manage_schedule')
-    isManager = true
-  } catch (error) {
-    isManager = false
-  }
+  const isManager = await hasPermission(user.id, member.store_id, 'manage_schedule')
 
   const roles = await getStoreRoles(member.store_id)
 

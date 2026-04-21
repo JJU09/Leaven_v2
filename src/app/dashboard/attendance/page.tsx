@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { requirePermission } from '@/features/auth/permissions'
+import { hasPermission } from '@/features/auth/permissions'
 import { getStoreRoles } from '@/features/store/actions'
 import { cookies } from 'next/headers'
 import { AttendanceClientPage } from '@/features/attendance/components/attendance-client'
@@ -30,16 +30,11 @@ export default async function AttendancePage() {
   if (!member) redirect('/onboarding')
 
   // Check permissions (using view_schedule as proxy for attendance view, manage_schedule for full manage)
-  let isManager = false
-  try {
-    await requirePermission(user.id, member.store_id, 'manage_schedule')
-    isManager = true
-  } catch (error) {
-    try {
-      await requirePermission(user.id, member.store_id, 'view_schedule')
-    } catch (e) {
-      return <div>접근 권한이 없습니다.</div>
-    }
+  const canViewSchedule = await hasPermission(user.id, member.store_id, 'view_schedule')
+  const isManager = await hasPermission(user.id, member.store_id, 'manage_schedule')
+
+  if (!canViewSchedule && !isManager) {
+    return <div>접근 권한이 없습니다.</div>
   }
 
   const roles = await getStoreRoles(member.store_id)
