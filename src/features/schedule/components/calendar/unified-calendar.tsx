@@ -71,7 +71,7 @@ interface UnifiedCalendarProps {
   schedules?: any[]
   storeOpeningHours?: any
   approvedLeaves?: any[]
-  isManager?: boolean
+  canManage?: boolean
   currentUserId?: string
 }
 
@@ -82,7 +82,7 @@ export function UnifiedCalendar({
   schedules = [], 
   storeOpeningHours, 
   approvedLeaves = [],
-  isManager = true,
+  canManage = true,
   currentUserId
 }: UnifiedCalendarProps) {
   const [viewMode, setViewMode] = useState<'timeline' | 'matrix' | 'calendar'>('matrix')
@@ -186,11 +186,11 @@ export function UnifiedCalendar({
 
   useEffect(() => {
     // 관리자가 아니거나, 관리자라도 모바일이면 본인의 스케줄만 필터링
-    if ((!isManager || isMobile) && currentUserId) {
+    if ((!canManage || isMobile) && currentUserId) {
       const myStaffId = staffList.find(s => s.user_id === currentUserId)?.id
       if (myStaffId) {
         setLocalSchedules((schedules || []).filter(sch => 
-          sch.schedule_members?.some((sm: any) => sm.member_id === myStaffId)
+          sch.member_id === myStaffId
         ))
       } else {
         setLocalSchedules([])
@@ -198,14 +198,13 @@ export function UnifiedCalendar({
     } else {
       setLocalSchedules(schedules || [])
     }
-  }, [schedules, isManager, currentUserId, staffList, isMobile])
+  }, [schedules, canManage, currentUserId, staffList, isMobile])
 
   // 중복 스케줄 검사 유틸리티
   const checkOverlap = (staffId: string, newStart: Date, newEnd: Date, excludeScheduleId?: string) => {
     return localSchedules.some(sch => {
       if (excludeScheduleId && sch.id === excludeScheduleId) return false;
-      const hasMember = sch.schedule_members?.some((sm: any) => sm.member_id === staffId);
-      if (!hasMember) return false;
+      if (sch.member_id !== staffId) return false;
       
       const schStart = new Date(sch.start_time);
       const schEnd = new Date(sch.end_time);
@@ -285,15 +284,14 @@ export function UnifiedCalendar({
           const startTimeStr = formatTimeStr(startHour)
           const endTimeStr = formatTimeStr(endHour)
           
-          const newStartUTC = toUTCISOString(dateStr, startTimeStr)
-          const newEndUTC = toUTCISOString(dateStr, endTimeStr)
+          const newStartLocal = `${dateStr}T${startTimeStr}:00`
+          const newEndLocal = `${dateStr}T${endTimeStr}:00`
           
-          // 최신 schedules 참조 (overlap 체크용 - string 비교 혹은 Date 비교. Date(utc) 비교가 안전함)
-          const startUtcDate = new Date(newStartUTC)
-          const endUtcDate = new Date(newEndUTC)
+          // 최신 schedules 참조
+          const startUtcDate = new Date(newStartLocal)
+          const endUtcDate = new Date(newEndLocal)
           const isOverlap = localSchedulesRef.current.some(s => {
-            const hasMember = s.schedule_members?.some((sm: any) => sm.member_id === staffId);
-            if (!hasMember) return false;
+            if (s.member_id !== staffId) return false;
             if (!isSameDay(new Date(s.start_time), startUtcDate)) return false;
             return startUtcDate < new Date(s.end_time) && endUtcDate > new Date(s.start_time);
           });
@@ -353,21 +351,20 @@ export function UnifiedCalendar({
           const startTimeStr = formatTimeStr(startHour)
           const endTimeStr = formatTimeStr(endHour)
           
-          const newStartUTC = toUTCISOString(dateStr, startTimeStr)
-          const newEndUTC = toUTCISOString(dateStr, endTimeStr)
+          const newStartLocal = `${dateStr}T${startTimeStr}:00`
+          const newEndLocal = `${dateStr}T${endTimeStr}:00`
           
           // 기존 시간과 동일하면 업데이트 하지 않음 (클릭만 한 경우)
-          if (sch.start_time === newStartUTC && sch.end_time === newEndUTC) {
+          if (sch.start_time === newStartLocal && sch.end_time === newEndLocal) {
             setDragState(null)
             return
           }
           
-          const startUtcDate = new Date(newStartUTC)
-          const endUtcDate = new Date(newEndUTC)
+          const startUtcDate = new Date(newStartLocal)
+          const endUtcDate = new Date(newEndLocal)
           const isOverlap = localSchedulesRef.current.some(s => {
             if (s.id === sch.id) return false;
-            const hasMember = s.schedule_members?.some((sm: any) => sm.member_id === staffId);
-            if (!hasMember) return false;
+            if (s.member_id !== staffId) return false;
             if (!isSameDay(new Date(s.start_time), startUtcDate)) return false;
             return startUtcDate < new Date(s.end_time) && endUtcDate > new Date(s.start_time);
           });
@@ -377,20 +374,20 @@ export function UnifiedCalendar({
           } else {
             // 개별 시간 지정 업무가 있는지 확인
             const hasTimeSpecificTasks = sch.tasks?.some((t: any) => t.start_time)
-            const deltaMinutes = getDiffInMinutes(sch.start_time, newStartUTC)
+            const deltaMinutes = getDiffInMinutes(sch.start_time, newStartLocal)
             
             if (hasTimeSpecificTasks) {
               // 개별 업무가 있으면 모달 띄우기
               setConfirmMoveModal({
                 isOpen: true,
                 scheduleId: sch.id,
-                newStartUTC,
-                newEndUTC,
+                newStartUTC: newStartLocal,
+                newEndUTC: newEndLocal,
                 deltaMinutes
               })
             } else {
               // 개별 업무가 없으면 즉시 업데이트
-              processScheduleUpdate(sch.id, newStartUTC, newEndUTC, false, deltaMinutes)
+              processScheduleUpdate(sch.id, newStartLocal, newEndLocal, false, deltaMinutes)
             }
           }
         }
@@ -425,21 +422,25 @@ export function UnifiedCalendar({
       if (s.id === scheduleId) {
         let updatedTasks = s.tasks;
         
-        if (moveTasks && updatedTasks && deltaMinutes !== 0) {
-          updatedTasks = updatedTasks.map((t: any) => {
-            if (!t.start_time) return t;
-            
-            const tStart = new Date(t.start_time)
-            tStart.setUTCMinutes(tStart.getUTCMinutes() + deltaMinutes)
-            const updates: any = { start_time: tStart.toISOString() }
-            
-            if (t.end_time) {
-              const tEnd = new Date(t.end_time)
-              tEnd.setUTCMinutes(tEnd.getUTCMinutes() + deltaMinutes)
-              updates.end_time = tEnd.toISOString()
-            }
+          if (moveTasks && updatedTasks && deltaMinutes !== 0) {
+            updatedTasks = updatedTasks.map((t: any) => {
+              if (!t.start_time) return t;
+              
+              const tStart = new Date(t.start_time)
+              tStart.setMinutes(tStart.getMinutes() + deltaMinutes)
+              
+              const tzOffset = tStart.getTimezoneOffset() * 60000;
+              const localISOStart = new Date(tStart.getTime() - tzOffset).toISOString().slice(0, 19);
+              const updates: any = { start_time: localISOStart }
+              
+              if (t.end_time) {
+                const tEnd = new Date(t.end_time)
+                tEnd.setMinutes(tEnd.getMinutes() + deltaMinutes)
+                const localISOEnd = new Date(tEnd.getTime() - tzOffset).toISOString().slice(0, 19);
+                updates.end_time = localISOEnd
+              }
 
-            return {
+              return {
               ...t,
               ...updates
             }
@@ -473,13 +474,16 @@ export function UnifiedCalendar({
           updatedTasks = updatedTasks.map((t: any) => {
             if (!t.start_time) return t;
             const tStart = new Date(t.start_time)
-            tStart.setUTCMinutes(tStart.getUTCMinutes() + deltaMinutes)
-            const updates: any = { start_time: tStart.toISOString() }
+            tStart.setMinutes(tStart.getMinutes() + deltaMinutes)
+            const tzOffset = tStart.getTimezoneOffset() * 60000;
+            const localISOStart = new Date(tStart.getTime() - tzOffset).toISOString().slice(0, 19);
+            const updates: any = { start_time: localISOStart }
             
             if (t.end_time) {
               const tEnd = new Date(t.end_time)
-              tEnd.setUTCMinutes(tEnd.getUTCMinutes() + deltaMinutes)
-              updates.end_time = tEnd.toISOString()
+              tEnd.setMinutes(tEnd.getMinutes() + deltaMinutes)
+              const localISOEnd = new Date(tEnd.getTime() - tzOffset).toISOString().slice(0, 19);
+              updates.end_time = localISOEnd
             }
             return {
               ...t,
@@ -558,21 +562,21 @@ export function UnifiedCalendar({
       endHour += 24
     }
     
-    const member = sch.schedule_members?.[0]?.member
+    const member = sch.member
     const roleInfo = getStaffRoleInfo(staffData)
-    const roleColor = roleInfo?.color || sch.color || '#534AB7'
+    const roleColor = roleInfo?.color || '#534AB7'
 
     setSelectedSchedule({
       ...sch,
       displayDate: format(start, 'yyyy년 M월 d일 (E)', { locale: ko }),
       displayTime: `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')} (${(endHour - startHour).toFixed(1)}시간)`,
-      displayName: staffData?.name || member?.name || sch.title || '직원',
+      displayName: staffData?.name || member?.name || '직원',
       displayRole: roleInfo?.name || '역할 없음',
       roleId: roleInfo?.id,
       roleColor: roleColor,
       
       // Edit form fields
-      editStaffId: sch.schedule_members?.[0]?.member_id || staffData?.id,
+      editStaffId: sch.member_id || staffData?.id,
       editDate: format(start, 'yyyy-MM-dd'),
       editStartTime: format(start, 'HH:mm'),
       editEndTime: format(end, 'HH:mm'),
@@ -634,7 +638,7 @@ export function UnifiedCalendar({
     let filtered = staffList
 
     // 관리자가 아니거나, 관리자라도 모바일이면 본인만 보이도록 필터링
-    if ((!isManager || isMobile) && currentUserId) {
+    if ((!canManage || isMobile) && currentUserId) {
       filtered = filtered.filter(s => s.user_id === currentUserId)
       return filtered
     }
@@ -743,7 +747,7 @@ export function UnifiedCalendar({
         toggleRole={toggleRole}
         onAutoSchedule={() => setIsAutoScheduleModalOpen(true)}
         onBulkDelete={() => setIsBulkDeleteModalOpen(true)}
-        isManager={isManager}
+        canManage={canManage}
       />
 
       {/* Main Layout (Matrix or Calendar) */}
@@ -761,10 +765,10 @@ export function UnifiedCalendar({
               activeRoleIds={activeRoleIds}
               getStaffRoleInfo={getStaffRoleInfo}
               approvedLeaves={approvedLeaves}
-              isManager={isManager}
+              canManage={canManage}
               hours={hours}
               onCellClick={(staff, date, hour) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 const displayHour = Math.floor(hour) >= 24 ? Math.floor(hour) - 24 : Math.floor(hour);
                 const startStr = `${displayHour.toString().padStart(2, '0')}:00`;
                 const endHour = displayHour + 1;
@@ -781,11 +785,11 @@ export function UnifiedCalendar({
                 setIsCreateModalOpen(true)
               }}
               onScheduleClick={(sch, staff) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 handleScheduleClick(sch, staff)
               }}
               onScheduleCreateDrag={(staffId, date, startStr, endStr) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 setCreateForm({
                   title: '근무',
                   date: format(date, 'yyyy-MM-dd'),
@@ -797,20 +801,20 @@ export function UnifiedCalendar({
                 setIsCreateModalOpen(true)
               }}
               onScheduleUpdateDrag={(scheduleId, date, startStr, endStr) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 const sch = localSchedulesRef.current.find(s => s.id === scheduleId)
                 if (!sch) return;
 
                 const dateStr = format(date, 'yyyy-MM-dd')
-                const newStartUTC = toUTCISOString(dateStr, startStr)
-                const newEndUTC = toUTCISOString(dateStr, endStr)
+                const newStartLocal = `${dateStr}T${startStr}:00`
+                const newEndLocal = `${dateStr}T${endStr}:00`
 
                 // 기존과 동일하면 스킵
-                if (sch.start_time === newStartUTC && sch.end_time === newEndUTC) return;
+                if (sch.start_time === newStartLocal && sch.end_time === newEndLocal) return;
 
                 // 겹침 체크
-                const startUtcDate = new Date(newStartUTC)
-                const endUtcDate = new Date(newEndUTC)
+                const startUtcDate = new Date(newStartLocal)
+                const endUtcDate = new Date(newEndLocal)
                 const staffId = sch.schedule_members?.[0]?.member_id;
                 
                 const isOverlap = localSchedulesRef.current.some(s => {
@@ -826,19 +830,19 @@ export function UnifiedCalendar({
                   return
                 }
 
-                const deltaMinutes = getDiffInMinutes(sch.start_time, newStartUTC)
+                const deltaMinutes = getDiffInMinutes(sch.start_time, newStartLocal)
                 const hasTimeSpecificTasks = sch.task_assignments?.some((ta: any) => ta.start_time)
                 
                 if (hasTimeSpecificTasks) {
                   setConfirmMoveModal({
                     isOpen: true,
                     scheduleId: sch.id,
-                    newStartUTC,
-                    newEndUTC,
+                    newStartUTC: newStartLocal,
+                    newEndUTC: newEndLocal,
                     deltaMinutes
                   })
                 } else {
-                  processScheduleUpdate(sch.id, newStartUTC, newEndUTC, false, deltaMinutes)
+                  processScheduleUpdate(sch.id, newStartLocal, newEndLocal, false, deltaMinutes)
                 }
               }}
             />
@@ -852,9 +856,9 @@ export function UnifiedCalendar({
               activeRoleIds={activeRoleIds}
               getStaffRoleInfo={getStaffRoleInfo}
               approvedLeaves={approvedLeaves}
-              isManager={isManager}
+              canManage={canManage}
               onCellClick={(staff, date) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 setCreateForm({
                   title: '근무',
                   date: format(date, 'yyyy-MM-dd'),
@@ -866,7 +870,7 @@ export function UnifiedCalendar({
                 setIsCreateModalOpen(true)
               }}
               onScheduleClick={(sch, staff) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 handleScheduleClick(sch, staff)
               }}
               onHeaderDateClick={(date) => {
@@ -874,7 +878,7 @@ export function UnifiedCalendar({
                 setViewMode('timeline')
               }}
               onScheduleDrop={async (scheduleId: string, sourceStaffId: string, targetStaffId: string, targetDate: Date) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 
                 const sch = localSchedulesRef.current.find(s => s.id === scheduleId)
                 if (!sch) return
@@ -889,22 +893,22 @@ export function UnifiedCalendar({
                   return // 변경된 것이 없음
                 }
 
-                // 새로운 시작/종료 시간 계산 (UTC 기준)
+                // 새로운 시작/종료 시간 계산 (로컬 KST 기준)
                 const startTimeStr = format(startObj, 'HH:mm:ss')
                 const endTimeStr = format(endObj, 'HH:mm:ss')
                 
-                const newStartUTC = toUTCISOString(newDateStr, startTimeStr)
-                let newEndUTC = toUTCISOString(newDateStr, endTimeStr)
+                const newStartLocal = `${newDateStr}T${startTimeStr}`
+                let newEndLocal = `${newDateStr}T${endTimeStr}`
                 
                 // 종료 시간이 시작 시간보다 작다면 (자정을 넘긴 경우)
                 if (endTimeStr < startTimeStr) {
                   const nextDateStr = format(addDays(targetDate, 1), 'yyyy-MM-dd')
-                  newEndUTC = toUTCISOString(nextDateStr, endTimeStr)
+                  newEndLocal = `${nextDateStr}T${endTimeStr}`
                 }
 
                 // 오버랩 체크 (같은 직원, 같은 날짜일 경우 겹치는 스케줄 있는지 확인)
-                const startUtcDate = new Date(newStartUTC)
-                const endUtcDate = new Date(newEndUTC)
+                const startUtcDate = new Date(newStartLocal)
+                const endUtcDate = new Date(newEndLocal)
                 
                 const isOverlap = localSchedulesRef.current.some(s => {
                   if (s.id === sch.id) return false;
@@ -923,7 +927,6 @@ export function UnifiedCalendar({
                 
                 const targetStaff = staffList.find(st => st.id === targetStaffId)
                 const targetRoleInfo = targetStaff ? getStaffRoleInfo(targetStaff) : null
-                const newColor = targetRoleInfo?.color || sch.color
 
                 try {
                   const formData = new FormData()
@@ -931,9 +934,6 @@ export function UnifiedCalendar({
                   formData.append('date', newDateStr)
                   formData.append('startTime', format(startObj, 'HH:mm'))
                   formData.append('endTime', format(endObj, 'HH:mm'))
-                  if (sch.memo) formData.append('memo', sch.memo)
-                  if (sch.title) formData.append('title', sch.title)
-                  if (newColor) formData.append('color', newColor)
                   formData.append('schedule_type', sch.schedule_type || 'regular')
 
                   
@@ -964,13 +964,16 @@ export function UnifiedCalendar({
                             
                             // 시간 이동 적용
                             const tStart = new Date(t.start_time)
-                            tStart.setUTCMinutes(tStart.getUTCMinutes() + deltaMinutes)
-                            const updates: any = { start_time: tStart.toISOString() }
+                            tStart.setMinutes(tStart.getMinutes() + deltaMinutes)
+                            const tzOffset = tStart.getTimezoneOffset() * 60000;
+                            const localISOStart = new Date(tStart.getTime() - tzOffset).toISOString().slice(0, 19);
+                            const updates: any = { start_time: localISOStart }
                             
                             if (t.end_time) {
                               const tEnd = new Date(t.end_time)
-                              tEnd.setUTCMinutes(tEnd.getUTCMinutes() + deltaMinutes)
-                              updates.end_time = tEnd.toISOString()
+                              tEnd.setMinutes(tEnd.getMinutes() + deltaMinutes)
+                              const localISOEnd = new Date(tEnd.getTime() - tzOffset).toISOString().slice(0, 19);
+                              updates.end_time = localISOEnd
                             }
                             
                             return {
@@ -982,9 +985,8 @@ export function UnifiedCalendar({
 
                       return {
                         ...s,
-                        start_time: newStartUTC,
-                        end_time: newEndUTC,
-                        color: newColor,
+                        start_time: newStartLocal,
+                        end_time: newEndLocal,
                         schedule_members: [{
                           member_id: targetStaffId,
                           member: staffList.find(st => st.id === targetStaffId)
@@ -1021,9 +1023,9 @@ export function UnifiedCalendar({
               activeRoleIds={activeRoleIds}
               getStaffRoleInfo={getStaffRoleInfo}
               approvedLeaves={approvedLeaves}
-              isManager={isManager}
+              canManage={canManage}
               onDateClick={(date) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 setCreateForm({
                   title: '근무',
                   date: format(date, 'yyyy-MM-dd'),
@@ -1035,11 +1037,11 @@ export function UnifiedCalendar({
                 setIsCreateModalOpen(true)
               }}
               onScheduleClick={(sch, staff) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 handleScheduleClick(sch, staff)
               }}
               onScheduleDrop={async (scheduleId: string, sourceStaffId: string, targetStaffId: string, targetDate: Date) => {
-                if (!isManager || isMobile) return;
+                if (!canManage || isMobile) return;
                 
                 const sch = localSchedulesRef.current.find(s => s.id === scheduleId)
                 if (!sch) return
@@ -1054,22 +1056,22 @@ export function UnifiedCalendar({
                   return // 변경된 것이 없음
                 }
 
-                // 새로운 시작/종료 시간 계산 (UTC 기준)
+                // 새로운 시작/종료 시간 계산 (로컬 KST 기준)
                 const startTimeStr = format(startObj, 'HH:mm:ss')
                 const endTimeStr = format(endObj, 'HH:mm:ss')
                 
-                const newStartUTC = toUTCISOString(newDateStr, startTimeStr)
-                let newEndUTC = toUTCISOString(newDateStr, endTimeStr)
+                const newStartLocal = `${newDateStr}T${startTimeStr}`
+                let newEndLocal = `${newDateStr}T${endTimeStr}`
                 
                 // 종료 시간이 시작 시간보다 작다면 (자정을 넘긴 경우)
                 if (endTimeStr < startTimeStr) {
                   const nextDateStr = format(addDays(targetDate, 1), 'yyyy-MM-dd')
-                  newEndUTC = toUTCISOString(nextDateStr, endTimeStr)
+                  newEndLocal = `${nextDateStr}T${endTimeStr}`
                 }
 
                 // 오버랩 체크 (같은 직원, 같은 날짜일 경우 겹치는 스케줄 있는지 확인)
-                const startUtcDate = new Date(newStartUTC)
-                const endUtcDate = new Date(newEndUTC)
+                const startUtcDate = new Date(newStartLocal)
+                const endUtcDate = new Date(newEndLocal)
                 
                 const isOverlap = localSchedulesRef.current.some(s => {
                   if (s.id === sch.id) return false;
@@ -1096,9 +1098,8 @@ export function UnifiedCalendar({
                   formData.append('date', newDateStr)
                   formData.append('startTime', format(startObj, 'HH:mm'))
                   formData.append('endTime', format(endObj, 'HH:mm'))
-                  if (sch.memo) formData.append('memo', sch.memo)
-                  if (sch.title) formData.append('title', sch.title)
-                  if (newColor) formData.append('color', newColor)
+                  formData.append('schedule_type', sch.schedule_type || 'regular')
+                  formData.append('endTime', format(endObj, 'HH:mm'))
                   formData.append('schedule_type', sch.schedule_type || 'regular')
 
                   // 기존 상태 백업
@@ -1128,13 +1129,16 @@ export function UnifiedCalendar({
                             
                             // 시간 이동 적용
                             const tStart = new Date(t.start_time)
-                            tStart.setUTCMinutes(tStart.getUTCMinutes() + deltaMinutes)
-                            const updates: any = { start_time: tStart.toISOString() }
+                            tStart.setMinutes(tStart.getMinutes() + deltaMinutes)
+                            const tzOffset = tStart.getTimezoneOffset() * 60000;
+                            const localISOStart = new Date(tStart.getTime() - tzOffset).toISOString().slice(0, 19);
+                            const updates: any = { start_time: localISOStart }
                             
                             if (t.end_time) {
                               const tEnd = new Date(t.end_time)
-                              tEnd.setUTCMinutes(tEnd.getUTCMinutes() + deltaMinutes)
-                              updates.end_time = tEnd.toISOString()
+                              tEnd.setMinutes(tEnd.getMinutes() + deltaMinutes)
+                              const localISOEnd = new Date(tEnd.getTime() - tzOffset).toISOString().slice(0, 19);
+                              updates.end_time = localISOEnd
                             }
                             
                             return {
@@ -1146,9 +1150,8 @@ export function UnifiedCalendar({
 
                       return {
                         ...s,
-                        start_time: newStartUTC,
-                        end_time: newEndUTC,
-                        color: newColor,
+                        start_time: newStartLocal,
+                        end_time: newEndLocal,
                         schedule_members: [{
                           member_id: targetStaffId,
                           member: staffList.find(st => st.id === targetStaffId)

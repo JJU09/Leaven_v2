@@ -30,9 +30,9 @@ export default async function LeavePage() {
   if (!member) redirect('/onboarding')
 
   const canViewLeave = await hasPermission(user.id, member.store_id, 'view_leave')
-  const isManager = await hasPermission(user.id, member.store_id, 'manage_leave')
+  const canManage = await hasPermission(user.id, member.store_id, 'manage_leave')
 
-  if (!canViewLeave && !isManager) {
+  if (!canViewLeave && !canManage) {
     return <div>접근 권한이 없습니다.</div>
   }
 
@@ -67,7 +67,7 @@ export default async function LeavePage() {
           storeId={member.store_id} 
           roles={roles || []} 
           staffList={staffList} 
-          isManager={isManager}
+          canManage={canManage}
           currentUserId={user.id}
           leaveCalcType={leaveCalcType}
         />

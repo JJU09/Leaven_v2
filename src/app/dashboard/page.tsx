@@ -220,7 +220,7 @@ function AdminDashboard({ pendingCount, store, announcements, stats }: { pending
               <AnnouncementList 
                 storeId={store.id} 
                 announcements={announcements} 
-                isManager={true} 
+                canManage={true} 
               />
            </div>
         </div>

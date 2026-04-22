@@ -28,7 +28,7 @@ interface CalendarHeaderProps {
   
   onAutoSchedule: () => void
   onBulkDelete: () => void
-  isManager?: boolean
+  canManage?: boolean
 }
 
 export function CalendarHeader({
@@ -55,7 +55,7 @@ export function CalendarHeader({
   
   onAutoSchedule,
   onBulkDelete,
-  isManager = true
+  canManage = true
 }: CalendarHeaderProps) {
   const [isMounted, setIsMounted] = useState(false)
   
@@ -178,7 +178,7 @@ export function CalendarHeader({
       {/* 오른쪽: 필터 칩, 검색창, 액션 버튼 */}
       <div className="items-center gap-3 w-full md:w-auto md:ml-auto flex-wrap justify-between md:justify-end hidden md:flex">
         
-        {isManager && (
+        {canManage && (
           <>
             {/* 역할(Role) 필터 토글 칩 */}
         <div className="flex gap-1.5 flex-wrap">

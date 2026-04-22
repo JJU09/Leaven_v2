@@ -1,0 +1,43 @@
+[dotenv@17.3.1] injecting env (10) from .env.local -- tip: ⚡️ secrets for agents: https://dotenvx.com/as2
+Recent schedules: [
+  {
+    id: '0cce95e9-128c-4829-9ef4-776578c92598',
+    plan_date: '2026-04-21',
+    start_time: '09:00:00',
+    end_time: '18:00:00',
+    member_id: 'e35ac6fb-d717-4cfd-855d-d9847eab4937',
+    schedule_type: 'regular'
+  },
+  {
+    id: '876d41d9-372c-4d55-9f45-e365f09a61a1',
+    plan_date: '2026-04-21',
+    start_time: '09:00:00',
+    end_time: '18:00:00',
+    member_id: '02b5d745-a714-4f90-aca8-b23303c563bf',
+    schedule_type: 'regular'
+  },
+  {
+    id: 'a723af82-6bad-4138-aac1-fa89120d5448',
+    plan_date: '2026-04-22',
+    start_time: '09:00:00',
+    end_time: '18:00:00',
+    member_id: 'e35ac6fb-d717-4cfd-855d-d9847eab4937',
+    schedule_type: 'regular'
+  },
+  {
+    id: '9bb46590-cf2d-40ae-9e8c-fc8343a55c46',
+    plan_date: '2026-04-22',
+    start_time: '09:00:00',
+    end_time: '18:00:00',
+    member_id: 'e35ac6fb-d717-4cfd-855d-d9847eab4937',
+    schedule_type: 'regular'
+  },
+  {
+    id: 'cebd9bcb-1389-4d5a-9bed-7cc86ce32749',
+    plan_date: '2026-04-22',
+    start_time: '09:00:00',
+    end_time: '18:00:00',
+    member_id: 'e35ac6fb-d717-4cfd-855d-d9847eab4937',
+    schedule_type: 'regular'
+  }
+]

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useMemo } from 'react'
-import { Task, getDashboardTasks, toggleTaskCheckitem, updateTaskStatus } from '../task-actions'
+import { Task, getDashboardTasks, toggleTaskCheckitem, updateTaskStatus } from '../../task-actions'
 import { getTodayDateString, toKSTISOString } from '@/shared/lib/date-utils'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { deleteTask } from '../task-actions'
+import { deleteTask } from '../../task-actions'
 import { CreatePersonalTaskDialog } from './create-personal-task-dialog'
 
 // 타임라인 내 시간 문자열("HH:mm")을 파싱하여 분(minute)으로 반환

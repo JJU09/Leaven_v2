@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { DashboardTaskList } from '@/features/schedule/components/dashboard-task-list'
+import { DashboardTaskList } from '@/features/schedule/components/dashboard/dashboard-task-list'
 import { getStoreAnnouncements } from '@/features/store/announcement-actions'
 import { StaffAnnouncementList } from '@/features/store/components/staff-announcement-list'
 import { getTodayDateString } from '@/shared/lib/date-utils'
-import { MyTasksClientWrapper } from '@/features/schedule/components/my-tasks-client-wrapper'
+import { MyTasksClientWrapper } from '@/features/schedule/components/dashboard/my-tasks-client-wrapper'
 
 export const dynamic = 'force-dynamic'
 

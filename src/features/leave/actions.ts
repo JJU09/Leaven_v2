@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { unstable_noStore as noStore } from 'next/cache'
 import { requirePermission } from '@/features/auth/permissions'
@@ -87,6 +87,7 @@ export async function createLeaveRequest(
 
 export async function resolveLeaveRequest(requestId: string, storeId: string, status: 'approved' | 'rejected') {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return { error: '인증되지 않은 사용자입니다.' }
@@ -97,25 +98,105 @@ export async function resolveLeaveRequest(requestId: string, storeId: string, st
     return { error: '요청을 처리할 권한이 없습니다.' }
   }
 
-  // [아키텍트 결정] RLS 정책 충돌을 피해 안전한 트랜잭션을 보장하기 위해 RPC를 통해 승인/반려를 처리합니다.
-  const { data, error } = await supabase.rpc('resolve_leave_request_v1', {
-    p_request_id: requestId,
-    p_user_id: user.id,
-    p_store_id: storeId,
-    p_status: status
-  })
+  // 1. 요청 정보 가져오기
+  const { data: request, error: requestError } = await supabase
+    .from('leave_requests')
+    .select('*')
+    .eq('id', requestId)
+    .eq('store_id', storeId)
+    .single()
 
-  if (error) {
-    console.error('RPC Error resolving leave request:', error)
-    return { error: '요청 상태 변경 중 오류가 발생했습니다.' }
+  if (requestError || !request) {
+    return { error: '요청을 찾을 수 없습니다.' }
   }
 
-  if (data?.error) {
-    return { error: data.error }
+  if (request.status !== 'pending') {
+    return { error: '이미 처리된 요청입니다.' }
   }
 
-  // [기획자 핵심 로직] 물리적 동기화 최소화 및 렌더링 기반 동기화로 전환
-  // 스케줄 테이블의 데이터를 직접 수정하는 대신, revalidate를 통해 최신 휴가 SSOT를 반영하게 합니다.
+  const year = new Date(request.start_date).getFullYear()
+
+  // 2. 상태 업데이트
+  const { error: updateError } = await adminClient
+    .from('leave_requests')
+    .update({ 
+      status, 
+      resolved_by: user.id, 
+      resolved_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', requestId)
+
+  if (updateError) {
+    console.error('Error resolving leave request:', updateError)
+    return { error: '상태 업데이트 중 오류가 발생했습니다.' }
+  }
+
+  // 3. 승인인 경우 연차 차감 (수동 롤백 패턴 적용)
+  if (status === 'approved') {
+    // 잔여 연차 조회
+    const { data: balance, error: balanceError } = await adminClient
+      .from('leave_balances')
+      .select('*')
+      .eq('store_id', storeId)
+      .eq('member_id', request.member_id)
+      .eq('year', year)
+      .single()
+
+    if (!balanceError && balance) {
+      // 연차 차감 로직 (사용일수 증가)
+      const newUsedDays = Number(balance.used_days) + Number(request.requested_days)
+      
+      const { error: deductError } = await adminClient
+        .from('leave_balances')
+        .update({ 
+          used_days: newUsedDays,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', balance.id)
+
+      if (deductError) {
+        // 보상 트랜잭션: 연차 차감 실패 시 승인 상태를 다시 pending으로 롤백
+        console.error('Error deducting leave balance, rolling back status:', deductError)
+        await adminClient
+          .from('leave_requests')
+          .update({ 
+            status: 'pending',
+            resolved_by: null,
+            resolved_at: null
+          })
+          .eq('id', requestId)
+        
+        return { error: '연차 차감 중 오류가 발생하여 승인이 취소되었습니다.' }
+      }
+    } else {
+      // 연차 정보가 없는 경우 새로 생성 (총 연차는 null로 두어 클라이언트 자동 계산 사용)
+      const { error: insertError } = await adminClient
+        .from('leave_balances')
+        .insert({
+          store_id: storeId,
+          member_id: request.member_id,
+          year: year,
+          total_days: null,
+          used_days: request.requested_days
+        })
+
+      if (insertError) {
+        console.error('Error inserting leave balance, rolling back status:', insertError)
+        await adminClient
+          .from('leave_requests')
+          .update({ 
+            status: 'pending',
+            resolved_by: null,
+            resolved_at: null
+          })
+          .eq('id', requestId)
+        
+        return { error: '연차 차감 중 오류가 발생하여 승인이 취소되었습니다.' }
+      }
+    }
+  }
+
   revalidatePath('/dashboard/leave')
   revalidatePath('/dashboard/schedule')
   return { success: true }
@@ -123,6 +204,7 @@ export async function resolveLeaveRequest(requestId: string, storeId: string, st
 
 export async function revokeLeaveRequest(requestId: string, storeId: string) {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return { error: '인증되지 않은 사용자입니다.' }
@@ -133,20 +215,74 @@ export async function revokeLeaveRequest(requestId: string, storeId: string) {
     return { error: '요청을 처리할 권한이 없습니다.' }
   }
 
-  // 승인 취소 및 연차 복구 RPC 호출
-  const { data, error } = await supabase.rpc('revoke_leave_request_v1', {
-    p_request_id: requestId,
-    p_user_id: user.id,
-    p_store_id: storeId
-  })
+  // 1. 요청 정보 가져오기
+  const { data: request, error: requestError } = await supabase
+    .from('leave_requests')
+    .select('*')
+    .eq('id', requestId)
+    .eq('store_id', storeId)
+    .single()
 
-  if (error) {
-    console.error('RPC Error revoking leave request:', error)
-    return { error: '승인 취소 중 오류가 발생했습니다.' }
+  if (requestError || !request) {
+    return { error: '요청을 찾을 수 없습니다.' }
   }
 
-  if (data?.error) {
-    return { error: data.error }
+  if (request.status !== 'approved') {
+    return { error: '승인된 요청만 취소할 수 있습니다.' }
+  }
+
+  const year = new Date(request.start_date).getFullYear()
+
+  // 2. 상태 업데이트 (rejected로 변경)
+  const { error: updateError } = await adminClient
+    .from('leave_requests')
+    .update({ 
+      status: 'rejected', 
+      resolved_by: user.id, 
+      resolved_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', requestId)
+
+  if (updateError) {
+    console.error('Error revoking leave request:', updateError)
+    return { error: '상태 업데이트 중 오류가 발생했습니다.' }
+  }
+
+  // 3. 연차 복구 (수동 롤백 패턴 적용)
+  const { data: balance, error: balanceError } = await adminClient
+    .from('leave_balances')
+    .select('*')
+    .eq('store_id', storeId)
+    .eq('member_id', request.member_id)
+    .eq('year', year)
+    .single()
+
+  if (!balanceError && balance) {
+    // 연차 복구 로직 (사용일수 감소)
+    const newUsedDays = Math.max(0, Number(balance.used_days) - Number(request.requested_days))
+    
+    const { error: refundError } = await adminClient
+      .from('leave_balances')
+      .update({ 
+        used_days: newUsedDays,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', balance.id)
+
+    if (refundError) {
+      // 보상 트랜잭션: 연차 복구 실패 시 취소 상태를 다시 approved로 롤백
+      console.error('Error refunding leave balance, rolling back status:', refundError)
+      await adminClient
+        .from('leave_requests')
+        .update({ 
+          status: 'approved',
+          // 원래 승인자 정보 유지가 베스트지만, 데이터가 없으므로 현재 사용자 유지
+        })
+        .eq('id', requestId)
+      
+      return { error: '연차 복구 중 오류가 발생하여 취소가 실패했습니다.' }
+    }
   }
 
   revalidatePath('/dashboard/leave')
@@ -156,25 +292,47 @@ export async function revokeLeaveRequest(requestId: string, storeId: string) {
 
 export async function cancelLeaveRequest(requestId: string, storeId: string) {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return { error: '인증되지 않은 사용자입니다.' }
 
-  // [아키텍트 결정] RLS 권한 문제를 근본적으로 해결하기 위해 DB RPC(PostgreSQL Function) 호출 방식으로 전환
-  // 이 방식은 원자적 트랜잭션을 보장하며, 복잡한 RLS 정책 우회 없이 안전하게 비즈니스 로직을 처리합니다.
-  const { data, error } = await supabase.rpc('cancel_leave_request_v1', {
-    p_request_id: requestId,
-    p_user_id: user.id,
-    p_store_id: storeId
-  })
+  // 1. 요청 정보 가져오기 및 본인 확인
+  const { data: request, error: requestError } = await supabase
+    .from('leave_requests')
+    .select('*, member:store_members!inner(user_id)')
+    .eq('id', requestId)
+    .eq('store_id', storeId)
+    .single()
 
-  if (error) {
-    console.error('RPC Error cancelling leave request:', error)
-    return { error: '휴가 취소 중 오류가 발생했습니다.' }
+  if (requestError || !request) {
+    return { error: '요청을 찾을 수 없거나 권한이 없습니다.' }
   }
 
-  if (data?.error) {
-    return { error: data.error }
+  // Array 형태로 반환되는 것을 방지하기 위해 any 캐스팅 후 처리
+  const member = request.member as any
+  const memberUserId = Array.isArray(member) ? member[0]?.user_id : member?.user_id
+
+  if (memberUserId !== user.id) {
+    return { error: '본인의 휴가 신청만 취소할 수 있습니다.' }
+  }
+
+  if (request.status !== 'pending') {
+    return { error: '대기 중인 요청만 취소할 수 있습니다.' }
+  }
+
+  // 2. 상태 업데이트 (cancelled로 변경)
+  const { error: updateError } = await adminClient
+    .from('leave_requests')
+    .update({ 
+      status: 'cancelled', 
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', requestId)
+
+  if (updateError) {
+    console.error('Error cancelling leave request:', updateError)
+    return { error: '휴가 취소 중 오류가 발생했습니다.' }
   }
 
   // [기획자 핵심 로직] 스케줄 테이블을 직접 수정하지 않고 Path Revalidation만 수행

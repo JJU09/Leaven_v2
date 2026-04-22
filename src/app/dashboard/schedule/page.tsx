@@ -3,7 +3,10 @@ import { redirect } from 'next/navigation'
 import { hasPermission } from '@/features/auth/permissions'
 import { getStoreRoles } from '@/features/store/actions'
 import { cookies } from 'next/headers'
-import { UnifiedCalendar } from '@/features/schedule/components/unified-calendar'
+import { UnifiedCalendar } from '@/features/schedule/components/calendar/unified-calendar'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function UnifiedSchedulePage() {
   const supabase = await createClient()
@@ -39,7 +42,7 @@ export default async function UnifiedSchedulePage() {
   console.log(`[Schedule Page] Permission check passed for view_schedule`)
 
   // 관리자 권한 확인 (manage_schedule)
-  const isManager = await hasPermission(user.id, member.store_id, 'manage_schedule')
+  const canManageSchedule = await hasPermission(user.id, member.store_id, 'manage_schedule')
 
   const roles = await getStoreRoles(member.store_id)
 
@@ -50,6 +53,7 @@ export default async function UnifiedSchedulePage() {
       id,
       user_id,
       name,
+      profiles (full_name),
       role_info:store_roles(id, name, color, hierarchy_level)
     `)
     .eq('store_id', member.store_id)
@@ -57,6 +61,7 @@ export default async function UnifiedSchedulePage() {
 
   const staffList = rawStaffList?.map((staff: any) => ({
     ...staff,
+    name: staff.name || staff.profiles?.full_name || '이름 없음',
     role_info: Array.isArray(staff.role_info) ? staff.role_info[0] : staff.role_info,
   })) || []
 
@@ -71,6 +76,8 @@ export default async function UnifiedSchedulePage() {
       title,
       color,
       schedule_type,
+      plan_date,
+      member_id,
       schedule_members (
         member_id,
         member:store_members (name, user_id)
@@ -92,23 +99,46 @@ export default async function UnifiedSchedulePage() {
     `)
     .eq('store_id', member.store_id)
 
-  const schedules = rawSchedules?.map((sch: any) => ({
-    ...sch,
-    tasks: sch.task_assignments?.map((ta: any) => {
-      const taskObj = Array.isArray(ta.task) ? ta.task[0] : ta.task;
-      return {
-        id: ta.id,
-        status: ta.status,
-        assigned_date: ta.assigned_date,
-        start_time: ta.start_time,
-        end_time: ta.end_time,
-        title: taskObj?.title,
-        description: taskObj?.description,
-        task_type: taskObj?.category,
-        is_routine: taskObj?.is_routine
+  const schedules = rawSchedules?.map((sch: any) => {
+    let startIso = sch.start_time;
+    if (startIso && !startIso.includes('T') && sch.plan_date) {
+      startIso = `${sch.plan_date}T${startIso}`;
+    }
+
+    let endIso = sch.end_time;
+    if (endIso && !endIso.includes('T') && sch.plan_date) {
+      if (endIso < sch.start_time) {
+        const nextDate = new Date(sch.plan_date);
+        nextDate.setDate(nextDate.getDate() + 1);
+        const y = nextDate.getFullYear();
+        const m = String(nextDate.getMonth() + 1).padStart(2, '0');
+        const d = String(nextDate.getDate()).padStart(2, '0');
+        endIso = `${y}-${m}-${d}T${endIso}`;
+      } else {
+        endIso = `${sch.plan_date}T${endIso}`;
       }
-    }) || []
-  })) || []
+    }
+
+    return {
+      ...sch,
+      start_time: startIso,
+      end_time: endIso,
+      tasks: sch.task_assignments?.map((ta: any) => {
+        const taskObj = Array.isArray(ta.task) ? ta.task[0] : ta.task;
+        return {
+          id: ta.id,
+          status: ta.status,
+          assigned_date: ta.assigned_date,
+          start_time: ta.start_time,
+          end_time: ta.end_time,
+          title: taskObj?.title,
+          description: taskObj?.description,
+          task_type: taskObj?.category,
+          is_routine: taskObj?.is_routine
+        }
+      }) || []
+    }
+  }) || []
 
   // 승인된 휴가 데이터 조회
   const { data: approvedLeaves } = await supabase
@@ -137,7 +167,7 @@ export default async function UnifiedSchedulePage() {
         schedules={schedules || []}
         storeOpeningHours={Array.isArray(member.store) ? member.store[0]?.operating_hours : (member.store as any)?.operating_hours}
         approvedLeaves={approvedLeaves || []}
-        isManager={isManager}
+        canManage={canManageSchedule}
         currentUserId={user.id}
       />
     </div>

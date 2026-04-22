@@ -29,11 +29,11 @@ export default async function AttendancePage() {
 
   if (!member) redirect('/onboarding')
 
-  // Check permissions (using view_schedule as proxy for attendance view, manage_schedule for full manage)
-  const canViewSchedule = await hasPermission(user.id, member.store_id, 'view_schedule')
-  const isManager = await hasPermission(user.id, member.store_id, 'manage_schedule')
+  // Check permissions
+  const canViewAttendance = await hasPermission(user.id, member.store_id, 'view_attendance')
+  const canManageAttendance = await hasPermission(user.id, member.store_id, 'manage_attendance')
 
-  if (!canViewSchedule && !isManager) {
+  if (!canViewAttendance && !canManageAttendance) {
     return <div>접근 권한이 없습니다.</div>
   }
 
@@ -46,7 +46,8 @@ export default async function AttendancePage() {
       id,
       user_id,
       name,
-      role_info:store_roles(id, name, color, hierarchy_level)
+      role_info:store_roles(id, name, color, hierarchy_level),
+      profile:profiles(full_name)
     `)
     .eq('store_id', member.store_id)
     .neq('status', 'invited')
@@ -77,7 +78,7 @@ export default async function AttendancePage() {
           storeId={member.store_id} 
           roles={roles || []} 
           staffList={staffList} 
-          isManager={isManager}
+          canManageAttendance={canManageAttendance}
           currentUserId={user.id}
           initialDate={today}
         />

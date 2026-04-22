@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Plus, Loader2, AlertTriangle, Clock, Briefcase, Trash2, CheckSquare, Users, Star } from 'lucide-react'
-import { ChecklistItem } from '../task-actions'
+import { ChecklistItem } from '../../task-actions'
 import { Checkbox } from "@/components/ui/checkbox"
 import { getStoreRoles, Role } from '@/features/store/roles'
 import { ScrollArea } from "@/components/ui/scroll-area"

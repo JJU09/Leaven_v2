@@ -15,11 +15,9 @@ export async function getSchedules(storeId: string, startDate: string, endDate: 
     .select(`
       id,
       store_id,
+      plan_date,
       start_time,
       end_time,
-      memo,
-      title,
-      color,
       schedule_type,
       member_id,
       member:store_members!schedules_member_id_fkey (name, user_id, profile:profiles(full_name, avatar_url)),
@@ -35,8 +33,8 @@ export async function getSchedules(storeId: string, startDate: string, endDate: 
       )
     `)
     .eq('store_id', storeId)
-    .gte('start_time', startDate)
-    .lte('end_time', endDate)
+    .gte('plan_date', startDate.split('T')[0])
+    .lte('plan_date', endDate.split('T')[0])
 
   if (scheduleError) {
     console.error('Error fetching schedules:', scheduleError)
@@ -58,10 +56,32 @@ export async function getSchedules(storeId: string, startDate: string, endDate: 
   }
 
   // 스케줄 객체에 관련 휴가 정보를 붙여서 반환
-  return schedules.map((sch: any) => ({
-    ...sch,
-    approved_leaves: leaves // 프론트엔드에서 필터링하여 사용
-  }))
+  return schedules.map((sch: any) => {
+    let startIso = sch.start_time;
+    if (startIso && !startIso.includes('T') && sch.plan_date) {
+      startIso = `${sch.plan_date}T${startIso}`;
+    }
+    let endIso = sch.end_time;
+    if (endIso && !endIso.includes('T') && sch.plan_date) {
+      if (endIso < sch.start_time) {
+        const nextDate = new Date(sch.plan_date);
+        nextDate.setDate(nextDate.getDate() + 1);
+        const y = nextDate.getFullYear();
+        const m = String(nextDate.getMonth() + 1).padStart(2, '0');
+        const d = String(nextDate.getDate()).padStart(2, '0');
+        endIso = `${y}-${m}-${d}T${endIso}`;
+      } else {
+        endIso = `${sch.plan_date}T${endIso}`;
+      }
+    }
+
+    return {
+      ...sch,
+      start_time: startIso,
+      end_time: endIso,
+      approved_leaves: leaves // 프론트엔드에서 필터링하여 사용
+    }
+  })
 }
 
 // 스케줄 생성 (다중 인원, 반복 지원)
@@ -93,9 +113,7 @@ export async function createSchedule(storeId: string, formData: FormData) {
   const startDateStr = formData.get('date') as string
   const startTimeStr = formData.get('startTime') as string
   const endTimeStr = formData.get('endTime') as string
-  const memo = formData.get('memo') as string
-  const title = formData.get('title') as string
-  const color = formData.get('color') as string
+  const scheduleType = formData.get('schedule_type') as string
   
   const isRecurring = formData.get('isRecurring') === 'on'
   const repeatEndDateStr = formData.get('repeatEndDate') as string
@@ -130,15 +148,15 @@ export async function createSchedule(storeId: string, formData: FormData) {
   let createdCount = 0
 
   for (const date of targetDates) {
-    // KST 입력 -> UTC 변환 (시스템 시간대 영향 제거)
-    const startDateTime = toUTCISOString(date, startTimeStr)
-    let finalEndDateTime = toUTCISOString(date, endTimeStr)
-
-    // 종료 시간이 시작 시간보다 빠른 경우 (자정 넘어가면) 날짜 하루 더함
-    if (startTimeStr > endTimeStr) {
-       const nextDate = getNextDateString(date)
-       finalEndDateTime = toUTCISOString(nextDate, endTimeStr)
-    }
+    // 스키마에 맞게 plan_date, start_time, end_time 설정
+    const planDate = date
+    // 시간이 자정을 넘기는 경우, 일단 end_time은 endTimeStr 그대로 저장 (데이터베이스 제약조건이나 정책에 따라 조정 가능)
+    // 현재 schedules 테이블 스키마:
+    // plan_date: DATE
+    // start_time: TIME WITHOUT TIME ZONE
+    // end_time: TIME WITHOUT TIME ZONE
+    const startTimeOnly = startTimeStr + ':00' // 'HH:mm' -> 'HH:mm:ss'
+    const endTimeOnly = endTimeStr + ':00'
 
     // 1. 스케줄 본체 생성 (현재 스키마에선 member_id 필요)
     const { data: schedule, error: scheduleError } = await supabase
@@ -146,16 +164,18 @@ export async function createSchedule(storeId: string, formData: FormData) {
         .insert({
             store_id: storeId,
             member_id: userIds[0],
-            start_time: startDateTime,
-            end_time: finalEndDateTime,
-            memo: memo || null,
-            title: title || null,
-            color: color || null,
+            plan_date: planDate,
+            start_time: startTimeOnly,
+            end_time: endTimeOnly,
+            schedule_type: scheduleType || 'regular',
         })
         .select()
         .single()
     
     if (scheduleError) {
+        console.error('Schedule Create Error:', scheduleError)
+        const fs = require('fs')
+        fs.writeFileSync('/tmp/leaven_schedule_error.txt', JSON.stringify(scheduleError))
         return { error: scheduleError.message }
     }
 
@@ -188,17 +208,24 @@ export async function updateScheduleTime(
     return { error: '권한이 없습니다.' }
   }
 
+  // newStart, newEnd는 ISO 문자열로 넘어오므로 분리 필요
+  const planDate = newStart.split('T')[0]
+  const startTimeOnly = newStart.split('T')[1].substring(0, 8)
+  const endTimeOnly = newEnd.split('T')[1].substring(0, 8)
+
   // 기존 스케줄 정보를 가져와 시간 차이(delta)를 분 단위로 계산 (moveTasks가 true일 때만)
   let deltaMinutes = 0;
   if (moveTasks) {
     const { data: oldSchedule } = await supabase
       .from('schedules')
-      .select('start_time')
+      .select('plan_date, start_time')
       .eq('id', scheduleId)
       .single()
 
-    if (oldSchedule?.start_time) {
-      deltaMinutes = getDiffInMinutes(oldSchedule.start_time, newStart)
+    if (oldSchedule?.start_time && oldSchedule?.plan_date) {
+      const oldStartIso = `${oldSchedule.plan_date}T${oldSchedule.start_time}Z`
+      const newStartIso = `${planDate}T${startTimeOnly}Z`
+      deltaMinutes = getDiffInMinutes(oldStartIso, newStartIso)
     }
   }
 
@@ -206,8 +233,9 @@ export async function updateScheduleTime(
   const { error } = await supabase
     .from('schedules')
     .update({
-      start_time: newStart,
-      end_time: newEnd,
+      plan_date: planDate,
+      start_time: startTimeOnly,
+      end_time: endTimeOnly,
       updated_at: new Date().toISOString(),
     })
     .eq('id', scheduleId)
@@ -290,38 +318,28 @@ export async function updateSchedule(storeId: string, scheduleId: string, formDa
   const date = formData.get('date') as string
   const startTimeStr = formData.get('startTime') as string
   const endTimeStr = formData.get('endTime') as string
-  const memo = formData.get('memo') as string
-  const title = formData.get('title') as string
-  const color = formData.get('color') as string
   const scheduleType = formData.get('schedule_type') as string
 
-  // KST 입력 -> UTC 변환
-  const startDateTime = toUTCISOString(date, startTimeStr)
-  let endDateTime = toUTCISOString(date, endTimeStr)
-
-  if (startTimeStr > endTimeStr) {
-       const nextDate = getNextDateString(date)
-       endDateTime = toUTCISOString(nextDate, endTimeStr)
-  }
+  const planDate = date
+  const startTimeOnly = startTimeStr + ':00'
+  const endTimeOnly = endTimeStr + ':00'
 
   // 기존 스케줄 정보를 가져와 날짜 차이 확인
   const { data: oldSchedule } = await supabase
     .from('schedules')
-    .select('start_time')
+    .select('plan_date')
     .eq('id', scheduleId)
     .single()
 
-  const oldDateStr = oldSchedule?.start_time ? toKSTISOString(oldSchedule.start_time).split('T')[0] : date
+  const oldDateStr = oldSchedule?.plan_date || date
 
   // 1. 스케줄 정보 업데이트
   const { error: updateError } = await supabase
     .from('schedules')
     .update({
-      start_time: startDateTime,
-      end_time: endDateTime,
-      memo: memo || null,
-      title: title || null,
-      color: color || null,
+      plan_date: planDate,
+      start_time: startTimeOnly,
+      end_time: endTimeOnly,
       schedule_type: scheduleType || 'regular',
       updated_at: new Date().toISOString(),
     })

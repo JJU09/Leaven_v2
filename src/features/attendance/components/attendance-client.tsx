@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Activity, Clock, FileClock, CheckSquare, Search, Download, PlayCircle, StopCircle, PenBox, Check, X, ChevronLeft, ChevronRight } from 'lucide-react'
-import { getDailyAttendanceOverview, clockIn, clockOut, startBreak, endBreak, getAttendanceRequests, resolveAttendanceRequest, createAttendanceRequest, AttendanceRecord } from '@/features/attendance/actions'
+import { getDailyAttendanceOverview, clockIn, clockOut, startBreak, endBreak, getAttendanceRequests, resolveAttendanceRequest, createAttendanceRequest, updateAttendanceDirectly, AttendanceRecord } from '@/features/attendance/actions'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getDiffInMinutes, toKSTISOString, toUTCISOString } from '@/shared/lib/date-utils'
@@ -24,7 +24,7 @@ interface AttendanceClientPageProps {
   storeId: string
   roles: any[]
   staffList: any[]
-  isManager: boolean
+  canManageAttendance: boolean
   currentUserId: string
   initialDate: string
 }
@@ -33,16 +33,16 @@ export function AttendanceClientPage({
   storeId,
   roles,
   staffList,
-  isManager,
+  canManageAttendance,
   currentUserId,
   initialDate
 }: AttendanceClientPageProps) {
   const [selectedDate, setSelectedDate] = useState(initialDate)
-  const [activeTab, setActiveTab] = useState(isManager ? 'live' : 'history')
+  const [activeTab, setActiveTab] = useState(canManageAttendance ? 'live' : 'history')
   const [attendanceData, setAttendanceData] = useState<any[]>([])
 
   useEffect(() => {
-    if (isManager) {
+    if (canManageAttendance) {
       const checkMobile = () => {
         if (window.innerWidth < 768) {
           setActiveTab(prev => prev === 'live' ? 'history' : prev)
@@ -52,15 +52,16 @@ export function AttendanceClientPage({
       window.addEventListener('resize', checkMobile)
       return () => window.removeEventListener('resize', checkMobile)
     }
-  }, [isManager])
+  }, [canManageAttendance])
   const [searchTerm, setSearchTerm] = useState('')
   const [schedulesData, setSchedulesData] = useState<any[]>([])
   const [requestsData, setRequestsData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-  // Request Modal State
+  // Request / Edit Modal State
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false)
+  const [isDirectEditModalOpen, setIsDirectEditModalOpen] = useState(false)
   const [requestDraft, setRequestDraft] = useState({ memberId: '', attendanceId: '', inTime: '', outTime: '', reason: '' })
   const [submitLoading, setSubmitLoading] = useState(false)
 
@@ -123,7 +124,7 @@ export function AttendanceClientPage({
   const managerView = (
     <div className={cn(
       "flex flex-col bg-white md:rounded-xl md:border md:shadow-sm overflow-hidden",
-      isManager ? "h-full" : "h-full"
+      canManageAttendance ? "h-full" : "h-full"
     )}>
       {/* Header / Controls */}
       <div className="flex flex-col md:flex-row justify-between p-3 md:p-4 border-b bg-slate-50/50 shrink-0 gap-3 md:gap-4">
@@ -187,7 +188,7 @@ export function AttendanceClientPage({
       <Tabs value={activeTab} onValueChange={setActiveTab} className={cn("flex flex-col min-h-0", "flex-1")}>
         <div className="px-4 md:px-6 pt-2 md:pt-4 border-b overflow-x-auto no-scrollbar">
           <TabsList className="bg-transparent h-9 md:h-10 p-0 gap-4 md:gap-8 justify-start flex-nowrap w-max min-w-full">
-            {isManager && (
+            {canManageAttendance && (
               <TabsTrigger 
                 value="live" 
                 className="relative rounded-none px-0.5 pb-2 md:pb-3 pt-2 text-sm md:text-base font-semibold text-muted-foreground hover:text-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none outline-none focus-visible:outline-none !shadow-none bg-transparent group whitespace-nowrap hidden md:inline-flex items-center"
@@ -212,11 +213,11 @@ export function AttendanceClientPage({
               className="relative rounded-none px-0.5 pb-2 md:pb-3 pt-2 text-sm md:text-base font-semibold text-muted-foreground hover:text-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none outline-none focus-visible:outline-none !shadow-none bg-transparent group flex items-center whitespace-nowrap"
             >
               <CheckSquare className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1.5 md:mr-2" />
-              <span className="hidden md:inline">{isManager ? "수정 내역 및 관리" : "수정 요청 현황"}</span>
-              <span className="md:hidden">{isManager ? "관리" : "수정요청"}</span>
-              {requestsData.filter(r => r.status === 'pending' && (isManager || r.member_id === myStaff?.id)).length > 0 && (
+              <span className="hidden md:inline">{canManageAttendance ? "수정 내역 및 관리" : "수정 요청 현황"}</span>
+              <span className="md:hidden">{canManageAttendance ? "관리" : "수정요청"}</span>
+              {requestsData.filter(r => r.status === 'pending' && (canManageAttendance || r.member_id === myStaff?.id)).length > 0 && (
                 <Badge variant="destructive" className="ml-1.5 w-4 h-4 md:w-5 md:h-5 flex items-center justify-center p-0 text-[9px] md:text-[10px] rounded-full">
-                  {requestsData.filter(r => r.status === 'pending' && (isManager || r.member_id === myStaff?.id)).length}
+                  {requestsData.filter(r => r.status === 'pending' && (canManageAttendance || r.member_id === myStaff?.id)).length}
                 </Badge>
               )}
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 origin-left transition-transform duration-200 group-data-[state=active]:scale-x-100" />
@@ -227,7 +228,7 @@ export function AttendanceClientPage({
         {/* Tab Contents */}
         <div className={cn("overflow-auto bg-slate-50/30 p-6", "flex-1")}>
           
-          {isManager && (
+          {canManageAttendance && (
             <TabsContent value="live" className="m-0 mt-0 h-full flex flex-col gap-6 outline-none">
               {(() => {
                 const now = new Date()
@@ -326,7 +327,7 @@ export function AttendanceClientPage({
                               }
 
                               const isMe = staff.user_id === currentUserId
-                              const canAction = isMe || isManager
+                              const canAction = isMe || canManageAttendance
 
                               const formatTime = (isoString?: string) => {
                                 if (!isoString) return '-'
@@ -447,7 +448,7 @@ export function AttendanceClientPage({
           <TabsContent value="history" className={cn("m-0 mt-0 flex flex-col outline-none", "h-full")}>
             <div className={cn("bg-white md:rounded-lg md:border-y border-t md:border shadow-none md:shadow-sm overflow-hidden flex flex-col", "flex-1")}>
               <div className="p-4 border-b hidden md:flex items-center justify-between bg-white md:bg-transparent">
-                <h1 className="text-base md:text-2xl font-semibold md:font-bold tracking-tight text-center md:text-left w-full md:w-auto">{isManager ? "전체 출퇴근 기록부" : "출퇴근 관리"}</h1>
+                <h1 className="text-base md:text-2xl font-semibold md:font-bold tracking-tight text-center md:text-left w-full md:w-auto">{canManageAttendance ? "전체 출퇴근 기록부" : "출퇴근 관리"}</h1>
               </div>
               <div className={cn("overflow-auto", "flex-1")}>
                 {/* Desktop View Table */}
@@ -464,7 +465,7 @@ export function AttendanceClientPage({
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {sortedStaffList.filter(s => isManager || s.user_id === currentUserId).map(staff => {
+                    {sortedStaffList.filter(s => canManageAttendance || s.user_id === currentUserId).map(staff => {
                       const roleInfo = getStaffRoleInfo(staff)
                       const attendance = attendanceData.find(a => a.member_id === staff.id)
                       const staffSchedule = schedulesData.find(sch => 
@@ -493,12 +494,12 @@ export function AttendanceClientPage({
                           statusBadge = <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">퇴근 완료</Badge>
                         } else if (attendance.status === 'working') {
                           statusBadge = (
-                            <div className="flex items-center justify-center gap-1.5 border border-emerald-200 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            <div className="inline-flex w-fit mx-auto items-center justify-center gap-1.5 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded-full">
                               <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                               </span>
-                              <span className="font-bold text-xs text-emerald-600">근무 중</span>
+                              <span className="font-bold text-xs text-blue-600">근무 중</span>
                             </div>
                           )
                         }
@@ -546,7 +547,27 @@ export function AttendanceClientPage({
                           <td className="px-4 py-3 text-center font-bold">{totalHours}</td>
                           <td className="px-4 py-3 text-center">{stateBadge}</td>
                           <td className="px-4 py-3 text-center">
-                            {staff.user_id === currentUserId && (
+                            {canManageAttendance ? (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 text-[11px] text-muted-foreground hover:text-primary"
+                                onClick={() => {
+                                  const formatT = (iso?: string | null) => iso ? format(new Date(iso), 'HH:mm') : ''
+                                  setRequestDraft({
+                                    memberId: staff.id,
+                                    attendanceId: attendance?.id || '',
+                                    inTime: formatT(attendance?.clock_in_time) || '09:00',
+                                    outTime: formatT(attendance?.clock_out_time) || '18:00',
+                                    reason: ''
+                                  })
+                                  setIsDirectEditModalOpen(true)
+                                }}
+                              >
+                                <PenBox className="w-3 h-3 mr-1" />
+                                기록 관리
+                              </Button>
+                            ) : staff.user_id === currentUserId ? (
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
@@ -566,7 +587,7 @@ export function AttendanceClientPage({
                                 <PenBox className="w-3 h-3 mr-1" />
                                 수정 요청
                               </Button>
-                            )}
+                            ) : null}
                           </td>
                         </tr>
                       )
@@ -576,7 +597,7 @@ export function AttendanceClientPage({
 
                 {/* Mobile View Card Layout */}
                 <div className="md:hidden flex flex-col gap-4 p-4">
-                  {sortedStaffList.filter(s => isManager || s.user_id === currentUserId).map(staff => {
+                  {sortedStaffList.filter(s => canManageAttendance || s.user_id === currentUserId).map(staff => {
                     const roleInfo = getStaffRoleInfo(staff)
                     const attendance = attendanceData.find(a => a.member_id === staff.id)
                     const staffSchedule = schedulesData.find(sch => 
@@ -605,12 +626,12 @@ export function AttendanceClientPage({
                         statusBadge = <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 text-[9px] px-1.5 h-4 font-normal">퇴근 완료</Badge>
                       } else if (attendance.status === 'working') {
                         statusBadge = (
-                          <div className="flex items-center gap-1 border border-emerald-200 bg-emerald-50 px-1.5 h-4 rounded-full">
+                          <div className="inline-flex w-fit items-center gap-1 border border-blue-200 bg-blue-50 px-1.5 h-4 rounded-full">
                             <span className="relative flex h-1 w-1">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-1 w-1 bg-emerald-500"></span>
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1 w-1 bg-blue-500"></span>
                             </span>
-                            <span className="font-normal text-[9px] text-emerald-600">근무 중</span>
+                            <span className="font-normal text-[9px] text-blue-600">근무 중</span>
                           </div>
                         )
                       }
@@ -669,7 +690,29 @@ export function AttendanceClientPage({
                           </div>
                         </div>
 
-                        {staff.user_id === currentUserId && (
+                        {canManageAttendance ? (
+                          <div className="pt-1">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full h-9 text-xs font-semibold border-primary/30 text-primary hover:bg-primary/5"
+                              onClick={() => {
+                                const formatT = (iso?: string | null) => iso ? format(new Date(iso), 'HH:mm') : ''
+                                setRequestDraft({
+                                  memberId: staff.id,
+                                  attendanceId: attendance?.id || '',
+                                  inTime: formatT(attendance?.clock_in_time) || '09:00',
+                                  outTime: formatT(attendance?.clock_out_time) || '18:00',
+                                  reason: ''
+                                })
+                                setIsDirectEditModalOpen(true)
+                              }}
+                            >
+                              <PenBox className="w-3.5 h-3.5 mr-1.5" />
+                              기록 직접 수정
+                            </Button>
+                          </div>
+                        ) : staff.user_id === currentUserId ? (
                           <div className="pt-1">
                             <Button 
                               variant="outline" 
@@ -691,12 +734,12 @@ export function AttendanceClientPage({
                               내 기록 수정 요청
                             </Button>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     )
                   })}
                 </div>
-                {sortedStaffList.filter(s => isManager || s.user_id === currentUserId).filter(staff => {
+                {sortedStaffList.filter(s => canManageAttendance || s.user_id === currentUserId).filter(staff => {
                     const attendance = attendanceData.find(a => a.member_id === staff.id)
                     const staffSchedule = schedulesData.find(sch => sch.schedule_members?.some((sm: any) => sm.member_id === staff.id) && toKSTISOString(sch.start_time).startsWith(selectedDate))
                     return attendance || staffSchedule
@@ -713,10 +756,10 @@ export function AttendanceClientPage({
           <TabsContent value="requests" className={cn("m-0 mt-0 flex flex-col outline-none", "h-full")}>
             <div className={cn("bg-white md:rounded-lg md:border-y border-t md:border shadow-none md:shadow-sm overflow-hidden flex flex-col", "flex-1")}>
               <div className="p-4 border-b flex items-center justify-center md:justify-between">
-                <h3 className="font-semibold text-base">{isManager ? "출퇴근 시간 수정 요청 관리" : "나의 수정 요청 내역"}</h3>
+                <h3 className="font-semibold text-base">{canManageAttendance ? "출퇴근 시간 수정 요청 관리" : "나의 수정 요청 내역"}</h3>
               </div>
               <div className={cn("bg-slate-50/50 p-4 md:p-6", "flex-1 overflow-auto")}>
-                {requestsData.filter(r => isManager || r.member_id === myStaff?.id).length === 0 ? (
+                {requestsData.filter(r => canManageAttendance || r.member_id === myStaff?.id).length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-muted-foreground p-12 bg-white rounded-xl border border-dashed border-border/50">
                     <CheckSquare className="w-12 h-12 mb-4 opacity-20" />
                     <p>수정 요청 내역이 없습니다.</p>
@@ -724,7 +767,7 @@ export function AttendanceClientPage({
                 ) : (
                   <div className="grid gap-4 max-w-4xl mx-auto">
                     {requestsData
-                      .filter(r => isManager || r.member_id === myStaff?.id)
+                      .filter(r => canManageAttendance || r.member_id === myStaff?.id)
                       .map(req => {
                         const formatT = (iso?: string | null) => iso ? format(new Date(iso), 'HH:mm') : '--:--'
                         
@@ -805,7 +848,7 @@ export function AttendanceClientPage({
                               </div>
                             </div>
 
-                            {req.status === 'pending' && isManager ? (
+                            {req.status === 'pending' && canManageAttendance ? (
                               <div className="flex gap-2 justify-end mt-1">
                                 <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20 h-8 md:h-9 text-xs" disabled={actionLoading === req.id} onClick={() => handleResolve(false)}>
                                   <X className="w-3.5 h-3.5 mr-1" /> 반려
@@ -832,6 +875,84 @@ export function AttendanceClientPage({
 
         </div>
       </Tabs>
+
+      {/* Direct Edit Modal for Managers */}
+      <Dialog open={isDirectEditModalOpen} onOpenChange={setIsDirectEditModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>출퇴근 기록 강제 수정</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label className="text-sm font-medium text-foreground">출근 시각</Label>
+                <TimePicker 
+                  value={requestDraft.inTime} 
+                  onChange={(val) => {
+                    setRequestDraft(prev => {
+                      const newOutTime = val > prev.outTime ? val : prev.outTime;
+                      return { ...prev, inTime: val, outTime: newOutTime };
+                    });
+                  }} 
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-sm font-medium text-foreground">퇴근 시각</Label>
+                <TimePicker 
+                  value={requestDraft.outTime} 
+                  onChange={(val) => {
+                    setRequestDraft(prev => {
+                      const newInTime = val < prev.inTime ? val : prev.inTime;
+                      return { ...prev, outTime: val, inTime: newInTime };
+                    });
+                  }} 
+                />
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground bg-amber-50 text-amber-800 p-3 rounded-md border border-amber-200">
+              * 관리자 권한으로 기록을 즉시 변경합니다.<br />
+              * 직원의 별도 승인이 필요하지 않습니다.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDirectEditModalOpen(false)}>취소</Button>
+            <Button 
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={submitLoading}
+              onClick={async () => {
+                setSubmitLoading(true)
+                try {
+                  const reqIn = requestDraft.inTime ? toUTCISOString(selectedDate, requestDraft.inTime) : null
+                  const reqOut = requestDraft.outTime ? toUTCISOString(selectedDate, requestDraft.outTime) : null
+                  
+                  const res = await updateAttendanceDirectly(
+                    storeId, 
+                    requestDraft.memberId, 
+                    selectedDate, 
+                    reqIn, 
+                    reqOut, 
+                    requestDraft.attendanceId
+                  )
+                  
+                  if (res.error) {
+                    toast.error(res.error)
+                  } else {
+                    toast.success('기록이 수정되었습니다.')
+                    setIsDirectEditModalOpen(false)
+                    fetchData()
+                  }
+                } catch(e) {
+                  toast.error('오류가 발생했습니다.')
+                } finally {
+                  setSubmitLoading(false)
+                }
+              }}
+            >
+              {submitLoading ? '저장 중...' : '저장하기'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Request Modal */}
       <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>

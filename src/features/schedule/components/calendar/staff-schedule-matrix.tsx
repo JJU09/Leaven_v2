@@ -22,7 +22,7 @@ interface StaffScheduleMatrixProps {
   activeRoleIds: string[]
   getStaffRoleInfo: (staff: any) => any
   approvedLeaves?: any[]
-  isManager?: boolean
+  canManage?: boolean
   onCellClick: (staff: any, date: Date) => void
   onScheduleClick: (sch: any, staff: any) => void
   onScheduleDrop?: (scheduleId: string, sourceStaffId: string, targetStaffId: string, targetDate: Date) => void
@@ -38,7 +38,7 @@ export function StaffScheduleMatrix({
   activeRoleIds,
   getStaffRoleInfo,
   approvedLeaves = [],
-  isManager = true,
+  canManage = true,
   onCellClick,
   onScheduleClick,
   onScheduleDrop,
@@ -49,16 +49,17 @@ export function StaffScheduleMatrix({
   // 특정 직원의 특정 날짜 스케줄 찾기 (시작 시간 오름차순 정렬)
   const getSchedulesForStaffAndDate = (staffId: string, date: Date) => {
     const schedules = localSchedules.filter(sch => {
-      if (!sch.start_time) return false
-      const parsedDate = new Date(sch.start_time)
+      if (!sch.plan_date) return false
+      const [year, month, day] = sch.plan_date.split('-').map(Number)
+      const parsedDate = new Date(year, month - 1, day)
       if (isNaN(parsedDate.getTime())) return false
       if (!isSameDay(parsedDate, date)) return false
 
-      const hasMember = sch.schedule_members?.some((sm: any) => sm.member_id === staffId)
-      return hasMember
+      // V2 Unified Schema: schedules 테이블이 직접 member_id를 가짐
+      return sch.member_id === staffId
     })
     
-    return schedules.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    return schedules.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
   }
 
   // 필터링 및 정렬된 직원 목록
@@ -134,7 +135,7 @@ export function StaffScheduleMatrix({
                   {/* 우측 일정 영역 */}
                   <div className="flex-1 flex flex-col justify-center min-w-0 relative group">
                     {/* 매니저 권한인 경우 빈 공간에서 추가 아이콘 띄우기 */}
-                    {isManager && daySchedules.length === 0 && (
+                    {canManage && daySchedules.length === 0 && (
                       <div className="absolute inset-y-0 right-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={(e) => {
@@ -155,11 +156,11 @@ export function StaffScheduleMatrix({
                     ) : (
                       <div className="flex flex-col gap-1 w-full">
                         {daySchedules.map((sch) => {
-                        const start = new Date(sch.start_time)
-                        const end = new Date(sch.end_time)
+                        const start = sch.start_time?.includes('T') ? new Date(sch.start_time) : new Date(`${sch.plan_date}T${sch.start_time}`)
+                        const end = sch.end_time?.includes('T') ? new Date(sch.end_time) : new Date(`${sch.plan_date}T${sch.end_time}`)
                         
                         const isActuallyOnLeave = approvedLeaves.some((leave: any) => {
-                          const schDateOnly = format(new Date(sch.start_time), 'yyyy-MM-dd')
+                          const schDateOnly = sch.plan_date
                           return leave.member_id === staff.id && 
                                  schDateOnly >= leave.start_date && 
                                  schDateOnly <= leave.end_date
@@ -167,15 +168,15 @@ export function StaffScheduleMatrix({
 
                         const currentType = isActuallyOnLeave ? 'leave' : sch.schedule_type
                         const isLeave = currentType === 'leave'
-                        const scheduleColor = isLeave ? '#64748b' : (sch.color || roleColor)
-                        
-                        const typeLabelMap: Record<string, string> = {
-                          'regular': '근무',
-                          'leave': '휴가',
-                          'training': '교육',
-                          'etc': '기타'
-                        }
-                        const displayTitle = typeLabelMap[currentType] || sch.title || '근무'
+                                const scheduleColor = isLeave ? '#64748b' : roleColor
+                                
+                                const typeLabelMap: Record<string, string> = {
+                                  'regular': '근무',
+                                  'leave': '휴가',
+                                  'training': '교육',
+                                  'etc': '기타'
+                                }
+                                const displayTitle = typeLabelMap[currentType] || '근무'
 
                           return (
                             <div 
@@ -204,17 +205,13 @@ export function StaffScheduleMatrix({
                                 </span>
                               </div>
 
-                              {/* 우측 시간 (또는 메모) */}
+                              {/* 우측 시간 */}
                               <div className="shrink-0 flex items-center">
-                                {!isLeave ? (
+                                {!isLeave && (
                                   <span className="text-[11px] font-medium leading-none" style={{ color: scheduleColor }}>
                                     {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
                                   </span>
-                                ) : sch.memo && sch.memo !== '자동 생성됨' ? (
-                                  <span className="text-[10px] text-slate-500 truncate max-w-[80px] leading-none">
-                                    {sch.memo}
-                                  </span>
-                                ) : null}
+                                )}
                               </div>
                             </div>
                           )
@@ -287,16 +284,16 @@ export function StaffScheduleMatrix({
                         <td 
                           key={date.toISOString()} 
                           onDragOver={(e) => {
-                            if (!isManager) return
+                            if (!canManage) return
                             e.preventDefault()
                             e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)'
                           }}
                           onDragLeave={(e) => {
-                            if (!isManager) return
+                            if (!canManage) return
                             e.currentTarget.style.backgroundColor = ''
                           }}
                           onDrop={(e) => {
-                            if (!isManager) return
+                            if (!canManage) return
                             e.preventDefault()
                             e.currentTarget.style.backgroundColor = ''
                             try {
@@ -316,14 +313,14 @@ export function StaffScheduleMatrix({
                           <div className="flex flex-col h-full min-h-[40px] pointer-events-none *:pointer-events-auto">
                             <div className="flex flex-col gap-1.5">
                               {daySchedules.map(sch => {
-                                const start = new Date(sch.start_time)
-                                const end = new Date(sch.end_time)
+                                const start = sch.start_time?.includes('T') ? new Date(sch.start_time) : new Date(`${sch.plan_date}T${sch.start_time}`)
+                                const end = sch.end_time?.includes('T') ? new Date(sch.end_time) : new Date(`${sch.plan_date}T${sch.end_time}`)
                                 
                                 // [기획자 핵심 로직] SSOT 기반 휴가 실시간 렌더링
                                 const isActuallyOnLeave = approvedLeaves.some((leave: any) => {
                                   // leave_requests의 start_date, end_date는 "YYYY-MM-DD" 문자열임
                                   // sch.start_time은 UTC ISO 문자열임. 비교를 위해 날짜만 추출
-                                  const schDateOnly = format(new Date(sch.start_time), 'yyyy-MM-dd');
+                                  const schDateOnly = sch.plan_date;
                                   return leave.member_id === staff.id && 
                                          schDateOnly >= leave.start_date && 
                                          schDateOnly <= leave.end_date;
@@ -351,9 +348,9 @@ export function StaffScheduleMatrix({
                                     <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div 
-                                        draggable={isManager && !isLeave}
+                                        draggable={canManage && !isLeave}
                                         onDragStart={(e) => {
-                                          if (!isManager || isLeave) return
+                                          if (!canManage || isLeave) return
                                           e.dataTransfer.setData('text/plain', JSON.stringify({
                                             scheduleId: sch.id,
                                             sourceStaffId: staff.id
@@ -370,7 +367,7 @@ export function StaffScheduleMatrix({
                                         className={cn(
                                           "px-2 py-1.5 rounded-md text-[11px] font-medium transition-all hover:scale-[1.02] shadow-sm border border-black/5 text-left cursor-pointer flex flex-col justify-center",
                                           isLeave ? "h-full min-h-[50px] items-center text-center opacity-90 hover:opacity-100" : "",
-                                          isManager && !isLeave ? "active:cursor-grabbing cursor-grab" : ""
+                                          canManage && !isLeave ? "active:cursor-grabbing cursor-grab" : ""
                                         )}
                                         style={{ 
                                           backgroundColor: hexToRgba(scheduleColor, isLeave ? 0.15 : 0.1), 
@@ -378,17 +375,17 @@ export function StaffScheduleMatrix({
                                           borderLeft: isLeave ? 'none' : `3px solid ${scheduleColor}`
                                         }}
                                       >
-                                        {!isLeave && (
-                                          <div className="font-semibold text-[10px] opacity-70 mb-0.5" style={{ color: scheduleColor }}>
-                                            {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
-                                          </div>
-                                        )}
+                                          {!isLeave && (
+                                            <div className="font-semibold text-[10px] opacity-70 mb-0.5" style={{ color: scheduleColor }}>
+                                              {sch.start_time?.substring(0, 5)} - {sch.end_time?.substring(0, 5)}
+                                            </div>
+                                          )}
                                         <div className={cn("truncate text-[#1a1a1a]", isLeave && "font-bold text-[12px] tracking-wide")} style={isLeave ? { color: scheduleColor } : {}}>
                                           {displayTitle}
                                         </div>
                                       </div>
                                     </TooltipTrigger>
-                                    {!isLeave ? (
+                                    {!isLeave && (
                                       <TooltipContent side="top" className="p-3 max-w-[250px] bg-white border border-black/10 shadow-lg text-[#1a1a1a]">
                                         <div className="font-semibold text-[12px] mb-2 border-b border-black/5 pb-1 flex justify-between items-center">
                                           <span>세부 할 일 ({(sch.tasks || []).length}개)</span>
@@ -416,12 +413,7 @@ export function StaffScheduleMatrix({
                                           )}
                                         </div>
                                       </TooltipContent>
-                                    ) : (
-                                      <TooltipContent side="top" className="p-3 max-w-[250px] bg-white border border-black/10 shadow-lg text-[#1a1a1a]">
-                                        <div className="font-bold text-[12px] mb-1">{displayTitle}</div>
-                                        {sch.memo && <div className="text-[11px] text-muted-foreground">{sch.memo}</div>}
-                                        </TooltipContent>
-                                      )}
+                                    )}
                                     </Tooltip>
                                   </TooltipProvider>
                                 )
@@ -429,7 +421,7 @@ export function StaffScheduleMatrix({
                             </div>
                             
                             {/* 빈 공간 클릭을 위한 영역 & Hover Plus Icon */}
-                            {isManager && (
+                            {canManage && (
                               <div 
                                 className={cn(
                                   "h-0 group-hover/cell:h-8 group-hover/cell:mt-1 relative rounded-md transition-all duration-200 overflow-hidden bg-black/[0.02] hover:bg-black/[0.04] cursor-pointer group/add-btn"

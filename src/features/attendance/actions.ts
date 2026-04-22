@@ -295,6 +295,7 @@ export async function getAttendanceRequests(storeId: string, _ts?: number) {
       ),
       attendance:store_attendance(
         id,
+        target_date,
         clock_in_time,
         clock_out_time,
         status
@@ -309,6 +310,58 @@ export async function getAttendanceRequests(storeId: string, _ts?: number) {
   }
 
   return data as any[]
+}
+
+export async function updateAttendanceDirectly(
+  storeId: string,
+  memberId: string,
+  targetDate: string,
+  clockInTime: string | null,
+  clockOutTime: string | null,
+  attendanceId?: string
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { error: '인증되지 않은 사용자입니다.' }
+
+  try {
+    await requirePermission(user.id, storeId, 'manage_schedule')
+  } catch {
+    return { error: '출퇴근 기록을 직접 수정할 권한이 없습니다.' }
+  }
+
+  const now = getCurrentISOString()
+
+  if (attendanceId) {
+    const { error } = await supabase
+      .from('store_attendance')
+      .update({
+        clock_in_time: clockInTime,
+        clock_out_time: clockOutTime,
+        status: clockOutTime ? 'completed' : 'working',
+        updated_at: now
+      })
+      .eq('id', attendanceId)
+      
+    if (error) return { error: '기록 업데이트 중 오류가 발생했습니다: ' + error.message }
+  } else {
+    const { error } = await supabase
+      .from('store_attendance')
+      .insert({
+        store_id: storeId,
+        member_id: memberId,
+        target_date: targetDate,
+        clock_in_time: clockInTime,
+        clock_out_time: clockOutTime,
+        status: clockOutTime ? 'completed' : 'working'
+      })
+      
+    if (error) return { error: '새 출퇴근 기록 생성 중 오류가 발생했습니다: ' + error.message }
+  }
+
+  revalidatePath('/dashboard/attendance')
+  return { success: true }
 }
 
 export async function createAttendanceRequest(

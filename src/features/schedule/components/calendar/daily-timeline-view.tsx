@@ -12,7 +12,7 @@ interface DailyTimelineViewProps {
   activeRoleIds: string[]
   getStaffRoleInfo: (staff: any) => any
   approvedLeaves: any[]
-  isManager: boolean
+  canManage: boolean
   onCellClick: (staff: any, date: Date, hour: number) => void
   onScheduleClick: (sch: any, staff: any) => void
   onScheduleCreateDrag?: (staffId: string, date: Date, startTimeStr: string, endTimeStr: string) => void
@@ -47,7 +47,7 @@ export function DailyTimelineView({
   activeRoleIds,
   getStaffRoleInfo,
   approvedLeaves,
-  isManager,
+  canManage,
   onCellClick,
   onScheduleClick,
   onScheduleCreateDrag,
@@ -250,7 +250,7 @@ export function DailyTimelineView({
               const roleInfo = getStaffRoleInfo(staff)
               const roleColor = roleInfo?.color || '#534AB7'
               const staffSchedules = localSchedules.filter(sch => 
-                sch.schedule_members?.some((sm: any) => sm.member_id === staff.id) &&
+                sch.member_id === staff.id &&
                 (isSameDay(new Date(sch.start_time), currentDate) || isSameDay(new Date(sch.end_time), currentDate))
               )
 
@@ -287,7 +287,7 @@ export function DailyTimelineView({
                     id={`track-${staff.id}`}
                     className="flex flex-1 relative min-w-0"
                     onMouseDown={(e) => {
-                      if (!isManager || isStaffOnLeave) return
+                      if (!canManage || isStaffOnLeave) return
                       // Only trigger create on background grid
                       if ((e.target as HTMLElement).id === `track-${staff.id}` || (e.target as HTMLElement).classList.contains('bg-grid-cell')) {
                         const rect = e.currentTarget.getBoundingClientRect()
@@ -348,7 +348,7 @@ export function DailyTimelineView({
                       const pos = getSchedulePosition(sch)
                       if (!pos) return null
 
-                      const sRoleColor = sch.color || roleColor
+                      const sRoleColor = roleColor
 
                       // Moving/Resizing styles
                       const isInteractingThis = interactionState?.scheduleId === sch.id
@@ -394,7 +394,7 @@ export function DailyTimelineView({
                             transition: isInteractingThis ? 'none' : 'left 0.2s, width 0.2s, background-color 0.2s'
                           }}
                           onMouseDown={(e) => {
-                            if (!isManager) return
+                            if (!canManage) return
                             e.stopPropagation()
                             const rect = document.getElementById(`track-${staff.id}`)?.getBoundingClientRect()
                             if (!rect) return
@@ -417,14 +417,14 @@ export function DailyTimelineView({
                           }}
                         >
                           <div className="text-[10px] font-bold truncate leading-tight select-none">
-                            {sch.title || '근무'}
+                            {sch.schedule_type === 'leave' ? '휴가' : sch.schedule_type === 'training' ? '교육' : sch.schedule_type === 'etc' ? '기타' : '근무'}
                           </div>
                           <div className="text-[9px] opacity-80 truncate leading-tight hidden md:block select-none">
                             {format(new Date(sch.start_time), 'HH:mm')} - {format(new Date(sch.end_time), 'HH:mm')}
                           </div>
 
                           {/* Resize Handles */}
-                          {isManager && !isInteractingThis && (
+                          {canManage && !isInteractingThis && (
                             <>
                               <div 
                                 className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-black/10 transition-colors opacity-0 group-hover/sch:opacity-100"

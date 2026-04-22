@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { TimePicker } from '@/components/ui/time-picker'
 import { toast } from 'sonner'
 import { updateSchedule, deleteSchedule, createSchedule } from '@/features/schedule/actions'
-import { createTask, assignTask, deleteTask, updateTaskAssignment, toggleTaskCheckitem, createDirectScheduleTask } from '@/features/schedule/task-actions'
+import { createTask, assignTask, deleteTask, updateTask, toggleTaskCheckitem, createDirectScheduleTask } from '@/features/schedule/task-actions'
 import { useRouter } from 'next/navigation'
 import { Pencil, Trash2 } from 'lucide-react'
 import { toKSTISOString, toUTCISOString, addMinutesToTime } from '@/shared/lib/date-utils'
@@ -303,10 +303,8 @@ export function ScheduleDetailPanel({
           ...s,
           start_time: new Date(`${newSchedule.editDate}T${newSchedule.editStartTime}:00`).toISOString(),
           end_time: endDateTime.toISOString(),
-          schedule_members: [{ member_id: newSchedule.editStaffId }],
-          schedule_type: newSchedule.scheduleType || newSchedule.schedule_type,
-          title: newSchedule.title,
-          color: newSchedule.color
+          member_id: newSchedule.editStaffId,
+          schedule_type: newSchedule.scheduleType || newSchedule.schedule_type
         }
       }
       return s
@@ -322,8 +320,6 @@ export function ScheduleDetailPanel({
       formData.append('date', newSchedule.editDate)
       formData.append('startTime', newSchedule.editStartTime)
       formData.append('endTime', newSchedule.editEndTime)
-      formData.append('title', newSchedule.title || '근무')
-      formData.append('color', newSchedule.color || '')
       formData.append('schedule_type', newSchedule.scheduleType || newSchedule.schedule_type || 'regular')
       
       const res = await updateSchedule(storeId, newSchedule.id, formData)
@@ -353,7 +349,7 @@ export function ScheduleDetailPanel({
   if (!state) return null
 
   // 공통 변수 계산
-  const targetStaffId = isCreate ? state.staffId : (state.editStaffId || state.schedule_members?.[0]?.member_id)
+  const targetStaffId = isCreate ? state.staffId : (state.editStaffId || state.member_id)
   const targetStaff = staffList.find(s => s.id === targetStaffId)
   const targetDate = isCreate ? state.date : state.editDate
   const targetStartTime = isCreate ? state.startTime : state.editStartTime
@@ -379,7 +375,7 @@ export function ScheduleDetailPanel({
         const schDateStr = `${yy}-${mm}-${dd}`
         
         if (schDateStr !== targetDate) return false;
-        return sch.schedule_members?.some((sm: any) => sm.member_id === targetStaffId);
+        return sch.member_id === targetStaffId;
       })
       .map(sch => {
         const startObj = new Date(sch.start_time)
@@ -480,9 +476,9 @@ export function ScheduleDetailPanel({
                       'regular': '근무', 'leave': '휴가', 'training': '교육', 'etc': '기타'
                     }
                     if (isCreate) {
-                      if (setCreateForm) setCreateForm({ ...createForm, scheduleType: val, title: typeLabelMap[val] || '근무' })
+                      if (setCreateForm) setCreateForm({ ...createForm, scheduleType: val })
                     } else {
-                      handleFieldsChange({ schedule_type: val, scheduleType: val, title: typeLabelMap[val] || '근무' })
+                      handleFieldsChange({ schedule_type: val, scheduleType: val })
                     }
                   }}
                 >
@@ -578,7 +574,6 @@ export function ScheduleDetailPanel({
                     formData.append('date', createForm.date)
                     formData.append('startTime', createForm.startTime)
                     formData.append('endTime', createForm.endTime)
-                    formData.append('title', createForm.title || '근무')
                     formData.append('schedule_type', createForm.scheduleType || 'regular')
 
                     const res = await createSchedule(storeId, formData)
@@ -587,22 +582,19 @@ export function ScheduleDetailPanel({
                       return
                     }
 
-                    const typeLabelMap: Record<string, string> = {
-                      'regular': '근무', 'leave': '휴가', 'training': '교육', 'etc': '기타'
-                    }
-                    const displayTitle = typeLabelMap[createForm.scheduleType || 'regular'] || createForm.title || '근무'
-                    
                     const newSchedule = {
                       id: `temp-${Date.now()}`,
                       start_time: startStr,
                       end_time: endStr,
-                      title: displayTitle,
                       schedule_type: createForm.scheduleType || 'regular',
-                      schedule_members: [{ member_id: createForm.staffId }],
-                      task_assignments: []
+                      member_id: createForm.staffId,
+                      plan_date: createForm.date,
+                      task_assignments: [],
+                      tasks: []
                     }
                     
-                    setLocalSchedules(prev => [...prev, newSchedule])
+                    // Optimistic Update
+                    setLocalSchedules(prev => [...prev.filter(s => s.id !== newSchedule.id), newSchedule])
                     toast.success('스케줄이 추가되었습니다.')
                     onClose()
                     router.refresh()
@@ -740,18 +732,13 @@ export function ScheduleDetailPanel({
                           .filter(c => c.text.trim() !== '')
                           .map(c => ({ id: c.id, text: c.text.trim(), is_completed: c.is_completed }))
 
-                        const res = await updateTaskAssignment(
-                          t.id, 
-                          t.id, 
-                          storeId, 
-                          editTaskDraft.title, 
-                          startTimeToUse,
-                          30
-                        );
-                        
-                        const { createClient } = await import('@/lib/supabase/client')
-                        const supabase = createClient()
-                        await supabase.from('tasks').update({ checklist: finalChecklist }).eq('id', t.id)
+                        const res = await updateTask({
+                          id: t.id,
+                          title: editTaskDraft.title,
+                          start_time: startTimeToUse,
+                          task_type: editTaskDraft.hasTime ? 'scheduled' : 'always',
+                          checklist: finalChecklist
+                        });
 
                         if (res.error) {
                           toast.dismiss(loadingToast)
@@ -1046,13 +1033,17 @@ export function ScheduleDetailPanel({
                            is_completed: false
                         }))
 
+                      // 로컬 타임 문자열 생성
+                      const taskStartLocal = assignStartTime ? `${selectedSchedule.editDate}T${assignStartTime}:00` : null;
+                      const taskEndLocal = assignStartTime ? `${selectedSchedule.editDate}T${addMinutesToTime(assignStartTime, 30)}:00` : null;
+
                       // 바로 스케줄과 연결되는 개별 업무로 생성 (is_template = false)
                       const result = await createDirectScheduleTask({
                         store_id: storeId,
                         title: newTaskDraft.title,
                         task_type: newTaskDraft.hasTime ? 'scheduled' : 'always',
-                        start_time: assignStartTime ? toUTCISOString(selectedSchedule.editDate, assignStartTime) : null,
-                        end_time: assignStartTime ? toUTCISOString(selectedSchedule.editDate, addMinutesToTime(assignStartTime, 30)) : null,
+                        start_time: taskStartLocal,
+                        end_time: taskEndLocal,
                         estimated_minutes: 30,
                         checklist: finalChecklist,
                         staff_id: targetStaffId,

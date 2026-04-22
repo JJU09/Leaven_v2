@@ -20,7 +20,7 @@ interface MonthlyCalendarViewProps {
   activeRoleIds: string[]
   getStaffRoleInfo: (staff: any) => any
   approvedLeaves?: any[]
-  isManager?: boolean
+  canManage?: boolean
   onDateClick: (date: Date) => void
   onScheduleClick: (sch: any, staff: any) => void
   onScheduleDrop?: (scheduleId: string, sourceStaffId: string, targetStaffId: string, targetDate: Date) => void
@@ -34,7 +34,7 @@ export function MonthlyCalendarView({
   activeRoleIds,
   getStaffRoleInfo,
   approvedLeaves = [],
-  isManager = true,
+  canManage = true,
   onDateClick,
   onScheduleClick,
   onScheduleDrop
@@ -58,12 +58,14 @@ export function MonthlyCalendarView({
   // 특정 날짜 스케줄 찾기 (직급 우선순위 > 이름 가나다순 > 시작 시간 오름차순 정렬)
   const getSchedulesForDate = (date: Date) => {
     const schedules = localSchedules.filter(sch => {
-      if (!sch.start_time) return false
-      const parsedDate = new Date(sch.start_time)
+      if (!sch.plan_date) return false
+      // 문자열 "YYYY-MM-DD"을 KST(또는 로컬 타임) 기준으로 명확히 파싱
+      const [year, month, day] = sch.plan_date.split('-').map(Number)
+      const parsedDate = new Date(year, month - 1, day)
       if (isNaN(parsedDate.getTime())) return false
       if (!isSameDay(parsedDate, date)) return false
 
-      const staffId = sch.schedule_members?.[0]?.member_id
+      const staffId = sch.member_id
       const staff = staffList.find(s => s.id === staffId)
       if (!staff) return false
 
@@ -76,8 +78,8 @@ export function MonthlyCalendarView({
     })
 
     return schedules.sort((a, b) => {
-      const staffAId = a.schedule_members?.[0]?.member_id
-      const staffBId = b.schedule_members?.[0]?.member_id
+      const staffAId = a.member_id
+      const staffBId = b.member_id
       const staffA = staffList.find(s => s.id === staffAId)
       const staffB = staffList.find(s => s.id === staffBId)
       
@@ -96,7 +98,8 @@ export function MonthlyCalendarView({
       if (nameSort !== 0) return nameSort
       
       // 3. 시작 시간 (오름차순)
-      return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      // start_time이 "HH:mm:ss" 포맷인 경우를 대비하여 문자열 비교
+      return (a.start_time || '').localeCompare(b.start_time || '')
     })
   }
 
@@ -136,16 +139,16 @@ export function MonthlyCalendarView({
                 <div 
                   key={date.toISOString()} 
                   onDragOver={(e) => {
-                    if (!isManager) return
+                    if (!canManage) return
                     e.preventDefault()
                     e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)'
                   }}
                   onDragLeave={(e) => {
-                    if (!isManager) return
+                    if (!canManage) return
                     e.currentTarget.style.backgroundColor = ''
                   }}
                   onDrop={(e) => {
-                    if (!isManager) return
+                    if (!canManage) return
                     e.preventDefault()
                     e.currentTarget.style.backgroundColor = ''
                     try {
@@ -162,12 +165,12 @@ export function MonthlyCalendarView({
                     "border-r border-black/5 last:border-r-0 p-1 md:p-2 flex flex-col md:gap-1 relative transition-all bg-white",
                     "items-center md:items-stretch justify-start md:justify-start", // 모바일에서는 중앙(가로) 정렬, PC에서는 기존 유지
                     isToday && "bg-primary/[0.03] ring-1 ring-inset ring-primary/20",
-                    isManager ? "group/cell" : ""
+                    canManage ? "group/cell" : ""
                   )}
                   onClick={() => {
                     // 모바일 환경에서 닷(dot) 형태가 눌리기 쉽도록 빈 셀 공간 클릭 시 
                     // 관리자는 추가 모달, 일반 직원은 빈 동작
-                    if (!isManager) return;
+                    if (!canManage) return;
                     // PC 뷰나 빈 영역 클릭 시 
                     const isMobile = window.innerWidth < 768;
                     if (isMobile) onDateClick(date);
@@ -198,13 +201,13 @@ export function MonthlyCalendarView({
                   {/* 스케줄 목록 (모바일 뷰 - Dot 아이콘) */}
                   <div className="flex md:hidden flex-wrap gap-1 mt-0.5 px-1 justify-center">
                     {daySchedules.slice(0, 3).map(sch => {
-                      const staffId = sch.schedule_members?.[0]?.member_id
+                      const staffId = sch.member_id
                       const staff = staffList.find(s => s.id === staffId)
                       const roleInfo = staff ? getStaffRoleInfo(staff) : null
                       const roleColor = roleInfo?.color || '#534AB7'
                       
                       const isActuallyOnLeave = approvedLeaves.some((leave: any) => {
-                        const schDateOnly = format(new Date(sch.start_time), 'yyyy-MM-dd')
+                        const schDateOnly = sch.plan_date
                         return leave.member_id === staffId && 
                                schDateOnly >= leave.start_date && 
                                schDateOnly <= leave.end_date
@@ -212,7 +215,7 @@ export function MonthlyCalendarView({
 
                       const currentType = isActuallyOnLeave ? 'leave' : sch.schedule_type
                       const isLeave = currentType === 'leave'
-                      const scheduleColor = isLeave ? '#64748b' : (sch.color || roleColor)
+                      const scheduleColor = isLeave ? '#64748b' : roleColor
 
                       return (
                         <div 
@@ -232,7 +235,7 @@ export function MonthlyCalendarView({
                   {/* 스케줄 목록 (PC 뷰 - 기존 바(Bar) 형태) */}
                   <div className="hidden md:flex flex-col gap-1 pb-1">
                     {daySchedules.map(sch => {
-                      const staffId = sch.schedule_members?.[0]?.member_id
+                      const staffId = sch.member_id
                       const staff = staffList.find(s => s.id === staffId)
                       const roleInfo = staff ? getStaffRoleInfo(staff) : null
                       const roleColor = roleInfo?.color || '#534AB7'
@@ -240,7 +243,7 @@ export function MonthlyCalendarView({
 
                       // [기획자 핵심 로직] SSOT 기반 휴가 실시간 렌더링
                       const isActuallyOnLeave = approvedLeaves.some((leave: any) => {
-                        const schDateOnly = format(new Date(sch.start_time), 'yyyy-MM-dd');
+                        const schDateOnly = sch.plan_date;
                         return leave.member_id === staffId && 
                                schDateOnly >= leave.start_date && 
                                schDateOnly <= leave.end_date;
@@ -253,7 +256,7 @@ export function MonthlyCalendarView({
                       const isEtc = currentType === 'etc'
                       
                       // 색상 동적 결정: 휴가는 무조건 회색, 나머지는 본래 색상(또는 직급 색상)
-                      const scheduleColor = isLeave ? '#64748b' : (sch.color || roleColor)
+                      const scheduleColor = isLeave ? '#64748b' : roleColor
                       
                       // 타이틀 동적 결정
                       const typeLabelMap: Record<string, string> = {
@@ -263,7 +266,7 @@ export function MonthlyCalendarView({
                         'etc': '기타'
                       }
                       
-                      let displayTitle = isActuallyOnLeave ? '휴가' : (sch.title || '근무')
+                      let displayTitle = isActuallyOnLeave ? '휴가' : (typeLabelMap[currentType] || '근무')
                       
                       if (!isActuallyOnLeave) {
                         if (isTraining && !displayTitle.includes('[교육]')) {
@@ -276,9 +279,9 @@ export function MonthlyCalendarView({
                       return (
                         <div
                           key={sch.id}
-                          draggable={isManager && !isLeave}
+                          draggable={canManage && !isLeave}
                           onDragStart={(e) => {
-                            if (!isManager || isLeave) return
+                            if (!canManage || isLeave) return
                             e.stopPropagation()
                             e.dataTransfer.setData('text/plain', JSON.stringify({
                               scheduleId: sch.id,
@@ -295,18 +298,20 @@ export function MonthlyCalendarView({
                           }}
                           className={cn(
                             "px-1.5 py-1 rounded text-[10px] truncate transition-transform hover:scale-[1.02] cursor-pointer shadow-sm border border-black/5",
-                            isManager && !isLeave && "active:cursor-grabbing cursor-grab"
+                            canManage && !isLeave && "active:cursor-grabbing cursor-grab"
                           )}
                           style={{ 
                             backgroundColor: hexToRgba(scheduleColor, 0.1), 
                             color: '#1a1a1a',
                             borderLeft: `2.5px solid ${scheduleColor}`
                           }}
-                          title={`${safeName} - ${displayTitle}${isLeave && sch.memo ? ` (${sch.memo})` : ''}`}
+                          title={`${safeName} - ${displayTitle}`}
                         >
                           <span className="font-semibold" style={{ color: scheduleColor }}>{safeName}</span> 
                           {!isLeave && (
-                            <span className="opacity-80 ml-1 text-[9px]">{format(new Date(sch.start_time), 'HH:mm')}-{format(new Date(sch.end_time), 'HH:mm')}</span>
+                            <span className="opacity-80 ml-1 text-[9px]">
+                              {sch.start_time?.substring(0, 5)}-{sch.end_time?.substring(0, 5)}
+                            </span>
                           )}
                           {isLeave && (
                             <span className="opacity-80 ml-1 font-medium">{displayTitle}</span>
@@ -317,7 +322,7 @@ export function MonthlyCalendarView({
                   </div>
 
                   {/* 빈 공간 클릭을 위한 영역 & Hover Plus Icon (PC 전용 스타일) */}
-                  {isManager && (
+                  {canManage && (
                     <div 
                       className={cn(
                         "hidden md:block flex-1 h-0 min-h-0 group-hover/cell:h-8 group-hover/cell:min-h-[32px] group-hover/cell:mt-1 relative rounded-md transition-all duration-200 overflow-hidden bg-black/[0.02] hover:bg-black/[0.04] cursor-pointer group/add-btn"

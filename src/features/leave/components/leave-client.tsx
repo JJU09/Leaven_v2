@@ -29,7 +29,7 @@ interface LeaveClientPageProps {
   storeId: string
   roles: any[]
   staffList: any[]
-  isManager: boolean
+  canManage: boolean
   currentUserId: string
   leaveCalcType: 'hire_date' | 'fiscal_year'
 }
@@ -38,7 +38,7 @@ export function LeaveClientPage({
   storeId,
   roles,
   staffList,
-  isManager,
+  canManage,
   currentUserId,
   leaveCalcType
 }: LeaveClientPageProps) {
@@ -92,7 +92,7 @@ export function LeaveClientPage({
     }
   }, [myStaff])
 
-  const pendingCount = isManager 
+  const pendingCount = canManage 
     ? requests.filter(r => r.status === 'pending').length
     : requests.filter(r => r.status === 'pending' && r.member?.user_id === currentUserId).length
 
@@ -332,19 +332,19 @@ export function LeaveClientPage({
           <TabsContent value="requests" className="m-0 mt-0 flex flex-col outline-none h-full min-h-0 flex-1">
             <div className="bg-white md:rounded-lg border shadow-sm flex flex-col h-full overflow-hidden min-h-[calc(100dvh-18rem)] md:min-h-0">
               <div className="p-4 border-b flex items-center justify-between bg-white md:bg-transparent shrink-0">
-                <h1 className="text-base md:text-2xl font-semibold md:font-bold tracking-tight w-full text-center md:text-left">{isManager ? '휴가 및 연차 신청함' : '나의 휴가 신청 내역'}</h1>
+                <h1 className="text-base md:text-2xl font-semibold md:font-bold tracking-tight w-full text-center md:text-left">{canManage ? '휴가 및 연차 신청함' : '나의 휴가 신청 내역'}</h1>
               </div>
               <div className="bg-slate-50/50 p-4 md:p-6 overflow-y-auto no-scrollbar flex-1">
-                {(isManager ? requests : myRequests).length === 0 ? (
+                {(canManage ? requests : myRequests).length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-muted-foreground min-h-[200px] h-full bg-white rounded-xl border border-dashed border-border/50">
                     <FileText className="w-12 h-12 mb-4 opacity-20" />
                     <p>등록된 휴가 신청이 없습니다.</p>
                   </div>
                 ) : (
                   <div className="grid gap-4 max-w-4xl mx-auto pb-6">
-                    {(isManager ? requests : myRequests).map(req => {
+                    {(canManage ? requests : myRequests).map(req => {
                       const handleResolve = async (status: 'approved' | 'rejected') => {
-                        if (!isManager) return
+                        if (!canManage) return
                         if (!window.confirm(`이 휴가를 ${status === 'approved' ? '승인' : '반려'}하시겠습니까?`)) return
                         setActionLoading(req.id)
                         try {
@@ -398,13 +398,13 @@ export function LeaveClientPage({
                             )}
                           </div>
                           <div className="flex gap-2 justify-end mt-2">
-                            {req.status === 'pending' && isManager && (
+                            {req.status === 'pending' && canManage && (
                               <>
                                 <Button variant="outline" className="text-destructive border-destructive/20" disabled={!!actionLoading} onClick={() => handleResolve('rejected')}>반려</Button>
                                 <Button className="bg-[#1D9E75]" disabled={!!actionLoading} onClick={() => handleResolve('approved')}>승인</Button>
                               </>
                             )}
-                            {req.status === 'approved' && isManager && (
+                            {req.status === 'approved' && canManage && (
                               <Button 
                                 variant="outline" 
                                 className="text-muted-foreground border-slate-200 hover:bg-slate-50" 
@@ -423,7 +423,7 @@ export function LeaveClientPage({
                                 승인 취소
                               </Button>
                             )}
-                            {req.status === 'pending' && !isManager && req.member?.user_id === currentUserId && (
+                            {req.status === 'pending' && !canManage && req.member?.user_id === currentUserId && (
                               <Button 
                                 variant="outline" 
                                 className="text-muted-foreground border-slate-200 hover:bg-slate-50" 
@@ -457,7 +457,7 @@ export function LeaveClientPage({
             )}>
               <div className="p-4 border-b flex items-center justify-between bg-white md:bg-transparent shrink-0">
                 <div className="flex flex-col w-full text-center md:text-left">
-                  <h1 className="text-base md:text-2xl font-semibold md:font-bold tracking-tight">{isManager ? '직원별 잔여 연차 관리' : '나의 잔여 연차 정보'}</h1>
+                  <h1 className="text-base md:text-2xl font-semibold md:font-bold tracking-tight">{canManage ? '직원별 잔여 연차 관리' : '나의 잔여 연차 정보'}</h1>
                   <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">산정 방식: <span className="font-semibold text-foreground">{leaveCalcType === 'hire_date' ? '입사일 기준' : '회계연도 기준'}</span></p>
                 </div>
               </div>
@@ -474,7 +474,7 @@ export function LeaveClientPage({
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {staffList.filter(s => isManager || s.user_id === currentUserId).map(staff => {
+                    {staffList.filter(s => canManage || s.user_id === currentUserId).map(staff => {
                       const roleInfo = getStaffRoleInfo(staff)
                       if (staff.role === 'owner' || (roleInfo && roleInfo.hierarchy_level >= 100)) return null
                       const balance = balances.find(b => b.member_id === staff.id)
@@ -512,7 +512,7 @@ export function LeaveClientPage({
 
                 {/* Mobile View Card Layout */}
                 <div className="md:hidden divide-y">
-                  {staffList.filter(s => isManager || s.user_id === currentUserId).map(staff => {
+                  {staffList.filter(s => canManage || s.user_id === currentUserId).map(staff => {
                     const roleInfo = getStaffRoleInfo(staff)
                     if (staff.role === 'owner' || (roleInfo && roleInfo.hierarchy_level >= 100)) return null
                     const balance = balances.find(b => b.member_id === staff.id)
@@ -587,7 +587,7 @@ export function LeaveClientPage({
           </DialogHeader>
 
           <div className="px-5 py-3 flex flex-col gap-3 text-sm max-h-[70vh] overflow-y-auto no-scrollbar">
-            {isManager ? (
+            {canManage ? (
               <div className="flex flex-col gap-1">
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">대상 직원</Label>
                 <Select value={requestDraft.memberId} onValueChange={(v) => setRequestDraft(prev => ({...prev, memberId: v}))}>

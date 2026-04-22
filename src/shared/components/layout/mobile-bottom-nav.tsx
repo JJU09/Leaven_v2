@@ -20,7 +20,7 @@ interface MobileBottomNavProps {
 export function MobileBottomNav({ role, permissions = {} }: MobileBottomNavProps) {
   const pathname = usePathname()
   
-  const isManager = role === 'owner' || role === 'manager'
+  const canManage = role === 'owner' || role === 'manager'
 
   const navItems = [
     {

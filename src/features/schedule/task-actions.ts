@@ -832,6 +832,7 @@ export async function createPersonalDashboardTask(input: {
 }
 
 // 캘린더용 이벤트 조회
+// 캘린더용 이벤트 조회
 export async function getCalendarEvents(storeId: string, start: string, end: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

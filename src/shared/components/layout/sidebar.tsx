@@ -55,7 +55,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname()
 
-  const isManager = role === 'owner' || role === 'manager'
+  const canManage = role === 'owner' || role === 'manager'
 
   const navGroups = [
     {

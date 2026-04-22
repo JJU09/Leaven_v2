@@ -36,10 +36,10 @@ interface Announcement {
 interface AnnouncementListProps {
   storeId: string
   announcements: Announcement[]
-  isManager: boolean
+  canManage: boolean
 }
 
-export function AnnouncementList({ storeId, announcements, isManager }: AnnouncementListProps) {
+export function AnnouncementList({ storeId, announcements, canManage }: AnnouncementListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingData, setEditingData] = useState<Announcement | null>(null)
   
@@ -90,7 +90,7 @@ export function AnnouncementList({ storeId, announcements, isManager }: Announce
           <Megaphone className="h-5 w-5 text-primary" />
           매장 공지사항
         </CardTitle>
-        {isManager && (
+        {canManage && (
           <Button size="sm" onClick={handleCreate} className="h-8">
             <Plus className="h-4 w-4 mr-1" /> 작성
           </Button>
@@ -119,7 +119,7 @@ export function AnnouncementList({ storeId, announcements, isManager }: Announce
                     <h4 className="font-semibold text-sm leading-none">{announcement.title}</h4>
                   </div>
                   
-                  {isManager && (
+                  {canManage && (
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 -mt-1 -mr-1">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(announcement)}>
                         <Edit2 className="h-3.5 w-3.5" />

@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { TimePicker } from '@/components/ui/time-picker'
 import { getTodayDateString } from '@/shared/lib/date-utils'
-import { createPersonalDashboardTask } from '../task-actions'
+import { createPersonalDashboardTask } from '../../task-actions'
 import { toast } from 'sonner'
 import { Loader2, Plus, X } from 'lucide-react'
 
