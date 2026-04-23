@@ -79,8 +79,7 @@ export default async function RolesPage() {
   // Fetch Roles, Permissions, and Task Templates
   const roles = await getStoreRoles(store.id)
   const permissions = await getStorePermissions()
-  const taskTemplates = await getTaskTemplates(store.id)
-  
+
   const isMigrationNeeded = roles.length === 0 && permissions.length > 0 ? false : (roles.length === 0 || permissions.length === 0)
 
   return (
@@ -103,11 +102,9 @@ export default async function RolesPage() {
         </div>
       ) : (
         <div className="flex-1 bg-white border rounded-xl overflow-hidden shadow-sm">
-          <UnifiedRoleManagement 
-            storeId={store.id} 
-            roles={roles} 
-            permissions={permissions} 
-            taskTemplates={taskTemplates}
+          <UnifiedRoleManagement
+            storeId={store.id}
+            roles={roles}
           />
         </div>
       )}

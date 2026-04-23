@@ -146,14 +146,14 @@ export function Sidebar({
         {
           title: '비품/자산 관리',
           href: '/dashboard/assets',
-          icon: Building2,
-          isUpcoming: true
+          icon: Package2,
+          isUpcoming: false
         },
         {
           title: '거래처 관리',
-          href: '/dashboard/partners',
-          icon: Handshake,
-          isUpcoming: true
+          href: '/dashboard/vendors',
+          icon: Building2,
+          isUpcoming: false
         }
       ]
     },
@@ -170,7 +170,7 @@ export function Sidebar({
           title: '운영 정책 설정',
           href: '/dashboard/policies',
           icon: Sliders,
-          isUpcoming: true
+          isUpcoming: false
         },
         ...(permissions.manage_roles || role === 'owner' ? [{
           title: '직급 및 권한 설정',

@@ -1,51 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { cache } from 'react'
 
-export type PermissionCode =
-  // 📦 매장 및 시스템
-  | 'manage_store'
-  | 'manage_roles'
-  | 'view_dashboard'
-  // 👥 인사 및 근로
-  | 'view_staff'
-  | 'manage_staff'
-  | 'view_salary'
-  | 'manage_payroll'
-  // ⏰ 일정 및 근태
-  | 'view_schedule'
-  | 'manage_schedule'
-  | 'view_attendance'
-  | 'manage_attendance'
-  | 'view_leave'
-  | 'manage_leave'
-  // 📊 운영 및 업무
-  | 'view_tasks'
-  | 'manage_tasks'
-  | 'view_sales'
-  | 'manage_inventory'
-  | 'manage_menu'
-  // 📢 공지사항
-  | 'view_announcements'
-  | 'manage_announcements'
-
-export const DEFAULT_ROLE_PERMISSIONS: Record<string, PermissionCode[]> = {
-  점주: [
-    'manage_store', 'manage_roles', 'view_dashboard', 
-    'view_staff', 'manage_staff', 'view_salary', 'manage_payroll',
-    'view_schedule', 'manage_schedule', 'view_attendance', 'manage_attendance',
-    'view_leave', 'manage_leave', 'view_tasks', 'manage_tasks',
-    'view_sales', 'manage_inventory', 'manage_menu',
-    'view_announcements', 'manage_announcements'
-  ],
-  매니저: [
-    'view_dashboard', 'view_staff', 'view_schedule', 'manage_schedule',
-    'view_attendance', 'manage_attendance', 'view_leave', 'manage_leave', 'view_tasks', 'manage_tasks',
-    'view_announcements', 'manage_announcements'
-  ],
-  직원: [
-    'view_staff', 'view_schedule', 'view_attendance', 'view_leave', 'view_tasks', 'view_announcements'
-  ]
-}
+export * from './permissions.constants'
+import { PermissionCode } from './permissions.constants'
 
 // 캐싱을 통해 동일한 요청 내에서 중복 DB 조회를 방지
 export const getStoreMemberRole = cache(async (userId: string, storeId: string) => {

@@ -1,3 +1,8 @@
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null) return '0원'
+  return amount.toLocaleString('ko-KR') + '원'
+}
+
 export function formatPhoneNumber(phone: string | null | undefined): string {
   if (!phone) return ''
 
