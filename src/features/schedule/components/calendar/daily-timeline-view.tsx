@@ -225,21 +225,35 @@ export function DailyTimelineView({
             
             {/* Hours */}
             <div className="flex flex-1 relative min-w-0">
-              {hours.slice(0, -1).map((hour, index) => (
-                <div 
-                  key={`header-${hour}`} 
-                  className="flex-1 flex items-end border-r border-black/5 relative h-8"
-                >
-                  <span className={`absolute bottom-1 text-[9px] lg:text-[10px] text-[#6b6b6b] whitespace-nowrap bg-[#fbfbfb] px-0.5 z-10 ${index === 0 ? 'left-1' : 'left-0 transform -translate-x-1/2'}`}>
-                    {formatTimeStr(hour)}
-                  </span>
-                </div>
-              ))}
+              {hours.slice(0, -1).map((hour, index) => {
+                const timeStr = formatTimeStr(hour);
+                const isEdgeZero = (index === 0 && timeStr === '00:00');
+                return (
+                  <div 
+                    key={`header-${hour}`} 
+                    className="flex-1 flex items-end border-r border-black/5 relative h-8"
+                  >
+                    {!isEdgeZero && (
+                      <span className={`absolute bottom-1 text-[9px] lg:text-[10px] text-[#6b6b6b] whitespace-nowrap bg-[#fbfbfb] px-0.5 z-10 ${index === 0 ? 'left-1' : 'left-0 transform -translate-x-1/2'}`}>
+                        {timeStr}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
               {/* Last hour label */}
               {hours.length > 0 && (
-                <span className="absolute right-1 bottom-1 text-[9px] lg:text-[10px] text-[#6b6b6b] whitespace-nowrap bg-[#fbfbfb] px-0.5 z-10">
-                  {formatTimeStr(hours[hours.length - 1])}
-                </span>
+                (() => {
+                  const lastHour = hours[hours.length - 1];
+                  const timeStr = formatTimeStr(lastHour);
+                  const isEdgeZero = timeStr === '00:00';
+                  if (isEdgeZero) return null;
+                  return (
+                    <span className="absolute right-1 bottom-1 text-[9px] lg:text-[10px] text-[#6b6b6b] whitespace-nowrap bg-[#fbfbfb] px-0.5 z-10">
+                      {timeStr}
+                    </span>
+                  )
+                })()
               )}
             </div>
           </div>

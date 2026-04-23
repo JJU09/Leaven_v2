@@ -380,11 +380,11 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
           <div className="flex items-center bg-white rounded-lg border shadow-sm p-0.5 w-full md:w-[260px] transition-all focus-within:ring-2 focus-within:ring-primary/20 mb-2 md:mb-2.5 self-center mr-1">
             <Search className="w-3.5 h-3.5 text-slate-400 ml-2 shrink-0" />
             <div className="relative flex-1 flex items-center">
-              <input 
+              <Input 
                 placeholder="이름, 연락처, 이메일 검색..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent border-none focus:outline-none focus:ring-0 text-[12.5px] font-medium w-full px-2 h-6.5 pr-6" 
+                className="bg-transparent border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-[12.5px] font-medium w-full px-2 h-7 pr-6 rounded-none" 
               />
               {searchQuery && (
                 <Button 

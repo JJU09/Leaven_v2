@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getDiffInMinutes, toKSTISOString, toUTCISOString } from '@/shared/lib/date-utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TimePicker } from '@/components/ui/time-picker'
@@ -452,19 +453,20 @@ export function AttendanceClientPage({
               </div>
               <div className={cn("overflow-auto", "flex-1")}>
                 {/* Desktop View Table */}
-                <table className="w-full text-sm hidden md:table">
-                  <thead className="bg-muted/50 text-muted-foreground sticky top-0 z-10">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold border-b text-center">이름 (역할)</th>
-                      <th className="px-4 py-3 font-semibold border-b text-center">예정된 스케줄</th>
-                      <th className="px-4 py-3 font-semibold border-b text-center">출근</th>
-                      <th className="px-4 py-3 font-semibold border-b text-center">퇴근</th>
-                      <th className="px-4 py-3 font-semibold border-b text-center">총 근무시간</th>
-                      <th className="px-4 py-3 font-semibold border-b text-center">상태</th>
-                      <th className="px-4 py-3 font-semibold border-b text-center">관리</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
+                <div className="hidden md:block w-full">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                      <TableRow>
+                        <TableHead className="text-center">이름 (역할)</TableHead>
+                        <TableHead className="text-center">예정된 스케줄</TableHead>
+                        <TableHead className="text-center">출근</TableHead>
+                        <TableHead className="text-center">퇴근</TableHead>
+                        <TableHead className="text-center">총 근무시간</TableHead>
+                        <TableHead className="text-center">상태</TableHead>
+                        <TableHead className="text-center">관리</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {sortedStaffList.filter(s => canManageAttendance || s.user_id === currentUserId).map(staff => {
                       const roleInfo = getStaffRoleInfo(staff)
                       const attendance = attendanceData.find(a => a.member_id === staff.id)
@@ -524,17 +526,17 @@ export function AttendanceClientPage({
                       }
 
                       return (
-                        <tr key={staff.id} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-4 py-3">
+                        <TableRow key={staff.id}>
+                          <TableCell>
                             <div className="flex items-center justify-center gap-2">
                               <span className="font-medium">{staff.name || staff.profile?.full_name}</span>
                               <Badge variant="outline" className="text-[10px] font-normal" style={{ color: roleInfo?.color, borderColor: roleInfo?.color }}>
                                 {roleInfo?.name || '직원'}
                               </Badge>
                             </div>
-                          </td>
-                          <td className="px-4 py-3 text-center text-muted-foreground font-medium">{scheduleText}</td>
-                          <td className="px-4 py-3 text-center font-semibold">
+                          </TableCell>
+                          <TableCell className="text-center text-muted-foreground font-medium">{scheduleText}</TableCell>
+                          <TableCell className="text-center font-semibold">
                             {isLate ? (
                               <div className="text-red-600">
                                 {formatT(attendance?.clock_in_time)}
@@ -542,11 +544,11 @@ export function AttendanceClientPage({
                             ) : (
                               formatT(attendance?.clock_in_time)
                             )}
-                          </td>
-                          <td className="px-4 py-3 text-center font-semibold">{formatT(attendance?.clock_out_time)}</td>
-                          <td className="px-4 py-3 text-center font-bold">{totalHours}</td>
-                          <td className="px-4 py-3 text-center">{stateBadge}</td>
-                          <td className="px-4 py-3 text-center">
+                          </TableCell>
+                          <TableCell className="text-center font-semibold">{formatT(attendance?.clock_out_time)}</TableCell>
+                          <TableCell className="text-center font-bold">{totalHours}</TableCell>
+                          <TableCell className="text-center">{stateBadge}</TableCell>
+                          <TableCell className="text-center">
                             {canManageAttendance ? (
                               <Button 
                                 variant="ghost" 
@@ -588,12 +590,13 @@ export function AttendanceClientPage({
                                 수정 요청
                               </Button>
                             ) : null}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       )
                     })}
-                  </tbody>
-                </table>
+                    </TableBody>
+                  </Table>
+                </div>
 
                 {/* Mobile View Card Layout */}
                 <div className="md:hidden flex flex-col gap-4 p-4">

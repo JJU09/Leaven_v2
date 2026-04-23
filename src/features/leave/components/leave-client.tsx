@@ -14,6 +14,7 @@ import { getLeaveBalances, getLeaveRequests, resolveLeaveRequest, createLeaveReq
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
@@ -463,17 +464,18 @@ export function LeaveClientPage({
               </div>
               <div className="overflow-y-auto no-scrollbar flex-1 bg-white">
                 {/* Desktop View Table */}
-                <table className="w-full text-sm hidden md:table">
-                  <thead className="bg-muted/50 text-muted-foreground sticky top-0">
-                    <tr>
-                      <th className="px-4 py-3 border-b text-center">이름 (역할)</th>
-                      <th className="px-4 py-3 border-b text-center">근속 기간</th>
-                      <th className="px-4 py-3 border-b text-center">발생</th>
-                      <th className="px-4 py-3 border-b text-center">사용</th>
-                      <th className="px-4 py-3 border-b text-center">잔여</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
+                <div className="hidden md:block w-full">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="text-center">이름 (역할)</TableHead>
+                        <TableHead className="text-center">근속 기간</TableHead>
+                        <TableHead className="text-center">발생</TableHead>
+                        <TableHead className="text-center">사용</TableHead>
+                        <TableHead className="text-center">잔여</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {staffList.filter(s => canManage || s.user_id === currentUserId).map(staff => {
                       const roleInfo = getStaffRoleInfo(staff)
                       if (staff.role === 'owner' || (roleInfo && roleInfo.hierarchy_level >= 100)) return null
@@ -484,8 +486,8 @@ export function LeaveClientPage({
                       const used = balance?.used_days || 0
                       const remain = total - used
                       return (
-                        <tr key={staff.id} className="hover:bg-muted/20">
-                          <td className="px-4 py-3 text-center">
+                        <TableRow key={staff.id}>
+                          <TableCell className="text-center">
                             <div className="flex flex-col items-center gap-1">
                               <div className="flex items-center gap-1.5 justify-center">
                                 <span className="font-medium">{staff.name}</span>
@@ -499,16 +501,17 @@ export function LeaveClientPage({
                                 {hireDate ? `입사일: ${hireDate}` : '입사일 미등록'}
                               </div>
                             </div>
-                          </td>
-                          <td className="px-4 py-3 text-center">{getServicePeriodLabel(hireDate)}</td>
-                          <td className="px-4 py-3 text-center font-semibold">{total}일</td>
-                          <td className="px-4 py-3 text-center text-muted-foreground">{used}일</td>
-                          <td className="px-4 py-3 text-center font-bold text-primary">{remain}일</td>
-                        </tr>
+                          </TableCell>
+                          <TableCell className="text-center">{getServicePeriodLabel(hireDate)}</TableCell>
+                          <TableCell className="text-center font-semibold">{total}일</TableCell>
+                          <TableCell className="text-center text-muted-foreground">{used}일</TableCell>
+                          <TableCell className="text-center font-bold text-primary">{remain}일</TableCell>
+                        </TableRow>
                       )
                     })}
-                  </tbody>
-                </table>
+                    </TableBody>
+                  </Table>
+                </div>
 
                 {/* Mobile View Card Layout */}
                 <div className="md:hidden divide-y">

@@ -77,13 +77,13 @@ export function AnnouncementDialog({ open, onOpenChange, storeId, initialData }:
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto p-6 md:p-10 md:px-16 flex flex-col gap-6">
-            <input 
+            <Input 
               id="title" 
               name="title" 
               placeholder="제목 없음" 
               defaultValue={initialData?.title || ''} 
               required 
-              className="w-full text-3xl md:text-4xl font-bold text-slate-800 placeholder:text-slate-300 border-none outline-none focus:ring-0 px-0 bg-transparent"
+              className="w-full text-3xl md:text-4xl font-bold text-slate-800 placeholder:text-slate-300 border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-0 bg-transparent rounded-none h-auto py-2"
             />
             
             <textarea
