@@ -23,31 +23,33 @@ import { SingleDayDeleteModal, ConfirmMoveModal } from './schedule-action-modals
 import { StaffScheduleMatrix } from './staff-schedule-matrix'
 import { MonthlyCalendarView } from './monthly-calendar-view'
 import { DailyTimelineView } from './daily-timeline-view'
+import { useRouter } from 'next/navigation'
 
 // 자동 파생 상태 계산 헬퍼 (시간 기반)
-export function getDerivedTaskStatus(t: any, scheduleDateStr: string, now: Date): 'todo' | 'in_progress' | 'pending' | 'done' {
-  if (t.status === 'done') return 'done'
-  if (!t.start_time) return 'todo'
+export function getDerivedTaskStatus(t: any, scheduleDateStr: string, now: Date): 'pending' | 'in_progress' | 'on_hold' | 'completed' | 'verified' {
+  if (t.status === 'completed' || t.status === 'verified' || t.status === 'done') return 'completed'
+  if (t.status === 'on_hold') return 'on_hold'
+  if (!t.start_time) return 'pending'
 
   let taskDateObj = null;
   if (t.start_time.includes('T')) {
     taskDateObj = new Date(t.start_time)
   } else {
     const dateStr = t.assigned_date || scheduleDateStr
-    if (!dateStr) return 'todo'
+    if (!dateStr) return 'pending'
     // 만약 start_time이 "09:00" 처럼 초가 없으면 추가
     const timeStr = t.start_time.length === 5 ? `${t.start_time}:00` : t.start_time
     taskDateObj = new Date(`${dateStr}T${timeStr}`)
   }
 
-  if (isNaN(taskDateObj.getTime())) return 'todo'
+  if (isNaN(taskDateObj.getTime())) return 'pending'
 
   const startTimeMs = taskDateObj.getTime()
   const nowMs = now.getTime()
   const thirtyMinsMs = 30 * 60 * 1000
 
   if (nowMs < startTimeMs) {
-    return 'todo'
+    return 'pending'
   } else if (nowMs >= startTimeMs && nowMs < startTimeMs + thirtyMinsMs) {
     return 'in_progress'
   } else {
@@ -145,6 +147,22 @@ export function UnifiedCalendar({
 
   const [localSchedules, setLocalSchedules] = useState<any[]>([])
   
+  const router = useRouter()
+
+  // 스케줄 상태 전역 동기화
+  useEffect(() => {
+    const handleScheduleUpdate = () => {
+      // 캘린더나 상세 패널 등에서 전체 데이터를 새로고침해야 할 때 호출
+      // 서버에서 새 데이터를 불러오도록 라우터 리프레시 실행
+      router.refresh()
+    }
+    
+    window.addEventListener('schedule-updated', handleScheduleUpdate)
+    return () => {
+      window.removeEventListener('schedule-updated', handleScheduleUpdate)
+    }
+  }, [router])
+
   // 드래그 종료 직후 클릭 방지용 ref
   const isDraggingRef = useRef(false)
 
@@ -186,6 +204,9 @@ export function UnifiedCalendar({
 
   useEffect(() => {
     // 관리자가 아니거나, 관리자라도 모바일이면 본인의 스케줄만 필터링
+    // 서버에서 받아온 schedules가 변경될 때마다 로컬 상태를 업데이트합니다.
+    // 기존에 진행 중이던 낙관적 업데이트를 덮어쓰지 않도록 주의해야 하지만, 
+    // 생성/수정 직후 router.refresh()로 서버 데이터가 새로 들어오면 그것으로 동기화합니다.
     if ((!canManage || isMobile) && currentUserId) {
       const myStaffId = staffList.find(s => s.user_id === currentUserId)?.id
       if (myStaffId) {
@@ -197,6 +218,17 @@ export function UnifiedCalendar({
       }
     } else {
       setLocalSchedules(schedules || [])
+    }
+
+    // 서버에서 schedules가 최신화되었을 때, 현재 열려있는 스케줄 모달이 있다면 그 내용도 최신 데이터로 동기화합니다.
+    if (selectedSchedule && schedules) {
+      const updatedSch = schedules.find(s => s.id === selectedSchedule.id)
+      if (updatedSch) {
+        setSelectedSchedule((prev: any) => ({
+          ...prev,
+          tasks: updatedSch.tasks
+        }))
+      }
     }
   }, [schedules, canManage, currentUserId, staffList, isMobile])
 
@@ -508,7 +540,7 @@ export function UnifiedCalendar({
   }
 
   const handleTaskToggle = async (taskId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'done' ? 'todo' : 'done'
+    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
     
     // Optimistic UI update
     setSelectedSchedule((prev: any) => {
@@ -831,7 +863,7 @@ export function UnifiedCalendar({
                 }
 
                 const deltaMinutes = getDiffInMinutes(sch.start_time, newStartLocal)
-                const hasTimeSpecificTasks = sch.task_assignments?.some((ta: any) => ta.start_time)
+                const hasTimeSpecificTasks = sch.tasks?.some((ta: any) => ta.start_time)
                 
                 if (hasTimeSpecificTasks) {
                   setConfirmMoveModal({

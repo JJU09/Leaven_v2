@@ -310,7 +310,7 @@ export function MonthlyCalendarView({
                           <span className="font-semibold" style={{ color: scheduleColor }}>{safeName}</span> 
                           {!isLeave && (
                             <span className="opacity-80 ml-1 text-[9px]">
-                              {sch.start_time?.substring(0, 5)}-{sch.end_time?.substring(0, 5)}
+                              {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
                             </span>
                           )}
                           {isLeave && (

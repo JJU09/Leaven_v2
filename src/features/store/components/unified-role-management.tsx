@@ -499,12 +499,13 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
   const renderRoleTree = (nodes: TreeNode[], depth = 0) => {
     return nodes.map((role) => (
       <div key={role.id} className="flex flex-col">
-        <button
+        <Button
+          variant="outline"
           onClick={() => setSelectedRole(role)}
           className={cn(
-            "w-full text-left p-3 mb-2 rounded-lg border transition-all flex items-center justify-between",
+            "w-full text-left h-auto p-3 mb-2 rounded-lg border transition-all flex items-center justify-between",
             selectedRole?.id === role.id 
-              ? "border-primary bg-primary/5 ring-1 ring-primary/20" 
+              ? "border-primary bg-primary/5 ring-1 ring-primary/20 hover:bg-primary/10" 
               : "border-border/50 bg-card hover:bg-muted/50 hover:border-border"
           )}
           style={{ marginLeft: `${depth * 1.5}rem`, width: `calc(100% - ${depth * 1.5}rem)` }}
@@ -521,7 +522,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
             >
               <Users className="h-4 w-4" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col items-start">
               <span className="font-semibold text-sm truncate">{role.name}</span>
               {role.hierarchy_level >= 100 ? (
                 <span className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
@@ -538,7 +539,7 @@ export function UnifiedRoleManagement({ storeId, roles, permissions, taskTemplat
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-muted-foreground/30 shrink-0" />
-        </button>
+        </Button>
         {role.children.length > 0 && (
           <div className="flex flex-col">
             {renderRoleTree(role.children, depth + 1)}

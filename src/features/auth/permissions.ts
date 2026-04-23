@@ -24,6 +24,9 @@ export type PermissionCode =
   | 'view_sales'
   | 'manage_inventory'
   | 'manage_menu'
+  // 📢 공지사항
+  | 'view_announcements'
+  | 'manage_announcements'
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, PermissionCode[]> = {
   점주: [
@@ -31,14 +34,16 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, PermissionCode[]> = {
     'view_staff', 'manage_staff', 'view_salary', 'manage_payroll',
     'view_schedule', 'manage_schedule', 'view_attendance', 'manage_attendance',
     'view_leave', 'manage_leave', 'view_tasks', 'manage_tasks',
-    'view_sales', 'manage_inventory', 'manage_menu'
+    'view_sales', 'manage_inventory', 'manage_menu',
+    'view_announcements', 'manage_announcements'
   ],
   매니저: [
     'view_dashboard', 'view_staff', 'view_schedule', 'manage_schedule',
-    'view_attendance', 'manage_attendance', 'view_leave', 'manage_leave', 'view_tasks', 'manage_tasks'
+    'view_attendance', 'manage_attendance', 'view_leave', 'manage_leave', 'view_tasks', 'manage_tasks',
+    'view_announcements', 'manage_announcements'
   ],
   직원: [
-    'view_staff', 'view_schedule', 'view_attendance', 'view_leave', 'view_tasks'
+    'view_staff', 'view_schedule', 'view_attendance', 'view_leave', 'view_tasks', 'view_announcements'
   ]
 }
 

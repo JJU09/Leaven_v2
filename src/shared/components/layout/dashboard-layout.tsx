@@ -95,10 +95,11 @@ export function DashboardClientLayout({
                 <div className="absolute left-0 w-1 h-9 bg-primary rounded-r-full" />
               )}
               
-              <button 
+              <Button 
+                variant="ghost"
                 className={cn(
-                  "relative flex items-center justify-center w-12 h-12 rounded-[24px] group-hover:rounded-3xl transition-all duration-300 overflow-hidden",
-                  store.name === storeName ? "bg-primary rounded-3xl" : "bg-background hover:bg-primary"
+                  "relative flex items-center justify-center w-12 h-12 rounded-[24px] group-hover:rounded-3xl transition-all duration-300 overflow-hidden p-0 border-0 outline-none ring-0",
+                  store.name === storeName ? "bg-primary hover:bg-primary rounded-3xl" : "bg-background hover:bg-primary"
                 )}
                 title={store.name}
                 onClick={() => setCurrentStore(store.id)}
@@ -112,7 +113,7 @@ export function DashboardClientLayout({
                     {store.name.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-              </button>
+              </Button>
             </div>
           ))}
           

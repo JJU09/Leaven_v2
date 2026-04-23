@@ -13,6 +13,7 @@ import { createTask, assignTask, deleteTask, updateTask, toggleTaskCheckitem, cr
 import { useRouter } from 'next/navigation'
 import { Pencil, Trash2 } from 'lucide-react'
 import { toKSTISOString, toUTCISOString, addMinutesToTime } from '@/shared/lib/date-utils'
+import { Button } from '@/components/ui/button'
 
 function hexToRgba(hex: string, alpha: number) {
   if (!hex) return `rgba(0,0,0,${alpha})`
@@ -214,69 +215,9 @@ export function ScheduleDetailPanel({
   onClose
 }: ScheduleDetailPanelProps) {
   const router = useRouter()
-  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
-  
-  // Create mode state
-  const [newTaskDraft, setNewTaskDraft] = useState({ title: '', hasTime: false, startTime: '', endTime: '' })
-  const [newChecklists, setNewChecklists] = useState<string[]>(['']) // 항상 입력할 수 있는 빈 칸 1개 제공
   
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  
-  // Edit mode state
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
-  const [editTaskDraft, setEditTaskDraft] = useState({ title: '', hasTime: false, startTime: '' })
-  const [editChecklists, setEditChecklists] = useState<{ id: string, text: string, is_completed: boolean }[]>([])
-
-  // Checklist handler helpers
-  const handleChecklistChange = (index: number, value: string, isEdit: boolean) => {
-    if (isEdit) {
-      const newItems = [...editChecklists]
-      newItems[index].text = value
-      setEditChecklists(newItems)
-      // 만약 마지막 아이템에 글자가 입력되었다면, 새 빈 아이템 추가
-      if (index === newItems.length - 1 && value.trim() !== '') {
-        setEditChecklists([...newItems, { id: crypto.randomUUID(), text: '', is_completed: false }])
-      }
-    } else {
-      const newItems = [...newChecklists]
-      newItems[index] = value
-      setNewChecklists(newItems)
-      // 만약 마지막 아이템에 글자가 입력되었다면, 새 빈 칸 추가
-      if (index === newItems.length - 1 && value.trim() !== '') {
-        setNewChecklists([...newItems, ''])
-      }
-    }
-  }
-
-  const handleChecklistKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number, isEdit: boolean) => {
-    if (e.nativeEvent.isComposing) return; // 한글 등 조합 중일 때는 엔터 이벤트 무시
-
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      // 다음 인풋으로 포커스 이동 (가장 마지막 인풋에서 엔터 치면 새 인풋은 handleChecklistChange에서 자동 생성됨)
-      const nextInput = document.getElementById(`checklist-${isEdit ? 'edit' : 'new'}-${index + 1}`)
-      if (nextInput) {
-        nextInput.focus()
-      }
-    } else if (e.key === 'Backspace' && (isEdit ? editChecklists[index].text === '' : newChecklists[index] === '')) {
-      // 값이 빈 칸인데 백스페이스 누르면 삭제 (마지막 하나 남은 빈 칸은 삭제 안함)
-      if (isEdit && editChecklists.length > 1) {
-        e.preventDefault()
-        const newItems = editChecklists.filter((_, i) => i !== index)
-        setEditChecklists(newItems)
-        // 이전 인풋으로 포커스
-        const prevInput = document.getElementById(`checklist-edit-${index - 1}`)
-        if (prevInput) prevInput.focus()
-      } else if (!isEdit && newChecklists.length > 1) {
-        e.preventDefault()
-        const newItems = newChecklists.filter((_, i) => i !== index)
-        setNewChecklists(newItems)
-        const prevInput = document.getElementById(`checklist-new-${index - 1}`)
-        if (prevInput) prevInput.focus()
-      }
-    }
-  }
 
   // Clear timeout on unmount
   useEffect(() => {
@@ -400,10 +341,10 @@ export function ScheduleDetailPanel({
   });
 
   return (
-    <div className={`flex flex-col h-[85vh] max-h-[750px] overflow-hidden w-full ${isCreate ? '' : 'md:flex-row'}`}>
-      {/* Left Column: Schedule Info & Slider */}
-      <div className={`w-full flex flex-col border-black/10 ${isCreate ? '' : 'md:w-1/2 border-r'}`}>
-        <div className="p-5 flex flex-col h-full overflow-y-auto custom-scrollbar">
+    <div className={`flex flex-col max-h-[85vh] overflow-hidden w-full`}>
+      {/* Schedule Info & Slider */}
+      <div className={`w-full flex flex-col border-black/10`}>
+        <div className="p-5 flex flex-col overflow-y-auto custom-scrollbar">
           <div className="flex items-center justify-between mb-4 pb-3 border-b shrink-0">
             <div className="flex items-center gap-2">
               <div 
@@ -539,17 +480,18 @@ export function ScheduleDetailPanel({
             </div>
           </div>
 
-          <div className="mt-auto pt-6 flex gap-2 justify-end">
+          <div className={`pt-6 mt-4 flex gap-2 ${isCreate ? 'justify-end' : 'justify-start'}`}>
             {isCreate ? (
               <>
-                <button 
-                  className="px-4 py-2 text-[11px] font-medium border border-black/10 rounded-md hover:bg-black/5 transition-colors" 
+                <Button 
+                  variant="outline"
+                  className="px-4 py-2 text-[11px] h-auto font-medium rounded-md" 
                   onClick={onClose}
                 >
                   취소
-                </button>
-                <button 
-                  className="px-5 py-2 text-[11px] font-medium bg-[#1a1a1a] text-white rounded-md hover:bg-black/80 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" 
+                </Button>
+                <Button 
+                  className="px-5 py-2 text-[11px] h-auto font-medium rounded-md shadow-sm" 
                   disabled={isOverlapping}
                   onClick={async () => {
                     if (!createForm.staffId || !createForm.startTime || !createForm.endTime || !createForm.date) {
@@ -582,30 +524,43 @@ export function ScheduleDetailPanel({
                       return
                     }
 
-                    const newSchedule = {
-                      id: `temp-${Date.now()}`,
-                      start_time: startStr,
-                      end_time: endStr,
-                      schedule_type: createForm.scheduleType || 'regular',
-                      member_id: createForm.staffId,
-                      plan_date: createForm.date,
-                      task_assignments: [],
-                      tasks: []
+                    if (res.schedules && res.schedules.length > 0) {
+                      // Use actual data from API instead of temporary objects
+                      const newSchedules = res.schedules.map((sch: any) => ({
+                        ...sch,
+                        // Ensure required UI fields are correctly formatted
+                        start_time: `${sch.plan_date}T${sch.start_time}`,
+                        end_time: `${sch.plan_date}T${sch.end_time}`,
+                        tasks: []
+                      }))
+                      
+                      setLocalSchedules(prev => [...prev, ...newSchedules])
+                    } else {
+                      // Fallback if full data wasn't returned
+                      const newSchedule = {
+                        id: `temp-${Date.now()}`,
+                        start_time: startStr,
+                        end_time: endStr,
+                        schedule_type: createForm.scheduleType || 'regular',
+                        member_id: createForm.staffId,
+                        plan_date: createForm.date,
+                        tasks: []
+                      }
+                      setLocalSchedules(prev => [...prev, newSchedule])
                     }
                     
-                    // Optimistic Update
-                    setLocalSchedules(prev => [...prev.filter(s => s.id !== newSchedule.id), newSchedule])
                     toast.success('스케줄이 추가되었습니다.')
                     onClose()
                     router.refresh()
                   }}
                 >
                   추가하기
-                </button>
+                </Button>
               </>
             ) : (
-              <button 
-                className="w-full text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive py-2 rounded font-medium transition-colors border border-transparent hover:border-destructive/20"
+              <Button 
+                variant="outline"
+                className="px-4 py-2 text-[11px] h-auto text-destructive hover:bg-destructive/10 hover:text-destructive rounded-md font-medium border-destructive/30 hover:border-destructive/50"
                 onClick={async () => {
                   if (window.confirm('이 스케줄을 정말 삭제하시겠습니까?')) {
                     const res = await deleteSchedule(storeId, state.id)
@@ -621,479 +576,13 @@ export function ScheduleDetailPanel({
                   }
                 }}
               >
-                이 스케줄 삭제
-              </button>
+                삭제
+              </Button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Right Column: Tasks (Checklists) */}
-      {!isCreate && (
-        <div className="w-full md:w-1/2 flex flex-col bg-[#fafafa] overflow-y-auto custom-scrollbar p-5 border-t md:border-t-0 border-black/10">
-          {(() => {
-          const allTasks = state.tasks || []
-          const customTasks = allTasks
-
-          const renderTaskItem = (t: any) => {
-            const derivedStatus = getDerivedTaskStatus(t, selectedSchedule.editDate, now)
-            const sInfo = STATUS_INFO[derivedStatus]
-            const isDone = derivedStatus === 'done'
-            const isPending = derivedStatus === 'pending'
-            
-            if (editingTaskId === t.id) {
-              return (
-                <div key={t.id} className="border border-primary/30 bg-primary/5 rounded-md p-3 flex flex-col gap-3 animate-in fade-in duration-200">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-semibold text-[#1a1a1a]">업무 그룹 (대표 제목)</label>
-                    <Input 
-                      placeholder="예: 홀 테이블 정리, 화장실 청소 등" 
-                      className="h-8 text-[12px] font-medium bg-white" 
-                      value={editTaskDraft.title}
-                      onChange={(e) => setEditTaskDraft(prev => ({...prev, title: e.target.value}))}
-                      autoFocus
-                    />
-                  </div>
-                  
-                  <div className="flex flex-col gap-1.5 bg-white p-2 rounded-md border border-black/5">
-                    <label className="text-[10px] font-semibold text-muted-foreground mb-1">세부 할 일 (체크리스트)</label>
-                    <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
-                      {editChecklists.map((item, index) => (
-                        <div key={item.id} className="flex items-center gap-2">
-                          <Checkbox disabled className="w-3.5 h-3.5 opacity-50" />
-                          <Input
-                            id={`checklist-edit-${index}`}
-                            placeholder={index === editChecklists.length - 1 ? "할 일 추가... (엔터 입력)" : "할 일 내용"}
-                            className="h-7 text-[11px] bg-transparent border-transparent hover:border-black/10 focus-visible:border-primary/50 focus-visible:ring-0 px-1 shadow-none transition-colors"
-                            value={item.text}
-                            onChange={(e) => handleChecklistChange(index, e.target.value, true)}
-                            onKeyDown={(e) => handleChecklistKeyDown(e, index, true)}
-                          />
-                          {item.text && index !== editChecklists.length - 1 && (
-                            <button 
-                              className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                              onClick={() => {
-                                const newItems = editChecklists.filter((_, i) => i !== index)
-                                setEditChecklists(newItems)
-                              }}
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between border-t border-black/5 pt-2">
-                    <label className="text-[10px] font-medium text-[#1a1a1a] flex items-center gap-2 cursor-pointer">
-                      <Switch 
-                        checked={editTaskDraft.hasTime} 
-                        onCheckedChange={(val) => setEditTaskDraft(prev => ({...prev, hasTime: val}))} 
-                        className="scale-75 origin-left"
-                      />
-                      수행 시간 지정하기
-                    </label>
-                  </div>
-
-                  {editTaskDraft.hasTime && (
-                    <div className="flex flex-col gap-1.5 bg-white p-2 rounded border border-black/5">
-                      <label className="text-[9px] text-muted-foreground">업무 시작 시간 (선택)</label>
-                      <div className="flex items-center gap-2">
-                        <TimePicker 
-                          value={editTaskDraft.startTime} 
-                          onChange={(val) => setEditTaskDraft(prev => ({...prev, startTime: val}))}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end gap-1.5 mt-1">
-                    <button 
-                      className="text-[11px] px-3 py-1.5 rounded text-muted-foreground hover:bg-black/5 transition-colors font-medium"
-                      onClick={() => setEditingTaskId(null)}
-                    >
-                      취소
-                    </button>
-                    <button 
-                      className="text-[11px] px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-sm"
-                      onClick={async () => {
-                        if (!editTaskDraft.title.trim()) {
-                          toast.error('업무 그룹(대표 제목)을 입력해주세요.')
-                          return
-                        }
-                        
-                        const loadingToast = toast.loading('업무 수정 중...')
-                        const startTimeToUse = editTaskDraft.hasTime && editTaskDraft.startTime 
-                          ? `${selectedSchedule.editDate}T${editTaskDraft.startTime}:00` 
-                          : null;
-                        
-                        const finalChecklist = editChecklists
-                          .filter(c => c.text.trim() !== '')
-                          .map(c => ({ id: c.id, text: c.text.trim(), is_completed: c.is_completed }))
-
-                        const res = await updateTask({
-                          id: t.id,
-                          title: editTaskDraft.title,
-                          start_time: startTimeToUse,
-                          task_type: editTaskDraft.hasTime ? 'scheduled' : 'always',
-                          checklist: finalChecklist
-                        });
-
-                        if (res.error) {
-                          toast.dismiss(loadingToast)
-                          toast.error(res.error)
-                          return
-                        }
-
-                        const updatedSchedule = {
-                          ...selectedSchedule,
-                          tasks: selectedSchedule.tasks.map((task: any) => {
-                            if (task.id === t.id) {
-                              return {
-                                ...task,
-                                title: editTaskDraft.title,
-                                start_time: startTimeToUse || (editTaskDraft.hasTime ? editTaskDraft.startTime : null),
-                                checklist: finalChecklist
-                              }
-                            }
-                            return task
-                          })
-                        }
-                        if (setSelectedSchedule) setSelectedSchedule(updatedSchedule)
-                        setLocalSchedules(prev => prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s))
-
-                        toast.dismiss(loadingToast)
-                        toast.success('업무가 수정되었습니다.')
-                        setEditingTaskId(null)
-                        router.refresh()
-                      }}
-                    >
-                      저장
-                    </button>
-                  </div>
-                </div>
-              )
-            }
-
-            return (
-              <div key={t.id} className={`relative flex flex-col gap-1 p-2.5 bg-[#fcfcfc] border ${isPending ? 'border-orange-300 bg-orange-50/30' : 'border-black/10'} rounded-md shadow-sm group hover:border-black/20 transition-colors`}>
-                
-                {/* Hover Actions (Edit / Delete) */}
-                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <button 
-                     className="p-1 rounded bg-white border border-black/10 text-muted-foreground hover:text-black hover:bg-muted/50 shadow-sm"
-                     onClick={() => {
-                        setEditTaskDraft({
-                          title: t.title || '',
-                          hasTime: !!t.start_time,
-                          startTime: t.start_time ? (t.start_time.includes('T') ? format(new Date(t.start_time), 'HH:mm') : t.start_time.substring(0, 5)) : ''
-                        })
-                        
-                        const existingList = t.checklist || []
-                        setEditChecklists([
-                            ...existingList,
-                            { id: crypto.randomUUID(), text: '', is_completed: false }
-                        ])
-                        
-                        setEditingTaskId(t.id)
-                     }}
-                     title="수정"
-                   >
-                     <Pencil className="w-3 h-3" />
-                   </button>
-                   <button 
-                     className="p-1 rounded bg-white border border-black/10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 shadow-sm"
-                     onClick={async () => {
-                       if (window.confirm('이 업무를 정말 삭제하시겠습니까?')) {
-                         const loadingToast = toast.loading('업무 삭제 중...')
-                         const res = await deleteTask(t.id)
-                         if (res.error) {
-                           toast.dismiss(loadingToast)
-                           toast.error(res.error)
-                           return
-                         }
-                         
-                         const updatedSchedule = {
-                           ...selectedSchedule,
-                           tasks: selectedSchedule.tasks.filter((task: any) => task.id !== t.id)
-                         }
-                         if (setSelectedSchedule) setSelectedSchedule(updatedSchedule)
-                         setLocalSchedules(prev => prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s))
-                         
-                         toast.dismiss(loadingToast)
-                         toast.success('업무가 삭제되었습니다.')
-                         router.refresh()
-                       }
-                     }}
-                     title="삭제"
-                   >
-                     <Trash2 className="w-3 h-3" />
-                   </button>
-                </div>
-
-                <div className="flex items-start gap-2 pr-12">
-                  <Checkbox 
-                    id={`panel-task-${t.id}`} 
-                    checked={isDone}
-                    onCheckedChange={() => handleTaskToggle?.(t.id, t.status)}
-                    className="mt-0.5 w-4 h-4 border-black/30 data-[state=checked]:bg-[#16a34a] data-[state=checked]:border-[#16a34a]"
-                  />
-                  <div className="flex flex-col flex-1 leading-tight mt-0.5">
-                    <label 
-                      htmlFor={`panel-task-${t.id}`}
-                      className={`text-[12px] font-medium cursor-pointer ${isDone ? 'line-through text-muted-foreground/60' : 'text-[#1a1a1a]'}`}
-                    >
-                      {t.title}
-                    </label>
-                    {t.checklist && t.checklist.length > 0 && (
-                      <div className="flex flex-col gap-1.5 mt-2">
-                        {t.checklist.map((item: any) => (
-                          <div key={item.id} className="flex items-start gap-1.5 group/chk">
-                            <Checkbox 
-                              id={`chk-${item.id}`}
-                              checked={item.is_completed}
-                              onCheckedChange={async (val) => {
-                                const newTasks = selectedSchedule.tasks.map((task: any) => {
-                                  if (task.id === t.id) {
-                                    const newChecklist = task.checklist.map((c: any) => 
-                                      c.id === item.id ? { ...c, is_completed: !!val } : c
-                                    )
-                                    
-                                    const allCompleted = newChecklist.length > 0 && newChecklist.every((c: any) => c.is_completed)
-                                    let newStatus = task.status
-                                    if (allCompleted) {
-                                      newStatus = 'done'
-                                    } else if (task.status === 'done') {
-                                      newStatus = 'todo'
-                                    }
-
-                                    return {
-                                      ...task,
-                                      checklist: newChecklist,
-                                      status: newStatus
-                                    }
-                                  }
-                                  return task
-                                });
-                                const updatedSchedule = { ...selectedSchedule, tasks: newTasks };
-                                if (setSelectedSchedule) setSelectedSchedule(updatedSchedule);
-                                setLocalSchedules((prev: any[]) => prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s));
-                                
-                                await toggleTaskCheckitem(t.id, item.id, !!val);
-                                router.refresh();
-                              }}
-                              className="mt-0.5 w-3 h-3 rounded-[3px] border-black/20 data-[state=checked]:bg-[#1a1a1a] data-[state=checked]:border-[#1a1a1a]"
-                            />
-                            <label 
-                              htmlFor={`chk-${item.id}`}
-                              className={`text-[11px] cursor-pointer flex-1 leading-tight ${item.is_completed ? 'line-through text-muted-foreground/60' : 'text-muted-foreground hover:text-[#1a1a1a]'}`}
-                            >
-                              {item.text}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {t.start_time && (
-                    <div 
-                      className="text-[9px] px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-                      style={{ backgroundColor: sInfo.bg, color: sInfo.color, border: `1px solid ${sInfo.border}` }}
-                    >
-                      {sInfo.label}
-                    </div>
-                  )}
-                </div>
-                
-                {t.start_time && (
-                  <div className="flex items-center gap-2 mt-1.5 pl-6">
-                    <span className={`text-[9px] font-medium flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border ${isPending ? 'text-orange-500 border-orange-200' : isDone ? 'text-muted-foreground/50 border-black/5' : 'text-primary/80 border-primary/20'}`}>
-                      🕒 {t.start_time.includes('T') ? format(new Date(t.start_time), 'HH:mm') : t.start_time.substring(0, 5)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )
-          }
-
-          return (
-            <div className="flex flex-col gap-3 h-full">
-              <div className="flex items-center justify-between pb-3 border-b border-black/10 shrink-0">
-                <span className="text-[14px] font-semibold text-[#1a1a1a]">오늘의 할 일 (체크리스트)</span>
-                <span className="text-[11px] text-muted-foreground bg-black/5 px-2 py-0.5 rounded-full font-medium">
-                  완료: {customTasks.filter((t: any) => t.status === 'done').length} / {customTasks.length}
-                </span>
-              </div>
-                
-                <div className="flex flex-col gap-2">
-                  {customTasks.length > 0 ? (
-                    customTasks.map((t: any) => renderTaskItem(t))
-                  ) : (
-                    <div className="text-[11px] text-muted-foreground text-center py-5 border border-dashed border-black/10 rounded-md bg-[#fcfcfc]">
-                      등록된 개별 업무가 없습니다.
-                    </div>
-                  )}
-
-                  {/* 업무 추가 폼 */}
-            {isTaskFormOpen ? (
-              <div className="border border-primary/30 bg-primary/5 rounded-md p-3 flex flex-col gap-3 mt-auto mb-2 animate-in fade-in duration-200 shadow-sm">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-semibold text-[#1a1a1a]">업무 그룹 (대표 제목)</label>
-                  <Input 
-                    placeholder="예: 홀 테이블 정리, 화장실 청소 등" 
-                    className="h-8 text-[12px] font-medium bg-white" 
-                    value={newTaskDraft.title}
-                    onChange={(e) => setNewTaskDraft(prev => ({...prev, title: e.target.value}))}
-                    autoFocus
-                  />
-                </div>
-                
-                <div className="flex flex-col gap-1.5 bg-white p-2 rounded-md border border-black/5">
-                  <label className="text-[10px] font-semibold text-muted-foreground mb-1">세부 할 일 (체크리스트)</label>
-                  <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
-                    {newChecklists.map((text, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Checkbox disabled className="w-3.5 h-3.5 opacity-50" />
-                        <Input
-                          id={`checklist-new-${index}`}
-                          placeholder={index === newChecklists.length - 1 ? "할 일 추가... (엔터 입력)" : "할 일 내용"}
-                          className="h-7 text-[11px] bg-transparent border-transparent hover:border-black/10 focus-visible:border-primary/50 focus-visible:ring-0 px-1 shadow-none transition-colors"
-                          value={text}
-                          onChange={(e) => handleChecklistChange(index, e.target.value, false)}
-                          onKeyDown={(e) => handleChecklistKeyDown(e, index, false)}
-                        />
-                        {text && index !== newChecklists.length - 1 && (
-                          <button 
-                            className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                            onClick={() => {
-                              const newItems = newChecklists.filter((_, i) => i !== index)
-                              setNewChecklists(newItems)
-                            }}
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-black/5 pt-2">
-                  <label className="text-[10px] font-medium text-[#1a1a1a] flex items-center gap-2 cursor-pointer">
-                    <Switch 
-                      checked={newTaskDraft.hasTime} 
-                      onCheckedChange={(val) => setNewTaskDraft(prev => ({...prev, hasTime: val}))} 
-                      className="scale-75 origin-left"
-                    />
-                    수행 시간 지정하기
-                  </label>
-                </div>
-
-                {newTaskDraft.hasTime && (
-                  <div className="flex flex-col gap-1.5 bg-white p-2 rounded border border-black/5">
-                    <label className="text-[9px] text-muted-foreground">업무 시작 시간 (선택)</label>
-                    <div className="flex items-center gap-2">
-                      <TimePicker 
-                        value={newTaskDraft.startTime} 
-                        onChange={(val) => setNewTaskDraft(prev => ({...prev, startTime: val}))}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-1.5 mt-1">
-                  <button 
-                    className="text-[11px] px-3 py-1.5 rounded text-muted-foreground hover:bg-black/5 transition-colors font-medium"
-                    onClick={() => setIsTaskFormOpen(false)}
-                  >
-                    취소
-                  </button>
-                  <button 
-                    className="text-[11px] px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-sm"
-                    onClick={async () => {
-                      if (!newTaskDraft.title.trim()) {
-                        toast.error('업무 그룹(대표 제목)을 입력해주세요.')
-                        return
-                      }
-
-                      const loadingToast = toast.loading('업무를 추가하는 중...')
-                      
-                      // startTimeStr은 입력된 시간을 UTC 형태 문자열로 생성할지 여부
-                      const assignStartTime = newTaskDraft.hasTime && newTaskDraft.startTime 
-                        ? newTaskDraft.startTime // "HH:mm" 포맷
-                        : null;
-                        
-                      const finalChecklist = newChecklists
-                        .filter(text => text.trim() !== '')
-                        .map(text => ({
-                           id: crypto.randomUUID(),
-                           text: text.trim(),
-                           is_completed: false
-                        }))
-
-                      // 로컬 타임 문자열 생성
-                      const taskStartLocal = assignStartTime ? `${selectedSchedule.editDate}T${assignStartTime}:00` : null;
-                      const taskEndLocal = assignStartTime ? `${selectedSchedule.editDate}T${addMinutesToTime(assignStartTime, 30)}:00` : null;
-
-                      // 바로 스케줄과 연결되는 개별 업무로 생성 (is_template = false)
-                      const result = await createDirectScheduleTask({
-                        store_id: storeId,
-                        title: newTaskDraft.title,
-                        task_type: newTaskDraft.hasTime ? 'scheduled' : 'always',
-                        start_time: taskStartLocal,
-                        end_time: taskEndLocal,
-                        estimated_minutes: 30,
-                        checklist: finalChecklist,
-                        staff_id: targetStaffId,
-                        schedule_id: selectedSchedule.id,
-                        assigned_date: selectedSchedule.editDate
-                      })
-
-                      if (result.error) {
-                        toast.dismiss(loadingToast)
-                        toast.error(result.error)
-                        return
-                      }
-
-                      const task = result.data
-
-                      // 성공적으로 생성되었으므로 UI 상태 업데이트
-                      const updatedSchedule = {
-                        ...selectedSchedule,
-                        tasks: [...(selectedSchedule.tasks || []), task]
-                      };
-                      
-                      if (setSelectedSchedule) setSelectedSchedule(updatedSchedule);
-                      setLocalSchedules(prev => prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s));
-                      
-                      toast.dismiss(loadingToast)
-                      toast.success(`'${newTaskDraft.title}' 업무가 추가되었습니다.`)
-                      setIsTaskFormOpen(false)
-                      setNewTaskDraft({ title: '', hasTime: false, startTime: '', endTime: '' })
-                      setNewChecklists([''])
-                      router.refresh()
-                    }}
-                  >
-                    추가하기
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button 
-                className="w-full border border-dashed border-black/20 text-[#6b6b6b] hover:text-[#1a1a1a] bg-white hover:bg-black/5 hover:border-black/30 text-[12px] py-2.5 rounded-md flex items-center justify-center gap-1 transition-all mt-auto mb-2 font-medium shadow-sm"
-                onClick={() => setIsTaskFormOpen(true)}
-              >
-                <span className="text-[14px] leading-none mb-[1px]">+</span> 개별 업무 추가
-              </button>
-                  )}
-                </div>
-            </div>
-          )
-        })()}
-        </div>
-      )}
     </div>
   )
 }

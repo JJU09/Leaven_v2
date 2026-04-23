@@ -57,7 +57,7 @@ function formatTimeLabel(timeString: string): string {
 
 // 업무 상태 도출 로직 (스케줄 관리 페이지와 동일하되, 시간 텍스트 기반으로 정확히 비교)
 function getDerivedTaskStatus(task: Task, now: Date): 'todo' | 'in_progress' | 'pending' | 'done' {
-  if (task.status === 'done') return 'done'
+  if (task.status === 'completed' || task.status as any === 'done') return 'done'
   if (!task.start_time) return 'todo'
   if (task.task_type === 'always') return 'todo'
 
@@ -153,19 +153,30 @@ export function DashboardTaskList({ storeId, roleId, attendanceStatus, currentUs
     setRoutineStatus(newStatus)
   }
 
-  const fetchTasks = async () => {
+  // 스케줄 유무 상태 및 해당 스케줄 ID
+  const [hasSchedule, setHasSchedule] = useState<boolean>(true)
+  const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(null)
+
+  const fetchTasks = async (isBackground = false) => {
     try {
-      setLoading(true)
+      if (!isBackground) setLoading(true)
       const today = getTodayDateString()
       
       // getDashboardTasks가 이제 is_template=true인 플레이북 데이터와 
       // 오늘 날짜의 내 스케줄(task_assignments)에 속한 세부 할 일 데이터를 한 번에 가져옵니다.
-      const data = await getDashboardTasks(storeId, today)
+      const response = await getDashboardTasks(storeId, today)
+      
+      const data = Array.isArray(response) ? response : response.tasks || []
+      const _hasSchedule = !Array.isArray(response) && response.hasSchedule !== undefined ? response.hasSchedule : true
+      const _scheduleId = !Array.isArray(response) && response.scheduleId !== undefined ? response.scheduleId : null
+      
+      setHasSchedule(_hasSchedule)
+      setCurrentScheduleId(_scheduleId)
       
       // 받은 데이터를 클라이언트에서 용도에 맞게 분리합니다.
       // 이제 루틴/플레이북 여부는 is_routine을 기준으로 합니다.
-      const normalTasks = data?.filter(t => !t.is_routine) || []
-      const playbookTasks = data?.filter(t => t.is_routine) || []
+      const normalTasks = data?.filter((t: Task) => !t.is_routine) || []
+      const playbookTasks = data?.filter((t: Task) => t.is_routine) || []
       
       setTasks(normalTasks)
       setRoleTasks(playbookTasks)
@@ -178,7 +189,17 @@ export function DashboardTaskList({ storeId, roleId, attendanceStatus, currentUs
   }
 
   useEffect(() => {
-    fetchTasks()
+    fetchTasks(false)
+
+    // 스케줄 상세 패널(ScheduleDetailPanel)에서 업무 수정/삭제/추가 시 새로고침
+    const handleTaskUpdate = () => {
+      fetchTasks(true)
+    }
+
+    window.addEventListener('task-updated', handleTaskUpdate)
+    return () => {
+      window.removeEventListener('task-updated', handleTaskUpdate)
+    }
   }, [storeId, roleId])
 
   const handleChecklistToggle = async (taskId: string, itemId: string, checked: boolean, isRoutine?: boolean) => {
@@ -217,11 +238,12 @@ export function DashboardTaskList({ storeId, roleId, attendanceStatus, currentUs
             item.id === itemId ? { ...item, is_completed: checked } : item
         ) || []
         const allCompleted = newChecklist.length > 0 && newChecklist.every(item => item.is_completed)
-        const newStatus = allCompleted ? 'done' : (task.status === 'done' ? 'todo' : task.status)
+        const newStatus = allCompleted ? 'completed' : (task.status === 'completed' ? 'pending' : task.status)
         return { ...task, checklist: newChecklist, status: newStatus }
     }))
     const result = await toggleTaskCheckitem(taskId, itemId, checked)
-    if (result.error) fetchTasks()
+    if (result.error) fetchTasks(true)
+    else window.dispatchEvent(new Event('schedule-updated'))
   }
 
   const handleStatusChange = async (taskId: string, status: 'todo' | 'in_progress' | 'done', isRoutine?: boolean) => {
@@ -245,6 +267,8 @@ export function DashboardTaskList({ storeId, roleId, attendanceStatus, currentUs
         return
       }
 
+      const dbStatus = status === 'done' ? 'completed' : 'pending'
+
       setTasks(prev => prev.map(task => {
           if (task.id !== taskId) return task
           // 메인 상태가 'done'이면 모든 하위 항목도 체크, 아니면 전부 해제
@@ -252,10 +276,11 @@ export function DashboardTaskList({ storeId, roleId, attendanceStatus, currentUs
               ...item,
               is_completed: status === 'done'
           })) || []
-          return { ...task, status, checklist: newChecklist }
+          return { ...task, status: dbStatus, checklist: newChecklist }
       }))
-      const result = await updateTaskStatus(taskId, status)
-      if (result.error) fetchTasks()
+      const result = await updateTaskStatus(taskId, dbStatus)
+      if (result.error) fetchTasks(true)
+      else window.dispatchEvent(new Event('schedule-updated'))
   }
 
   const handleDeleteTask = async (taskId: string) => {
@@ -268,9 +293,10 @@ export function DashboardTaskList({ storeId, roleId, attendanceStatus, currentUs
     const result = await deleteTask(taskId)
     if (result.error) {
       toast.error('삭제 실패: ' + result.error)
-      fetchTasks() // 실패 시 롤백
+      fetchTasks(true) // 실패 시 롤백
     } else {
       toast.success('업무가 삭제되었습니다.')
+      window.dispatchEvent(new Event('schedule-updated'))
     }
     setDeletingId(null)
   }
@@ -371,25 +397,38 @@ export function DashboardTaskList({ storeId, roleId, attendanceStatus, currentUs
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-6 w-6 md:h-7 md:w-7 rounded-md border-black/10 shadow-sm"
-                    onClick={() => {
-                      setCreateForm({
-                        title: '개인 업무',
-                        date: getTodayDateString(),
-                        startTime: '09:00',
-                        endTime: '10:00',
-                        staffId: '' // 서버 연동 시 본인 아이디를 사용하거나 내부적으로 알아서 할당됨
-                      })
-                      setCreateModalOpen(true)
-                    }}
-                  >
-                    <Plus className="w-4 h-4 text-[#1a1a1a]" />
-                  </Button>
+                  <span tabIndex={0} className="inline-block">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      disabled={!hasSchedule}
+                      className={cn(
+                        "h-6 w-6 md:h-7 md:w-7 rounded-md border-black/10 shadow-sm",
+                        !hasSchedule && "opacity-50 cursor-not-allowed"
+                      )}
+                      onClick={(e) => {
+                        if (!hasSchedule) {
+                          e.preventDefault();
+                          toast.error('오늘 배정된 스케줄이 없습니다.', { description: '스케줄이 존재해야 개인 업무를 추가할 수 있습니다.' });
+                          return;
+                        }
+                        setCreateForm({
+                          title: '개인 업무',
+                          date: getTodayDateString(),
+                          startTime: '09:00',
+                          endTime: '10:00',
+                          staffId: '' // 서버 연동 시 본인 아이디를 사용하거나 내부적으로 알아서 할당됨
+                        })
+                        setCreateModalOpen(true)
+                      }}
+                    >
+                      <Plus className="w-4 h-4 text-[#1a1a1a]" />
+                    </Button>
+                  </span>
                 </TooltipTrigger>
-                <TooltipContent className="text-[11px]">개인 업무 추가</TooltipContent>
+                <TooltipContent className="text-[11px]">
+                  {hasSchedule ? "개인 업무 추가" : "스케줄이 없어 업무를 추가할 수 없습니다"}
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
@@ -435,7 +474,7 @@ export function DashboardTaskList({ storeId, roleId, attendanceStatus, currentUs
               {groupedTasks.length === 0 && mergedAnytimeTasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                   <CheckCircle2 className="w-10 h-10 mb-2 opacity-20" />
-                  <p className="text-sm">오늘 예정된 업무가 없습니다</p>
+                  <p className="text-sm">{!hasSchedule ? "오늘 스케줄이 없습니다" : "오늘 예정된 업무가 없습니다"}</p>
                 </div>
               )}
 
@@ -531,7 +570,10 @@ export function DashboardTaskList({ storeId, roleId, attendanceStatus, currentUs
         storeId={storeId}
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
-        onSuccess={fetchTasks}
+        onSuccess={() => {
+          fetchTasks(true)
+          window.dispatchEvent(new Event('schedule-updated'))
+        }}
       />
     </>
   )
@@ -549,7 +591,7 @@ interface TaskCardProps {
 
 function TaskCard({ task, now, routineStatus, onCheck, onStatusChange, onDelete, isDeleting }: TaskCardProps) {
   const isRoutine = task.is_routine === true
-  const isDone = isRoutine ? (routineStatus?.status === 'done') : (task.status === 'done')
+  const isDone = isRoutine ? (routineStatus?.status === 'done') : (task.status === 'completed' || task.status as any === 'done')
   
   // 템플릿(가이드) 이거나 역할에 배정된 경우 뱃지 표시
   const isRoleTask = isRoutine || (task.assigned_role_ids && task.assigned_role_ids.length > 0)
@@ -606,8 +648,10 @@ function TaskCard({ task, now, routineStatus, onCheck, onStatusChange, onDelete,
                 </div>
                 
                 {isPersonal && (
-                  <button 
-                    className="shrink-0 w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                  <Button 
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 w-5 h-5 md:w-6 md:h-6 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                     title="업무 삭제"
                     disabled={isDeleting}
                     onClick={(e) => {
@@ -616,7 +660,7 @@ function TaskCard({ task, now, routineStatus, onCheck, onStatusChange, onDelete,
                     }}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  </Button>
                 )}
               </div>
               

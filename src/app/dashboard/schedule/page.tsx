@@ -66,38 +66,33 @@ export default async function UnifiedSchedulePage() {
   })) || []
 
   // 스케줄 데이터 및 연관 업무(체크리스트) 조회
-  const { data: rawSchedules } = await supabase
+  // V2 스키마: task_assignments가 tasks 테이블로 통합됨
+  const { data: rawSchedules, error: scheduleError } = await supabase
     .from('schedules')
     .select(`
       id,
       start_time,
       end_time,
-      memo,
-      title,
-      color,
       schedule_type,
       plan_date,
       member_id,
-      schedule_members (
-        member_id,
-        member:store_members (name, user_id)
-      ),
-      task_assignments (
+      member:store_members!schedules_member_id_fkey (name, user_id),
+      tasks (
         id,
+        title,
+        description,
         status,
         assigned_date,
         start_time,
-        end_time,
-        task:tasks (
-          id,
-          title,
-          description,
-          category,
-          is_routine
-        )
+        task_type,
+        is_routine
       )
     `)
     .eq('store_id', member.store_id)
+
+  if (scheduleError) {
+    console.error('Error fetching raw schedules in page:', JSON.stringify(scheduleError, null, 2))
+  }
 
   const schedules = rawSchedules?.map((sch: any) => {
     let startIso = sch.start_time;
@@ -123,18 +118,16 @@ export default async function UnifiedSchedulePage() {
       ...sch,
       start_time: startIso,
       end_time: endIso,
-      tasks: sch.task_assignments?.map((ta: any) => {
-        const taskObj = Array.isArray(ta.task) ? ta.task[0] : ta.task;
+      tasks: sch.tasks?.map((task: any) => {
         return {
-          id: ta.id,
-          status: ta.status,
-          assigned_date: ta.assigned_date,
-          start_time: ta.start_time,
-          end_time: ta.end_time,
-          title: taskObj?.title,
-          description: taskObj?.description,
-          task_type: taskObj?.category,
-          is_routine: taskObj?.is_routine
+          id: task.id,
+          status: task.status,
+          assigned_date: task.assigned_date,
+          start_time: task.start_time,
+          title: task.title,
+          description: task.description,
+          task_type: task.task_type,
+          is_routine: task.is_routine
         }
       }) || []
     }

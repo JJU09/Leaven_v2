@@ -193,18 +193,20 @@ export function RoleTaskForm({
                   {roles.map((role) => {
                     const isSelected = formData.assigned_role_ids.includes('all') || formData.assigned_role_ids.includes(role.id)
                     return (
-                      <button
+                      <Button
                         key={role.id}
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => toggleRole(role.id)}
                         className={`
-                          flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-colors
-                          ${isSelected ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border/60 text-muted-foreground bg-card hover:bg-muted/50'}
+                          flex items-center h-auto gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-colors
+                          ${isSelected ? 'border-primary bg-primary/10 text-primary font-medium hover:bg-primary/20 hover:text-primary' : 'border-border/60 text-muted-foreground bg-card hover:bg-muted/50'}
                         `}
                       >
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: role.color || '#ccc' }} />
                         {role.name}
-                      </button>
+                      </Button>
                     )
                   })}
                 </div>

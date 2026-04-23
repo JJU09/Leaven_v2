@@ -6,8 +6,6 @@ import { getPendingRequestsCount } from '@/features/staff/actions'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { getCurrentSchedule } from '@/features/schedule/actions'
-import { AnnouncementList } from '@/features/store/components/announcement-list'
-import { getStoreAnnouncements } from '@/features/store/announcement-actions'
 import { hasPermission } from '@/features/auth/permissions'
 import { getTodayDashboardStats } from '@/features/schedule/dashboard-actions'
 
@@ -72,10 +70,9 @@ export default async function DashboardPage() {
   }
 
   // 병렬로 데이터 조회
-  const [pendingCount, _currentSchedule, announcements, dashboardStats] = await Promise.all([
+  const [pendingCount, _currentSchedule, dashboardStats] = await Promise.all([
     getPendingRequestsCount(store.id),
     getCurrentSchedule(store.id),
-    getStoreAnnouncements(store.id),
     getTodayDashboardStats(store.id)
   ])
 
@@ -83,13 +80,12 @@ export default async function DashboardPage() {
     <AdminDashboard 
       pendingCount={pendingCount} 
       store={store} 
-      announcements={announcements} 
       stats={dashboardStats}
     />
   )
 }
 
-function AdminDashboard({ pendingCount, store, announcements, stats }: { pendingCount: number, store: { id: string, name: string, [key: string]: unknown }, announcements: any[], stats: { scheduledMembersCount: number, leaveMembersCount: number, clockedInMembersCount: number } }) {
+function AdminDashboard({ pendingCount, store, stats }: { pendingCount: number, store: { id: string, name: string, [key: string]: unknown }, stats: { scheduledMembersCount: number, leaveMembersCount: number, clockedInMembersCount: number } }) {
   
   // 근무자 현황 표시 텍스트 로직
   let attendanceStatusText = '전원 출근'
@@ -137,7 +133,7 @@ function AdminDashboard({ pendingCount, store, announcements, stats }: { pending
 
       <div className="grid gap-6 md:grid-cols-12">
         {/* Main Content (Left) */}
-        <div className="md:col-span-8 lg:col-span-8">
+        <div className="md:col-span-12 lg:col-span-12">
           <Card className="border shadow-sm overflow-hidden bg-white dark:bg-slate-900">
             <div className="grid grid-cols-2 divide-x">
               {/* Sales Section */}
@@ -212,17 +208,6 @@ function AdminDashboard({ pendingCount, store, announcements, stats }: { pending
               </div>
             </div>
           </Card>
-        </div>
-
-        {/* Sidebar: Announcements */}
-        <div className="md:col-span-4 lg:col-span-4">
-           <div className="sticky top-6 flex flex-col h-[300px] md:h-[calc(100vh-12rem)] min-h-[300px] md:min-h-[400px]">
-              <AnnouncementList 
-                storeId={store.id} 
-                announcements={announcements} 
-                canManage={true} 
-              />
-           </div>
         </div>
       </div>
     </div>

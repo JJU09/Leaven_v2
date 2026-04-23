@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { format, addDays, startOfWeek } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Search, Sparkles, Trash2 } from 'lucide-react'
+import { Search, Sparkles, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 interface CalendarHeaderProps {
   searchQuery: string
@@ -74,24 +75,30 @@ export function CalendarHeader({
       <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 w-full md:w-auto">
         {/* 뷰 토글 */}
         <div className="flex w-full md:w-auto bg-[#f3f2ef] rounded-md p-0.5 shrink-0 shadow-inner border border-black/5">
-          <button 
-            className={`hidden md:block flex-1 md:flex-none text-[12px] px-4 py-1.5 rounded-md transition-all ${viewMode === 'timeline' ? 'bg-white font-semibold text-[#1a1a1a] shadow-sm' : 'text-[#6b6b6b] hover:text-[#1a1a1a]'}`}
+          <Button 
+            variant="ghost"
+            size="sm"
+            className={`hidden md:flex flex-1 md:flex-none text-[12px] px-4 h-auto py-1.5 rounded-md transition-all ${viewMode === 'timeline' ? 'bg-white font-semibold text-[#1a1a1a] shadow-sm hover:bg-white' : 'text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-transparent'}`}
             onClick={() => setViewMode('timeline')}
           >
             일간
-          </button>
-          <button 
-            className={`flex-1 md:flex-none text-[12px] px-4 py-1.5 rounded-md transition-all ${viewMode === 'matrix' ? 'bg-white font-semibold text-[#1a1a1a] shadow-sm' : 'text-[#6b6b6b] hover:text-[#1a1a1a]'}`}
+          </Button>
+          <Button 
+            variant="ghost"
+            size="sm"
+            className={`flex-1 md:flex-none text-[12px] px-4 h-auto py-1.5 rounded-md transition-all ${viewMode === 'matrix' ? 'bg-white font-semibold text-[#1a1a1a] shadow-sm hover:bg-white' : 'text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-transparent'}`}
             onClick={() => setViewMode('matrix')}
           >
             주간
-          </button>
-          <button 
-            className={`flex-1 md:flex-none text-[12px] px-4 py-1.5 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white font-semibold text-[#1a1a1a] shadow-sm' : 'text-[#6b6b6b] hover:text-[#1a1a1a]'}`}
+          </Button>
+          <Button 
+            variant="ghost"
+            size="sm"
+            className={`flex-1 md:flex-none text-[12px] px-4 h-auto py-1.5 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white font-semibold text-[#1a1a1a] shadow-sm hover:bg-white' : 'text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-transparent'}`}
             onClick={() => setViewMode('calendar')}
           >
             월간
-          </button>
+          </Button>
         </div>
 
         {/* 날짜 이동 (PC 뷰 - 기본 스타일) */}
@@ -99,8 +106,8 @@ export function CalendarHeader({
           {viewMode === 'timeline' ? (
             <>
               <div className="flex gap-1">
-                <button className="flex items-center justify-center w-7 h-7 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5 transition-colors shadow-sm" onClick={() => setTimelineDate(addDays(timelineDate, -1))}>‹</button>
-                <button className="flex items-center justify-center w-7 h-7 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5 transition-colors shadow-sm" onClick={() => setTimelineDate(addDays(timelineDate, 1))}>›</button>
+                <Button variant="outline" size="icon" className="w-7 h-7 bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5" onClick={() => setTimelineDate(addDays(timelineDate, -1))}><ChevronLeft className="h-4 w-4" /></Button>
+                <Button variant="outline" size="icon" className="w-7 h-7 bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5" onClick={() => setTimelineDate(addDays(timelineDate, 1))}><ChevronRight className="h-4 w-4" /></Button>
               </div>
               <div className="text-[14px] font-semibold text-[#1a1a1a]">
                 {format(timelineDate, 'yyyy년 M월 d일 (E)', { locale: ko })}
@@ -109,8 +116,8 @@ export function CalendarHeader({
           ) : viewMode === 'matrix' ? (
             <>
               <div className="flex gap-1">
-                <button className="flex items-center justify-center w-7 h-7 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5 transition-colors shadow-sm" onClick={() => setMatrixStartDate(addDays(matrixStartDate, -7))}>‹</button>
-                <button className="flex items-center justify-center w-7 h-7 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5 transition-colors shadow-sm" onClick={() => setMatrixStartDate(addDays(matrixStartDate, 7))}>›</button>
+                <Button variant="outline" size="icon" className="w-7 h-7 bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5" onClick={() => setMatrixStartDate(addDays(matrixStartDate, -7))}><ChevronLeft className="h-4 w-4" /></Button>
+                <Button variant="outline" size="icon" className="w-7 h-7 bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5" onClick={() => setMatrixStartDate(addDays(matrixStartDate, 7))}><ChevronRight className="h-4 w-4" /></Button>
               </div>
               <div className="text-[14px] font-semibold text-[#1a1a1a]">
                 {format(matrixStartDate, 'yyyy년 M월 d일')} - {format(addDays(matrixStartDate, 6), 'M월 d일', { locale: ko })}
@@ -119,16 +126,16 @@ export function CalendarHeader({
           ) : (
             <>
               <div className="flex gap-1">
-                <button className="flex items-center justify-center w-7 h-7 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5 transition-colors shadow-sm" onClick={() => {
+                <Button variant="outline" size="icon" className="w-7 h-7 bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5" onClick={() => {
                   const newDate = new Date(calendarDate)
                   newDate.setMonth(newDate.getMonth() - 1)
                   setCalendarDate(newDate)
-                }}>‹</button>
-                <button className="flex items-center justify-center w-7 h-7 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5 transition-colors shadow-sm" onClick={() => {
+                }}><ChevronLeft className="h-4 w-4" /></Button>
+                <Button variant="outline" size="icon" className="w-7 h-7 bg-white text-[#6b6b6b] hover:text-[#1a1a1a] hover:bg-black/5" onClick={() => {
                   const newDate = new Date(calendarDate)
                   newDate.setMonth(newDate.getMonth() + 1)
                   setCalendarDate(newDate)
-                }}>›</button>
+                }}><ChevronRight className="h-4 w-4" /></Button>
               </div>
               <div className="text-[14px] font-semibold text-[#1a1a1a]">
                 {format(calendarDate, 'yyyy년 M월', { locale: ko })}
@@ -141,35 +148,35 @@ export function CalendarHeader({
         <div className="flex md:hidden items-center justify-between w-full px-2 pb-0">
           {viewMode === 'timeline' ? (
             <>
-              <button className="flex items-center justify-center w-8 h-8 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors shadow-sm" onClick={() => setTimelineDate(addDays(timelineDate, -1))}>‹</button>
+              <Button variant="outline" size="icon" className="w-8 h-8 bg-white text-[#6b6b6b]" onClick={() => setTimelineDate(addDays(timelineDate, -1))}><ChevronLeft className="h-4 w-4" /></Button>
               <div className="text-[14px] font-semibold text-[#1a1a1a] text-center flex-1">
                 {format(timelineDate, 'yyyy년 M월 d일 (E)', { locale: ko })}
               </div>
-              <button className="flex items-center justify-center w-8 h-8 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors shadow-sm" onClick={() => setTimelineDate(addDays(timelineDate, 1))}>›</button>
+              <Button variant="outline" size="icon" className="w-8 h-8 bg-white text-[#6b6b6b]" onClick={() => setTimelineDate(addDays(timelineDate, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </>
           ) : viewMode === 'matrix' ? (
             <>
-              <button className="flex items-center justify-center w-8 h-8 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors shadow-sm" onClick={() => setMatrixStartDate(addDays(matrixStartDate, -7))}>‹</button>
+              <Button variant="outline" size="icon" className="w-8 h-8 bg-white text-[#6b6b6b]" onClick={() => setMatrixStartDate(addDays(matrixStartDate, -7))}><ChevronLeft className="h-4 w-4" /></Button>
               <div className="text-[14px] font-semibold text-[#1a1a1a] text-center flex-1">
                 {format(matrixStartDate, 'M월 d일')} - {format(addDays(matrixStartDate, 6), 'M월 d일', { locale: ko })}
               </div>
-              <button className="flex items-center justify-center w-8 h-8 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors shadow-sm" onClick={() => setMatrixStartDate(addDays(matrixStartDate, 7))}>›</button>
+              <Button variant="outline" size="icon" className="w-8 h-8 bg-white text-[#6b6b6b]" onClick={() => setMatrixStartDate(addDays(matrixStartDate, 7))}><ChevronRight className="h-4 w-4" /></Button>
             </>
           ) : (
             <>
-              <button className="flex items-center justify-center w-8 h-8 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors shadow-sm" onClick={() => {
+              <Button variant="outline" size="icon" className="w-8 h-8 bg-white text-[#6b6b6b]" onClick={() => {
                 const newDate = new Date(calendarDate)
                 newDate.setMonth(newDate.getMonth() - 1)
                 setCalendarDate(newDate)
-              }}>‹</button>
+              }}><ChevronLeft className="h-4 w-4" /></Button>
               <div className="text-[14px] font-semibold text-[#1a1a1a] text-center flex-1">
                 {format(calendarDate, 'yyyy년 M월', { locale: ko })}
               </div>
-              <button className="flex items-center justify-center w-8 h-8 border border-black/15 rounded-md bg-white text-[#6b6b6b] hover:text-[#1a1a1a] transition-colors shadow-sm" onClick={() => {
+              <Button variant="outline" size="icon" className="w-8 h-8 bg-white text-[#6b6b6b]" onClick={() => {
                 const newDate = new Date(calendarDate)
                 newDate.setMonth(newDate.getMonth() + 1)
                 setCalendarDate(newDate)
-              }}>›</button>
+              }}><ChevronRight className="h-4 w-4" /></Button>
             </>
           )}
         </div>
@@ -252,20 +259,22 @@ export function CalendarHeader({
 
             {/* 액션 버튼 */}
             <div className="flex items-stretch shadow-sm rounded-md ml-1">
-              <button 
-                className="bg-[#1a1a1a] text-white text-[11px] font-medium px-3 py-1.5 rounded-l-md hover:bg-black/80 flex items-center gap-1.5 transition-colors outline-none border-r border-white/20"
+              <Button 
+                variant="default"
+                className="bg-[#1a1a1a] text-white text-[11px] h-auto font-medium px-3 py-1.5 rounded-none rounded-l-md hover:bg-black/80 flex items-center gap-1.5 border-r border-white/20"
                 onClick={onAutoSchedule}
                 title="스케줄 자동 생성"
               >
                 <Sparkles className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500/20" /> 스케줄 자동 생성
-              </button>
-              <button 
-                className="bg-[#1a1a1a] text-white/70 px-2.5 py-1.5 rounded-r-md hover:bg-destructive hover:text-white flex items-center transition-colors outline-none"
+              </Button>
+              <Button 
+                variant="default"
+                className="bg-[#1a1a1a] text-white/70 h-auto px-2.5 py-1.5 rounded-none rounded-r-md hover:bg-destructive hover:text-white flex items-center"
                 onClick={onBulkDelete}
                 title="스케줄 일괄 초기화"
               >
                 <Trash2 className="w-[14px] h-[14px]" />
-              </button>
+              </Button>
             </div>
           </>
         )}

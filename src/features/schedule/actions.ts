@@ -21,15 +21,16 @@ export async function getSchedules(storeId: string, startDate: string, endDate: 
       schedule_type,
       member_id,
       member:store_members!schedules_member_id_fkey (name, user_id, profile:profiles(full_name, avatar_url)),
-      tasks!schedule_id(
+      tasks(
         id,
         title,
         description,
         status,
         checklist,
         start_time,
-        end_time,
-        task_type
+        task_type,
+        is_template,
+        is_routine
       )
     `)
     .eq('store_id', storeId)
@@ -57,6 +58,11 @@ export async function getSchedules(storeId: string, startDate: string, endDate: 
 
   // 스케줄 객체에 관련 휴가 정보를 붙여서 반환
   return schedules.map((sch: any) => {
+    // 템플릿(루틴)용이 아닌, 실제 할당된 태스크만 필터링해서 내려주기
+    if (sch.tasks && Array.isArray(sch.tasks)) {
+      sch.tasks = sch.tasks.filter((t: any) => !t.is_template && !t.is_routine);
+    }
+
     let startIso = sch.start_time;
     if (startIso && !startIso.includes('T') && sch.plan_date) {
       startIso = `${sch.plan_date}T${startIso}`;
@@ -146,6 +152,7 @@ export async function createSchedule(storeId: string, formData: FormData) {
   }
 
   let createdCount = 0
+  let createdSchedules = []
 
   for (const date of targetDates) {
     // 스키마에 맞게 plan_date, start_time, end_time 설정
@@ -183,10 +190,13 @@ export async function createSchedule(storeId: string, formData: FormData) {
     // (다중 할당이 필요한 경우 스케줄 row를 각각 생성해야 함)
 
     createdCount++
+    if (schedule) {
+      createdSchedules.push(schedule)
+    }
   }
 
   revalidatePath('/dashboard/schedule')
-  return { success: true, count: createdCount }
+  return { success: true, count: createdCount, schedules: createdSchedules }
 }
 
 // 스케줄 시간 수정 (드래그 앤 드롭 등) 및 개별 업무(Task) 시간 이동
@@ -249,7 +259,7 @@ export async function updateScheduleTime(
   if (moveTasks && deltaMinutes !== 0) {
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('id, start_time, end_time, assigned_date')
+      .select('id, start_time, assigned_date')
       .eq('schedule_id', scheduleId)
       .eq('store_id', storeId)
       .eq('is_template', false)
@@ -264,13 +274,6 @@ export async function updateScheduleTime(
             const tStart = new Date(task.start_time)
             tStart.setUTCMinutes(tStart.getUTCMinutes() + deltaMinutes)
             updates.start_time = tStart.toISOString()
-
-            // end_time 업데이트
-            if (task.end_time) {
-              const tEnd = new Date(task.end_time)
-              tEnd.setUTCMinutes(tEnd.getUTCMinutes() + deltaMinutes)
-              updates.end_time = tEnd.toISOString()
-            }
 
             await supabase
               .from('tasks')
@@ -380,7 +383,7 @@ export async function updateSchedule(storeId: string, scheduleId: string, formDa
 
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('id, start_time, end_time, assigned_date, user_id')
+      .select('id, start_time, assigned_date, user_id')
       .eq('schedule_id', scheduleId)
       .eq('store_id', storeId)
       .eq('is_template', false)
@@ -420,11 +423,6 @@ export async function updateSchedule(storeId: string, scheduleId: string, formDa
               tStart.setUTCMinutes(tStart.getUTCMinutes() + deltaMinutes)
               updates.start_time = tStart.toISOString()
 
-              if (task.end_time) {
-                const tEnd = new Date(task.end_time)
-                tEnd.setUTCMinutes(tEnd.getUTCMinutes() + deltaMinutes)
-                updates.end_time = tEnd.toISOString()
-              }
               hasChanges = true;
             } catch(e) {
                 console.error("Task time update error:", e)

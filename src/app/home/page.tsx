@@ -99,10 +99,10 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
                     'use server'
                     await logout()
                   }} className="w-full cursor-pointer">
-                    <button type="submit" className="flex w-full items-center text-red-600">
+                    <Button type="submit" variant="ghost" className="flex w-full items-center justify-start text-red-600 hover:text-red-700 hover:bg-red-50 p-0 h-auto font-normal">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>로그아웃</span>
-                    </button>
+                    </Button>
                   </form>
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { DashboardTaskList } from '@/features/schedule/components/dashboard/dashboard-task-list'
-import { StaffAnnouncementList } from '@/features/store/components/staff-announcement-list'
+import { StaffAnnouncementList } from '@/features/announcement/components/staff-announcement-list'
 import { TaskAttendanceWidget } from '@/features/attendance/components/task-attendance-widget'
 import { cn } from '@/lib/utils'
 

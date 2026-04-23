@@ -16,18 +16,14 @@ export interface Task {
   store_id: string
   title: string
   description: string | null
-  is_critical: boolean
-  estimated_minutes: number
   created_at: string
   updated_at: string
   task_type: 'scheduled' | 'always'
   start_time: string | null // timestamptz (ISO string)
-  end_time: string | null // timestamptz (ISO string)
-  original_repeat_id: string | null
   assigned_role_ids: string[] | null
   assigned_role_id?: string | null // Deprecated
   checklist: ChecklistItem[] | null
-  status: 'todo' | 'in_progress' | 'done'
+  status: 'pending' | 'in_progress' | 'on_hold' | 'completed' | 'verified'
   is_template?: boolean
   recurrence_rule?: any
   is_routine?: boolean
@@ -70,11 +66,8 @@ export interface CreateTaskInput {
   store_id: string
   title: string
   description?: string
-  is_critical?: boolean
-  estimated_minutes?: number
   task_type: 'scheduled' | 'always'
   start_time?: string | null // ISO String (UTC)
-  end_time?: string | null // ISO String (UTC)
   assigned_role_ids?: string[] | null
   assigned_role_id?: string | null // Deprecated
   checklist?: ChecklistItem[]
@@ -88,15 +81,12 @@ export interface UpdateTaskInput {
   id: string
   title?: string
   description?: string
-  is_critical?: boolean
-  estimated_minutes?: number
   task_type?: 'scheduled' | 'always'
   start_time?: string | null
-  end_time?: string | null
   assigned_role_ids?: string[] | null
   assigned_role_id?: string | null // Deprecated
   checklist?: ChecklistItem[]
-  status?: 'todo' | 'in_progress' | 'pending' | 'done'
+  status?: 'pending' | 'in_progress' | 'on_hold' | 'completed' | 'verified'
 }
 
 export interface AssignTaskInput {
@@ -105,7 +95,6 @@ export interface AssignTaskInput {
   member_id: string
   assigned_date: string
   start_time?: string | null
-  estimated_minutes: number
   schedule_id?: string
 }
 
@@ -249,7 +238,6 @@ export async function createTask(input: CreateTaskInput) {
     const anchorDate = start.getUTCDate()
     
     const timePartStart = input.start_time ? input.start_time.split('T')[1] : null
-    const timePartEnd = input.end_time ? input.end_time.split('T')[1] : null
     const isAlways = input.task_type === 'always'
 
     let current = new Date(start)
@@ -282,30 +270,23 @@ export async function createTask(input: CreateTaskInput) {
         const dateStr = `${year}-${month}-${day}`
         
         let start_time = null
-        let end_time = null
 
-        if (!isAlways && timePartStart && timePartEnd) {
+        if (!isAlways && timePartStart) {
             start_time = `${dateStr}T${timePartStart}`
-            end_time = `${dateStr}T${timePartEnd}`
         } else if (isAlways) {
             start_time = `${dateStr}T00:00:00Z`
-            end_time = `${dateStr}T23:59:59Z` 
         }
 
       tasksToCreate.push({
         store_id: input.store_id,
         title: input.title,
         description: input.description,
-        is_critical: input.is_critical,
-        estimated_minutes: input.estimated_minutes,
         task_type: input.task_type,
         start_time: start_time,
-        end_time: end_time,
-        original_repeat_id: original_repeat_id,
         assigned_role_ids: input.assigned_role_ids || [],
         // assigned_role_id: null, // DB Default or handle via migration
         checklist: input.checklist || [],
-        status: 'todo',
+        status: 'pending',
         is_template: false,
         is_routine: input.is_routine || false
       })
@@ -351,16 +332,12 @@ export async function createTask(input: CreateTaskInput) {
       store_id: input.store_id,
       title: input.title,
       description: input.description,
-      is_critical: input.is_critical,
-      estimated_minutes: input.estimated_minutes,
       task_type: input.task_type,
       start_time: input.start_time,
-      end_time: input.end_time,
-      original_repeat_id: null,
       assigned_role_ids: input.assigned_role_ids || [],
       // assigned_role_id: null,
       checklist: input.checklist || [],
-      status: 'todo',
+      status: 'pending',
       is_template: input.is_template || false,
       recurrence_rule: input.recurrence_rule || null,
       is_routine: input.is_routine || false
@@ -518,12 +495,6 @@ export async function assignTask(input: AssignTaskInput) {
     return { error: '유효하지 않은 직원입니다.' }
   }
 
-  // 종료 시간 계산 (순수 시간 계산, Timezone 무관)
-  let end_time = null
-  if (input.start_time) {
-    end_time = addMinutesToTime(input.start_time, input.estimated_minutes)
-  }
-
   // Fetch template task details
   const { data: templateTask } = await supabase
     .from('tasks')
@@ -535,10 +506,9 @@ export async function assignTask(input: AssignTaskInput) {
     return { error: '원본 템플릿을 찾을 수 없습니다.' }
   }
 
-  // start_time / end_time 은 "09:00" 형태의 문자열이 올 수 있고, DB의 timestamptz 형식에 맞춰야 하므로 
+  // start_time은 "09:00" 형태의 문자열이 올 수 있고, DB의 timestamptz 형식에 맞춰야 하므로 
   // 기존 toUTCISOString 등을 사용해 KST -> UTC 변환 적용
   const startUTC = input.start_time ? toUTCISOString(input.assigned_date, input.start_time) : null;
-  const endUTC = end_time ? toUTCISOString(input.assigned_date, end_time) : null;
 
   const { data, error } = await supabase
     .from('tasks')
@@ -547,13 +517,11 @@ export async function assignTask(input: AssignTaskInput) {
       title: templateTask.title,
       description: templateTask.description,
       checklist: templateTask.checklist,
-      estimated_minutes: input.estimated_minutes,
       task_type: input.start_time ? 'scheduled' : 'always',
       user_id: targetMember.user_id,
       assigned_date: input.assigned_date,
       start_time: startUTC,
-      end_time: endUTC,
-      status: 'todo',
+      status: 'pending',
       schedule_id: input.schedule_id || null,
       is_template: false,
       is_routine: true
@@ -595,19 +563,12 @@ export async function updateTaskAssignment(
     ? new Date(startTime).toISOString() 
     : (task && task.assigned_date ? `${task.assigned_date}T00:00:00Z` : null)
 
-  let endTime = null
-  if (startTime) {
-    endTime = addMinutesToTime(startTime.split('T')[1]?.substring(0, 5) || startTime, estimatedMinutes)
-  }
-
   // Update unified task table
   const { data, error } = await supabase
     .from('tasks')
     .update({ 
       title, 
       start_time: finalStartTime,
-      end_time: endTime ? (task && task.assigned_date ? `${task.assigned_date}T${endTime}` : null) : null,
-      estimated_minutes: estimatedMinutes,
       task_type: startTime ? 'scheduled' : 'always',
       updated_at: getCurrentISOString()
     })
@@ -658,9 +619,8 @@ export async function deleteAllTasks(storeId: string) {
   if (!user) throw new Error('User not found')
   await requirePermission(user.id, storeId, 'manage_tasks')
 
-  // 연관 데이터 삭제 (Cascade 설정이 안되어 있을 경우를 대비해 명시적 삭제)
-  await supabase.from('task_assignments').delete().eq('store_id', storeId)
-  await supabase.from('task_history').delete().eq('store_id', storeId)
+  // 연관 데이터 삭제 (더 이상 존재하지 않는 테이블 참조 제거)
+  // await supabase.from('task_history').delete().eq('store_id', storeId)
 
   const { error } = await supabase
     .from('tasks')
@@ -699,7 +659,7 @@ export async function getTaskAssignmentsBySchedule(storeId: string, scheduleId: 
 // 업무 상태 업데이트
 export async function updateTaskStatus(
   taskId: string, 
-  status: 'todo' | 'in_progress' | 'pending' | 'done'
+  status: 'pending' | 'in_progress' | 'on_hold' | 'completed' | 'verified'
 ) {
   const supabase = await createClient()
 
@@ -710,7 +670,7 @@ export async function updateTaskStatus(
     .eq('id', taskId)
     .single()
 
-  // 2. 상태가 'done'이면 하위 항목 전부 체크, 아니면 전부 해제 (체크리스트가 있을 경우에만)
+  // 2. 상태가 'completed'이면 하위 항목 전부 체크, 아니면 전부 해제 (체크리스트가 있을 경우에만)
   const updatePayload: any = {
     status,
     updated_at: getCurrentISOString()
@@ -719,7 +679,7 @@ export async function updateTaskStatus(
   if (task?.checklist && Array.isArray(task.checklist)) {
     updatePayload.checklist = task.checklist.map((item: any) => ({
       ...item,
-      is_completed: status === 'done'
+      is_completed: status === 'completed'
     }))
   }
 
@@ -745,9 +705,9 @@ export async function createPersonalDashboardTask(input: {
   description?: string
   task_type: 'scheduled' | 'always'
   start_time?: string | null // HH:mm format
-  end_time?: string | null // HH:mm format
   assigned_date: string // YYYY-MM-DD
   checklist?: { id: string, text: string, is_completed: boolean }[]
+  schedule_id?: string | null
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -766,23 +726,25 @@ export async function createPersonalDashboardTask(input: {
   }
 
   // 2. 당일 배정된 스케줄 ID 조회 (시간 범위 내 검색)
-  let scheduleId = null;
-  const startIso = toUTCISOString(input.assigned_date, '00:00')
-  const nextDate = getNextDateString(input.assigned_date)
-  const endIso = toUTCISOString(nextDate, '00:00')
-  
-  const { data: scheduleData } = await supabase
-      .from('schedules')
-      .select('id, member_id')
-      .eq('store_id', input.store_id)
-      .eq('member_id', member.id)
-      .gte('start_time', startIso)
-      .lt('start_time', endIso)
-      .limit(1)
-      .maybeSingle()
+  let scheduleId = input.schedule_id || null;
+  if (!scheduleId) {
+    const startIso = toUTCISOString(input.assigned_date, '00:00')
+    const nextDate = getNextDateString(input.assigned_date)
+    const endIso = toUTCISOString(nextDate, '00:00')
+    
+    const { data: scheduleData } = await supabase
+        .from('schedules')
+        .select('id, member_id')
+        .eq('store_id', input.store_id)
+        .eq('member_id', member.id)
+        .gte('start_time', startIso)
+        .lt('start_time', endIso)
+        .limit(1)
+        .maybeSingle()
 
-  if (scheduleData) {
-      scheduleId = scheduleData.id
+    if (scheduleData) {
+        scheduleId = scheduleData.id
+    }
   }
 
   let taskStartTime = null;
@@ -792,12 +754,8 @@ export async function createPersonalDashboardTask(input: {
     // 이미 UTC 문자열이면 그대로 사용, 'HH:mm' 형태면 변환
     if (input.start_time.includes('T')) {
       taskStartTime = input.start_time
-      taskEndTime = input.end_time || null
     } else {
       taskStartTime = toUTCISOString(input.assigned_date, input.start_time)
-      if (input.end_time) {
-        taskEndTime = toUTCISOString(input.assigned_date, input.end_time)
-      }
     }
   }
 
@@ -810,11 +768,10 @@ export async function createPersonalDashboardTask(input: {
       description: input.description,
       task_type: input.task_type,
       start_time: taskStartTime,
-      end_time: taskEndTime,
       assigned_role_ids: [],
       checklist: input.checklist || [],
       is_template: false,
-      status: 'todo',
+      status: 'pending',
       user_id: user.id,
       schedule_id: scheduleId,
       assigned_date: input.assigned_date
@@ -884,26 +841,21 @@ export async function getDashboardTasks(storeId: string, date: string) {
     const isOwner = roleInfo?.name === 'owner' || memberRoleInfo?.name === 'owner'
 
     // 2. 해당 직원의 오늘 날짜 근무 스케줄이 존재하는지 확인합니다.
-    // 점주(Owner)는 스케줄 표 등록 여부와 무관하게 대시보드 가이드를 항상 열람할 수 있도록 예외(Bypass) 처리합니다.
-    if (!isOwner) {
-        const startIso = toUTCISOString(date, '00:00')
-        const nextDate = getNextDateString(date)
-        const endIso = toUTCISOString(nextDate, '00:00')
-        
-        const { data: scheduleData } = await supabase
-            .from('schedules')
-            .select('id, member_id')
-            .eq('store_id', storeId)
-            .eq('member_id', memberData.id)
-            .gte('start_time', startIso)
-            .lt('start_time', endIso)
-            .limit(1)
-            .maybeSingle()
+    let hasSchedule = false;
+    let finalScheduleId: string | null = null;
+    
+    const { data: scheduleData } = await supabase
+        .from('schedules')
+        .select('id, member_id')
+        .eq('store_id', storeId)
+        .eq('member_id', memberData.id)
+        .eq('plan_date', date)
+        .limit(1)
+        .maybeSingle()
 
-        // 일반 직원은 오늘 스케줄이 없다면 대시보드 업무에 아무것도 보여주지 않음
-        if (!scheduleData) {
-            return []
-        }
+    if (scheduleData) {
+        hasSchedule = true;
+        finalScheduleId = scheduleData.id;
     }
 
     // 1. 내 당일 배정된 개별 업무 목록 가져오기 (단일 테이블 tasks에서)
@@ -915,6 +867,12 @@ export async function getDashboardTasks(storeId: string, date: string) {
         .eq('assigned_date', date)
         .eq('is_template', false)
 
+    // 만약 스케줄도 없고, 개인 업무도 없다면, 그리고 점주가 아니라면 빈 객체 반환
+    // 점주(Owner)는 스케줄이 없더라도 대시보드 가이드(플레이북)를 열람할 수 있도록 계속 진행합니다.
+    if (!hasSchedule && (!myTasks || myTasks.length === 0) && !isOwner) {
+        return { tasks: [], hasSchedule: false, scheduleId: null }
+    }
+
     const assignedTasks: Task[] = []
     myTasks?.forEach((t: any) => {
         let safeStartTime = t.start_time;
@@ -923,15 +881,9 @@ export async function getDashboardTasks(storeId: string, date: string) {
            safeStartTime = toUTCISOString(date, t.start_time.substring(0, 5));
         }
 
-        let safeEndTime = t.end_time;
-        if (t.end_time && !t.end_time.includes('T')) {
-           safeEndTime = toUTCISOString(date, t.end_time.substring(0, 5));
-        }
-
         assignedTasks.push({
           ...t,
           start_time: safeStartTime,
-          end_time: safeEndTime,
           task_type: safeStartTime ? 'scheduled' : 'always',
         } as Task)
     })
@@ -946,7 +898,7 @@ export async function getDashboardTasks(storeId: string, date: string) {
 
     // DB의 배열을 직접 .cs (contains)로 조회 시 owner와 같이 UUID 형태가 아닌 문자열일 경우
     // Supabase PostgREST에서 오류가 나거나 조회가 안 되는 버그가 존재합니다.
-    // 따라서 템플릿을 먼저 모두 조회한 뒤, 안전하게 메모리 단에서 필터링합니다.
+    // 따라서 템플릿을 먼저 모두 조회한 뒤, 안전하게 메모 단에서 필터링합니다.
     const { data: rawTemplates, error } = await templateQuery
 
     let templateData: any[] = []
@@ -1004,11 +956,17 @@ export async function getDashboardTasks(storeId: string, date: string) {
     const allTasks = [...assignedTasks, ...(templateData as Task[])]
 
     // start_time 오름차순으로 최종 정렬
-    return allTasks.sort((a, b) => {
+    const sortedTasks = allTasks.sort((a, b) => {
       const aTime = a.start_time ? new Date(a.start_time).getTime() : 0
       const bTime = b.start_time ? new Date(b.start_time).getTime() : 0
       return aTime - bTime
     })
+
+    return { 
+      tasks: sortedTasks, 
+      hasSchedule, 
+      scheduleId: finalScheduleId
+    }
 }
 
 // 체크리스트 아이템 토글 및 업무 상태 자동 업데이트
@@ -1029,19 +987,19 @@ export async function toggleTaskCheckitem(taskId: string, itemId: string, isComp
   const allCompleted = newChecklist.length > 0 && newChecklist.every((item: any) => item.is_completed)
   
   // 상태 결정 로직:
-  // - 다 완료됨 -> done
+  // - 다 완료됨 -> completed
   // - 다 완료 안 됨 -> 
-  //   - 원래 done이었다면 -> todo로 복구
-  //   - 원래 todo/in_progress였다면 -> 그대로 유지
+  //   - 원래 completed이었다면 -> pending으로 복구
+  //   - 원래 pending/in_progress였다면 -> 그대로 유지
   let newStatus = task.status
   if (allCompleted) {
-      newStatus = 'done'
-  } else if (task.status === 'done') {
-      newStatus = 'todo' // 다시 미완료로 복구
+      newStatus = 'completed'
+  } else if (task.status === 'completed') {
+      newStatus = 'pending' // 다시 미완료로 복구
   }
   
   // 4. Update DB
-  const { error } = await supabase
+  const { error: dbError } = await supabase
     .from('tasks')
     .update({
       checklist: newChecklist,
@@ -1050,9 +1008,9 @@ export async function toggleTaskCheckitem(taskId: string, itemId: string, isComp
     })
     .eq('id', taskId)
 
-  if (error) {
-      console.error('Error updating checklist:', error)
-      return { error: 'Failed to update' }
+  if (dbError) {
+    console.error('Error updating checklist:', dbError)
+    return { error: 'Failed to update' }
   }
   
   revalidatePath('/dashboard')
@@ -1064,8 +1022,6 @@ export async function createDirectScheduleTask(input: {
   title: string
   task_type: 'scheduled' | 'always'
   start_time: string | null
-  end_time: string | null
-  estimated_minutes: number
   checklist: any[]
   staff_id: string
   schedule_id: string
@@ -1092,10 +1048,8 @@ export async function createDirectScheduleTask(input: {
     title: input.title,
     task_type: input.task_type,
     start_time: input.start_time,
-    end_time: input.end_time,
-    estimated_minutes: input.estimated_minutes,
     checklist: input.checklist,
-    status: 'todo',
+    status: 'pending',
     is_template: false,
     is_routine: false,
     user_id: memberData?.user_id || null,

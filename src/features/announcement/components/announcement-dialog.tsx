@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { createAnnouncement, updateAnnouncement } from '../announcement-actions'
+import { createAnnouncement, updateAnnouncement } from '../actions'
 import { toast } from 'sonner'
 
 interface AnnouncementDialogProps {
@@ -18,9 +18,10 @@ interface AnnouncementDialogProps {
     id: string
     title: string
     content: string
-    is_important: boolean
   } | null
 }
+
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 
 export function AnnouncementDialog({ open, onOpenChange, storeId, initialData }: AnnouncementDialogProps) {
   const [loading, setLoading] = useState(false)
@@ -32,10 +33,6 @@ export function AnnouncementDialog({ open, onOpenChange, storeId, initialData }:
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
-    
-    // Checkbox is not included in formData if not checked, so handle it explicitly
-    const isImportant = formData.get('is_important') === 'on' ? 'true' : 'false'
-    formData.set('is_important', isImportant)
 
     try {
       let result
@@ -61,51 +58,41 @@ export function AnnouncementDialog({ open, onOpenChange, storeId, initialData }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] w-[95vw]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[800px] w-[95vw] h-[90vh] sm:h-[80vh] flex flex-col p-0 gap-0 overflow-hidden bg-white border-slate-200">
+        <VisuallyHidden>
           <DialogTitle>{isEditing ? '공지사항 수정' : '새 공지사항 작성'}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">제목</Label>
-            <Input 
+        </VisuallyHidden>
+        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          {/* Header Actions */}
+          <div className="flex items-center justify-end px-6 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="ghost" className="text-slate-500" onClick={() => onOpenChange(false)} disabled={loading}>
+                취소
+              </Button>
+              <Button type="submit" disabled={loading} className="bg-slate-800 hover:bg-slate-900 text-white">
+                {loading ? '저장 중...' : isEditing ? '수정하기' : '등록하기'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto p-6 md:p-10 md:px-16 flex flex-col gap-6">
+            <input 
               id="title" 
               name="title" 
-              placeholder="공지사항 제목을 입력하세요" 
+              placeholder="제목 없음" 
               defaultValue={initialData?.title || ''} 
               required 
+              className="w-full text-3xl md:text-4xl font-bold text-slate-800 placeholder:text-slate-300 border-none outline-none focus:ring-0 px-0 bg-transparent"
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="content">내용</Label>
-            <Textarea
+            
+            <textarea
               id="content"
               name="content"
-              placeholder="공지사항 내용을 입력하세요"
+              placeholder="여기에 내용을 입력하세요..."
               defaultValue={initialData?.content || ''}
-              className="min-h-[150px] max-h-[300px] resize-y w-full whitespace-pre-wrap break-all"
+              className="w-full flex-1 min-h-[300px] text-base md:text-lg text-slate-600 placeholder:text-slate-300 border-none outline-none focus:ring-0 px-0 resize-none bg-transparent whitespace-pre-wrap break-all"
             />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="is_important" 
-              name="is_important" 
-              defaultChecked={initialData?.is_important || false} 
-            />
-            <Label htmlFor="is_important" className="cursor-pointer">
-              중요 공지 (상단 고정 및 강조 표시)
-            </Label>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              취소
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? '저장 중...' : isEditing ? '수정하기' : '등록하기'}
-            </Button>
           </div>
         </form>
       </DialogContent>

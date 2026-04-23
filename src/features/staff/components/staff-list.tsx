@@ -387,12 +387,14 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
                 className="bg-transparent border-none focus:outline-none focus:ring-0 text-[12.5px] font-medium w-full px-2 h-6.5 pr-6" 
               />
               {searchQuery && (
-                <button 
+                <Button 
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-1 p-0.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-1 w-5 h-5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </Button>
               )}
             </div>
           </div>

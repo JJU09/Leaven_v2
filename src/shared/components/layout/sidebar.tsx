@@ -22,7 +22,14 @@ import {
   Store,
   Umbrella,
   BarChart3,
-  Archive
+  Archive,
+  Megaphone,
+  FileText,
+  Calculator,
+  ClipboardList,
+  Building2,
+  Handshake,
+  Sliders
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { logout } from '@/features/auth/actions'
@@ -67,23 +74,29 @@ export function Sidebar({
           icon: LayoutDashboard,
           isUpcoming: false
         }] : []),
-        ...(permissions.view_tasks ? [{
-          title: '할 일',
-          href: permissions.view_dashboard ? '/dashboard/my-tasks' : '/dashboard',
-          icon: CheckSquare,
+        {
+          title: '공지사항',
+          href: '/dashboard/announcements',
+          icon: Megaphone,
           isUpcoming: false
-        }] : [])
+        }
       ]
     },
     {
-      title: '근무 및 일정 관리',
+      title: 'HR 관리',
       items: [
-        ...(permissions.view_schedule ? [{
-          title: '스케줄 관리',
-          href: '/dashboard/schedule',
-          icon: CalendarRange,
+        ...(permissions.view_staff ? [{
+          title: '직원 관리',
+          href: '/dashboard/staff',
+          icon: Users,
           isUpcoming: false
         }] : []),
+        {
+          title: '계약 관리',
+          href: '/dashboard/contracts',
+          icon: FileText,
+          isUpcoming: true
+        },
         ...(permissions.view_attendance ? [{
           title: '출퇴근 관리',
           href: '/dashboard/attendance',
@@ -95,36 +108,76 @@ export function Sidebar({
           href: '/dashboard/leave',
           icon: Umbrella,
           isUpcoming: false
-        }] : [])
+        }] : []),
+        {
+          title: '급여 정산',
+          href: '/dashboard/payroll',
+          icon: Calculator,
+          isUpcoming: true
+        }
       ]
     },
     {
-      title: '인사 및 급여 관리',
+      title: '업무 및 일정 관리',
       items: [
-        ...(permissions.view_staff ? [{
-          title: '직원 관리',
-          href: '/dashboard/staff',
-          icon: Users,
+        ...(permissions.view_schedule ? [{
+          title: '스케줄 관리',
+          href: '/dashboard/schedule',
+          icon: CalendarRange,
           isUpcoming: false
         }] : []),
+        ...(permissions.view_tasks ? [{
+          title: '체크리스트',
+          href: permissions.view_dashboard ? '/dashboard/my-tasks' : '/dashboard',
+          icon: CheckSquare,
+          isUpcoming: false
+        }] : []),
+        {
+          title: '인수인계 리포트',
+          href: '/dashboard/handover',
+          icon: ClipboardList,
+          isUpcoming: true
+        }
+      ]
+    },
+    {
+      title: '자산 및 거래처 관리',
+      items: [
+        {
+          title: '비품/자산 관리',
+          href: '/dashboard/assets',
+          icon: Building2,
+          isUpcoming: true
+        },
+        {
+          title: '거래처 관리',
+          href: '/dashboard/partners',
+          icon: Handshake,
+          isUpcoming: true
+        }
+      ]
+    },
+    ...(permissions.manage_store || permissions.manage_roles || role === 'owner' ? [{
+      title: '시스템 설정',
+      items: [
+        ...(permissions.manage_store ? [{
+          title: '매장 정보 설정',
+          href: '/dashboard/settings',
+          icon: Store,
+          isUpcoming: false
+        }] : []),
+        {
+          title: '운영 정책 설정',
+          href: '/dashboard/policies',
+          icon: Sliders,
+          isUpcoming: true
+        },
         ...(permissions.manage_roles || role === 'owner' ? [{
           title: '직급 및 권한 설정',
           href: '/dashboard/roles',
           icon: Settings,
           isUpcoming: false
         }] : []),
-      ]
-    },
-
-    ...(permissions.manage_store ? [{
-      title: '시스템 설정',
-      items: [
-        {
-          title: '매장 설정',
-          href: '/dashboard/settings',
-          icon: Store,
-          isUpcoming: false
-        }
       ]
     }] : [])
   ]
@@ -157,14 +210,14 @@ export function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-6 p-2 overflow-y-auto py-4">
+      <nav className="flex-1 space-y-3 p-2 overflow-y-auto py-4">
         <TooltipProvider delayDuration={0}>
           {navGroups.map((group, index) => {
             if (group.items.length === 0) return null;
             return (
             <div key={index} className="space-y-1">
               {!isCollapsed && (
-                <h4 className="px-2 text-xs font-semibold text-muted-foreground mb-2">
+                <h4 className="px-2 text-xs font-semibold text-muted-foreground mb-1">
                   {group.title}
                 </h4>
               )}
@@ -205,7 +258,7 @@ export function Sidebar({
                     href={item.href}
                     onClick={(e) => handleUpcomingClick(e, item.isUpcoming)}
                     className={cn(
-                      "flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground overflow-hidden group",
+                      "flex items-center justify-between rounded-md pl-6 pr-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground overflow-hidden group",
                       isActive ? "bg-muted text-primary" : "text-muted-foreground",
                       item.isUpcoming && "opacity-70 hover:opacity-100"
                     )}

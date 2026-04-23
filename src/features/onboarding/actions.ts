@@ -27,6 +27,7 @@ export async function createStore(formData: FormData) {
       description,
       address,
       business_number: businessNumber,
+      leave_calc_type: 'hire_date',
     })
     .select('id')
     .single()

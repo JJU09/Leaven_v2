@@ -4,6 +4,7 @@ import { ko } from 'date-fns/locale'
 import { Plus, CheckSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button } from '@/components/ui/button'
 
 function hexToRgba(hex: string, alpha: number) {
   if (!hex) return `rgba(0,0,0,${alpha})`
@@ -137,15 +138,17 @@ export function StaffScheduleMatrix({
                     {/* 매니저 권한인 경우 빈 공간에서 추가 아이콘 띄우기 */}
                     {canManage && daySchedules.length === 0 && (
                       <div className="absolute inset-y-0 right-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
+                        <Button 
+                          variant="ghost"
+                          size="icon"
                           onClick={(e) => {
                             e.stopPropagation()
                             onCellClick(staff, date)
                           }}
-                          className="p-1 bg-black/5 hover:bg-black/10 text-muted-foreground rounded-full"
+                          className="h-6 w-6 bg-black/5 hover:bg-black/10 text-muted-foreground rounded-full"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                       </div>
                     )}
 
@@ -209,7 +212,7 @@ export function StaffScheduleMatrix({
                               <div className="shrink-0 flex items-center">
                                 {!isLeave && (
                                   <span className="text-[11px] font-medium leading-none" style={{ color: scheduleColor }}>
-                                    {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
+                                    {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
                                   </span>
                                 )}
                               </div>
@@ -377,7 +380,7 @@ export function StaffScheduleMatrix({
                                       >
                                           {!isLeave && (
                                             <div className="font-semibold text-[10px] opacity-70 mb-0.5" style={{ color: scheduleColor }}>
-                                              {sch.start_time?.substring(0, 5)} - {sch.end_time?.substring(0, 5)}
+                                              {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
                                             </div>
                                           )}
                                         <div className={cn("truncate text-[#1a1a1a]", isLeave && "font-bold text-[12px] tracking-wide")} style={isLeave ? { color: scheduleColor } : {}}>
@@ -390,7 +393,7 @@ export function StaffScheduleMatrix({
                                         <div className="font-semibold text-[12px] mb-2 border-b border-black/5 pb-1 flex justify-between items-center">
                                           <span>세부 할 일 ({(sch.tasks || []).length}개)</span>
                                           <span className="text-[10px] text-muted-foreground font-normal bg-black/5 px-1.5 py-0.5 rounded">
-                                            {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
+                                            {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
                                           </span>
                                         </div>
                                         <div className="flex flex-col gap-1.5 max-h-[150px] overflow-y-auto no-scrollbar">

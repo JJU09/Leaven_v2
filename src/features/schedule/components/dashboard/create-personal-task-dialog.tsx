@@ -67,17 +67,18 @@ export function CreatePersonalTaskDialog({ storeId, open, onOpenChange, onSucces
 
     setLoading(true)
     try {
-      const today = getTodayDateString()
-      
-      const result = await createPersonalDashboardTask({
-        store_id: storeId,
-        title,
-        description,
-        task_type: isAnytime ? 'always' : 'scheduled',
-        start_time: isAnytime ? null : startTime,
-        assigned_date: today,
-        checklist
-      })
+        const targetDate = isAnytime ? getTodayDateString() : (startTime ? getTodayDateString() : getTodayDateString()) // 보통 선택한 date를 쓰지만 일단 모달에 date 필드가 없어 today로 세팅중. 수정 가능.
+        const today = getTodayDateString() // 상단에 이미 있음
+        
+        const result = await createPersonalDashboardTask({
+          store_id: storeId,
+          title,
+          description,
+          task_type: isAnytime ? 'always' : 'scheduled',
+          start_time: isAnytime ? null : startTime,
+          assigned_date: today,
+          checklist
+        })
 
       if (result.error) {
         toast.error('오류 발생: ' + result.error)
@@ -137,12 +138,14 @@ export function CreatePersonalTaskDialog({ storeId, open, onOpenChange, onSucces
                       <div key={item.id} className="flex items-center gap-2 bg-black/5 px-2 py-1.5 rounded-md">
                         <div className="w-3.5 h-3.5 rounded-sm border border-black/20 bg-white shrink-0" />
                         <span className="text-sm flex-1 leading-normal break-all min-w-0">{item.text}</span>
-                        <button 
+                        <Button 
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleRemoveChecklist(item.id)}
-                          className="text-muted-foreground hover:text-red-500 transition-colors p-0.5 shrink-0"
+                          className="h-5 w-5 text-muted-foreground hover:text-red-500 hover:bg-transparent transition-colors p-0.5 shrink-0"
                         >
                           <X className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                       </div>
                     ))
                   )}

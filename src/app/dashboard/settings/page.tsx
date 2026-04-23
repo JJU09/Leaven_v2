@@ -47,10 +47,17 @@ export default async function StoreSettingsPage({ searchParams }: SettingsPagePr
   }
 
   const storeData = member?.store as any
-  const store = Array.isArray(storeData) ? storeData[0] : storeData
+  const dbStore = Array.isArray(storeData) ? storeData[0] : storeData
 
-  if (!store) {
+  if (!dbStore) {
     return <div>매장 정보를 찾을 수 없습니다.</div>
+  }
+
+  // DB 스키마와 폼 컴포넌트의 변수명 매핑
+  const store = {
+    ...dbStore,
+    auth_radius: dbStore.attendance_radius,
+    opening_hours: dbStore.operating_hours,
   }
 
   const hasManageStorePermission = await hasPermission(user.id, store.id, 'manage_store')

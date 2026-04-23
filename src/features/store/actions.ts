@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
+import { hasPermission } from '@/features/auth/permissions'
 
 export async function setCurrentStore(storeId: string) {
   const cookieStore = await cookies()
@@ -18,21 +19,19 @@ export async function updateStore(formData: FormData) {
     return { error: 'Unauthorized' }
   }
 
-  // 사용자의 매장 ID 조회
-  const { data: member } = await supabase
-    .from('store_members')
-    .select('store_id, role_info:store_roles(name)')
-    .eq('user_id', user.id)
-    .single()
+  const cookieStore = await cookies()
+  const storeId = cookieStore.get('leaven_current_store_id')?.value
 
-  // @ts-ignore - PostgREST response typing for relations
-  const roleName = Array.isArray(member?.role_info) ? member?.role_info[0]?.name : member?.role_info?.name
-
-  if (!member || roleName !== 'owner') {
-    return { error: 'Permission denied' }
+  if (!storeId) {
+    return { error: 'No store selected' }
   }
 
-  const storeId = member.store_id
+  // 사용자의 매장 권한 검사 (manage_store)
+  const hasManagePermission = await hasPermission(user.id, storeId, 'manage_store')
+
+  if (!hasManagePermission) {
+    return { error: 'Permission denied' }
+  }
   const name = formData.get('name') as string
   const address = formData.get('address') as string
   const businessNumber = formData.get('business_number') as string
@@ -84,12 +83,12 @@ export async function updateStore(formData: FormData) {
       store_phone: storePhone,
       zip_code: zipCode,
       address_detail: addressDetail,
-      opening_hours: openingHours,
       image_url: imageUrl,
       stamp_image_url: stampImageUrl,
+      operating_hours: openingHours,
       latitude,
       longitude,
-      auth_radius: authRadius,
+      attendance_radius: authRadius,
       wage_start_day: wageStartDay,
       wage_end_day: wageEndDay,
       pay_day: payDay,

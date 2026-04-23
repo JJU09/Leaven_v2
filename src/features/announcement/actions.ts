@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { hasPermission } from '@/features/auth/permissions'
 
 export async function getStoreAnnouncements(storeId: string) {
   const supabase = await createClient()
@@ -9,14 +10,16 @@ export async function getStoreAnnouncements(storeId: string) {
   const { data, error } = await supabase
     .from('store_announcements')
     .select(`
-      *,
-      author:store_members!author_id (
+      id,
+      title,
+      content,
+      created_at,
+      author:store_members!store_announcements_author_id_fkey (
         id,
-        profile:profiles(full_name)
+        user:profiles!store_members_user_id_fkey(full_name)
       )
     `)
     .eq('store_id', storeId)
-    .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -28,8 +31,8 @@ export async function getStoreAnnouncements(storeId: string) {
 
   // Map the announcements to include the correct author name
   return data.map((item: any) => {
-    const profile = Array.isArray(item.author?.profile) ? item.author.profile[0] : item.author?.profile
-    const displayName = profile?.full_name || '이름 없음'
+    const userProfile = Array.isArray(item.author?.user) ? item.author.user[0] : item.author?.user
+    const displayName = userProfile?.full_name || '이름 없음'
 
     return {
       ...item,
@@ -49,9 +52,25 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
     return { error: 'Unauthorized' }
   }
 
+  const canManage = await hasPermission(user.id, storeId, 'manage_announcements')
+  if (!canManage) {
+    return { error: '권한이 없습니다.' }
+  }
+
+  // 사용자의 해당 매장 멤버 ID 조회
+  const { data: memberData } = await supabase
+    .from('store_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('store_id', storeId)
+    .single()
+
+  if (!memberData) {
+    return { error: '매장 멤버 정보를 찾을 수 없습니다.' }
+  }
+
   const title = formData.get('title') as string
   const content = formData.get('content') as string
-  const isPinned = formData.get('is_pinned') === 'true'
 
   if (!title) {
     return { error: 'Title is required' }
@@ -63,8 +82,7 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
       store_id: storeId,
       title,
       content,
-      is_pinned: isPinned,
-      author_id: user.id
+      author_id: memberData.id
     })
 
   if (error) {
@@ -85,9 +103,13 @@ export async function updateAnnouncement(id: string, storeId: string, formData: 
     return { error: 'Unauthorized' }
   }
 
+  const canManage = await hasPermission(user.id, storeId, 'manage_announcements')
+  if (!canManage) {
+    return { error: '권한이 없습니다.' }
+  }
+
   const title = formData.get('title') as string
   const content = formData.get('content') as string
-  const isPinned = formData.get('is_pinned') === 'true'
 
   if (!title) {
     return { error: 'Title is required' }
@@ -97,8 +119,7 @@ export async function updateAnnouncement(id: string, storeId: string, formData: 
     .from('store_announcements')
     .update({
       title,
-      content,
-      is_pinned: isPinned,
+      content
     })
     .eq('id', id)
     .eq('store_id', storeId) // Security check
@@ -119,6 +140,11 @@ export async function deleteAnnouncement(id: string, storeId: string) {
 
   if (!user) {
     return { error: 'Unauthorized' }
+  }
+
+  const canManage = await hasPermission(user.id, storeId, 'manage_announcements')
+  if (!canManage) {
+    return { error: '권한이 없습니다.' }
   }
 
   const { error } = await supabase

@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { deleteStaffSchedules } from '@/features/schedule/actions'
+import { Button } from '@/components/ui/button'
 
 interface SingleDayDeleteModalProps {
   isOpen: boolean
@@ -40,14 +41,16 @@ export function SingleDayDeleteModal({
           </div>
         </div>
         <div className="px-5 py-4 border-t border-black/10 bg-[#fbfbfb] flex justify-end gap-2">
-          <button 
-            className="text-[12px] h-9 px-4 rounded-md border text-[#1a1a1a] font-medium hover:bg-muted/50 transition-colors"
+          <Button 
+            variant="outline"
+            className="text-[12px] h-9 px-4 rounded-md font-medium"
             onClick={onClose}
           >
             취소
-          </button>
-          <button 
-            className="text-[12px] h-9 px-4 rounded-md bg-destructive text-destructive-foreground font-medium hover:bg-destructive/90 transition-colors shadow-sm"
+          </Button>
+          <Button 
+            variant="destructive"
+            className="text-[12px] h-9 px-4 rounded-md font-medium shadow-sm"
             onClick={async () => {
               const dateStr = format(date, 'yyyy-MM-dd')
               const res = await deleteStaffSchedules(storeId, dateStr, dateStr, [staffId])
@@ -59,7 +62,7 @@ export function SingleDayDeleteModal({
             }}
           >
             삭제하기
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -94,24 +97,25 @@ export function ConfirmMoveModal({
           스케줄 변경 시간에 맞춰 <strong>개별 업무 시간도 함께 이동</strong>하시겠습니까?
         </div>
         <div className="flex gap-2 w-full justify-end">
-          <button 
-            className="text-[12px] h-9 px-4 rounded-md border text-[#1a1a1a] font-medium hover:bg-muted/50 transition-colors"
+          <Button 
+            variant="outline"
+            className="text-[12px] h-9 px-4 rounded-md font-medium"
             onClick={() => {
               onConfirm(false)
               onClose()
             }}
           >
             아니오 (스케줄만 변경)
-          </button>
-          <button 
-            className="text-[12px] h-9 px-4 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-sm"
+          </Button>
+          <Button 
+            className="text-[12px] h-9 px-4 rounded-md font-medium shadow-sm"
             onClick={() => {
               onConfirm(true)
               onClose()
             }}
           >
             예 (함께 이동)
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

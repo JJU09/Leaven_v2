@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
 
 interface Announcement {
   id: string
@@ -42,9 +43,10 @@ export function StaffAnnouncementList({ announcements }: StaffAnnouncementListPr
     <>
       {/* 모바일 뷰: 컴팩트한 확성기 버튼 */}
       <div className="md:hidden flex justify-end h-full">
-        <button 
+        <Button 
+          variant="outline"
           onClick={() => setShowAllList(true)}
-          className="flex flex-col items-center justify-center gap-1 bg-white border shadow-sm px-3 rounded-xl h-full w-[72px] text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shrink-0"
+          className="flex flex-col items-center justify-center gap-1 bg-white shadow-sm px-3 rounded-xl h-full w-[72px] text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shrink-0 border"
         >
           <div className="relative">
             <Megaphone className="h-5 w-5 text-primary" />
@@ -53,7 +55,7 @@ export function StaffAnnouncementList({ announcements }: StaffAnnouncementListPr
             </span>
           </div>
           <span className="text-[10px]">공지사항</span>
-        </button>
+        </Button>
       </div>
 
       {/* 데스크탑 뷰: 기존 리스트 형태 */}
@@ -136,15 +138,16 @@ export function StaffAnnouncementList({ announcements }: StaffAnnouncementListPr
 
       <Dialog open={!!selectedAnnouncement} onOpenChange={(open) => !open && setSelectedAnnouncement(null)}>
         <DialogContent className="sm:max-w-[500px]">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => {
               setSelectedAnnouncement(null)
               setShowAllList(true)
             }}
-            className="absolute right-10 top-4 text-[11px] md:text-xs text-muted-foreground hover:text-primary transition-colors whitespace-nowrap underline underline-offset-2"
+            className="absolute right-10 top-4 h-auto p-0 text-[11px] md:text-xs text-muted-foreground hover:text-primary hover:bg-transparent transition-colors whitespace-nowrap underline underline-offset-2"
           >
             목록으로 돌아가기
-          </button>
+          </Button>
           <DialogHeader className="pt-6">
             <div className="flex flex-col gap-2 mb-1">
               <div className="flex items-center gap-2">
