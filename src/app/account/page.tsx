@@ -54,8 +54,6 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         view_leave: await hasPermission(user.id, selectedStoreId, 'view_leave'),
         view_tasks: await hasPermission(user.id, selectedStoreId, 'view_tasks'),
         view_salary: await hasPermission(user.id, selectedStoreId, 'view_salary'),
-        view_sales: await hasPermission(user.id, selectedStoreId, 'view_sales'),
-        manage_inventory: await hasPermission(user.id, selectedStoreId, 'manage_inventory'),
         view_dashboard: await hasPermission(user.id, selectedStoreId, 'view_dashboard'),
       }
     }

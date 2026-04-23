@@ -9,21 +9,21 @@ import { toUTCISOString } from '@/shared/lib/date-utils'
 export async function getLeaveBalances(storeId: string, year: number) {
   noStore()
   const supabase = await createClient()
-  
+
   const { data, error } = await supabase
     .from('leave_balances')
     .select(`
       *,
-      member:store_members!inner(id, user_id, profile:profiles(full_name), role:store_roles(name))
+      member:store_members!inner(id, name, user_id, profiles(full_name), role:store_roles(name))
     `)
     .eq('store_id', storeId)
     .eq('year', year)
-    
+
   if (error) {
     console.error('Error fetching leave balances:', error)
     return []
   }
-  
+
   return data
 }
 
@@ -35,7 +35,7 @@ export async function getLeaveRequests(storeId: string) {
     .from('leave_requests')
     .select(`
       *,
-      member:store_members!leave_requests_member_id_fkey!inner(id, user_id, profile:profiles(full_name), role:store_roles(name))
+      member:store_members!leave_requests_member_id_fkey!inner(id, name, user_id, profiles(full_name), role:store_roles(name))
     `)
     .eq('store_id', storeId)
     .order('created_at', { ascending: false })

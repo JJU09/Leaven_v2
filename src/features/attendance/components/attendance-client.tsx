@@ -243,12 +243,11 @@ export function AttendanceClientPage({
             if (attendance?.status === 'working') working++
             
             const staffSchedule = schedulesData.find(sch => 
-              sch.schedule_members?.some((sm: any) => sm.member_id === staff.id) &&
-              toKSTISOString(sch.start_time).startsWith(selectedDate)
+              sch.member_id === staff.id && sch.plan_date === selectedDate
             )
 
             if (staffSchedule && isToday && (!attendance || attendance.status === 'none')) {
-              const schTime = new Date(staffSchedule.start_time).getTime()
+              const schTime = new Date(`${staffSchedule.plan_date}T${staffSchedule.start_time}`).getTime()
               if (now.getTime() > schTime + (5 * 60 * 1000)) {
                 lateOrAbsent++
               }
@@ -317,13 +316,12 @@ export function AttendanceClientPage({
                               const status = attendance?.status || 'none'
                               
                               const staffSchedule = schedulesData.find(sch => 
-                                sch.schedule_members?.some((sm: any) => sm.member_id === staff.id) &&
-                                toKSTISOString(sch.start_time).startsWith(selectedDate)
+                                sch.member_id === staff.id && sch.plan_date === selectedDate
                               )
                               
                               let isLate = false
                               if (staffSchedule && status === 'none' && isToday) {
-                                const schTime = new Date(staffSchedule.start_time).getTime()
+                                const schTime = new Date(`${staffSchedule.plan_date}T${staffSchedule.start_time}`).getTime()
                                 if (now.getTime() > schTime + (5 * 60 * 1000)) isLate = true
                               }
 
@@ -471,20 +469,22 @@ export function AttendanceClientPage({
                       const roleInfo = getStaffRoleInfo(staff)
                       const attendance = attendanceData.find(a => a.member_id === staff.id)
                       const staffSchedule = schedulesData.find(sch => 
-                        sch.schedule_members?.some((sm: any) => sm.member_id === staff.id) &&
-                        toKSTISOString(sch.start_time).startsWith(selectedDate)
+                        sch.member_id === staff.id && sch.plan_date === selectedDate
                       )
 
                       if (!attendance && !staffSchedule) return null
 
                       const formatT = (iso?: string | null) => iso ? format(new Date(iso), 'HH:mm') : '-'
+                      
+                      // For times like '09:00:00', format directly
+                      const formatTimeString = (timeString: string) => timeString.substring(0, 5)
 
                       let scheduleText = '오늘 스케줄 없음'
                       if (staffSchedule) {
-                        scheduleText = `${formatT(staffSchedule.start_time)} ~ ${formatT(staffSchedule.end_time)}`
+                        scheduleText = `${formatTimeString(staffSchedule.start_time)} ~ ${formatTimeString(staffSchedule.end_time)}`
                       }
 
-                      const schStartTime = staffSchedule ? new Date(staffSchedule.start_time).getTime() : null
+                      const schStartTime = staffSchedule ? new Date(`${staffSchedule.plan_date}T${staffSchedule.start_time}`).getTime() : null
                       const attStartTime = attendance?.clock_in_time ? new Date(attendance.clock_in_time).getTime() : null
                       
                       const isLate = attendance && schStartTime && attStartTime && attStartTime > schStartTime + (5 * 60 * 1000)
@@ -604,20 +604,21 @@ export function AttendanceClientPage({
                     const roleInfo = getStaffRoleInfo(staff)
                     const attendance = attendanceData.find(a => a.member_id === staff.id)
                     const staffSchedule = schedulesData.find(sch => 
-                      sch.schedule_members?.some((sm: any) => sm.member_id === staff.id) &&
-                      toKSTISOString(sch.start_time).startsWith(selectedDate)
+                      sch.member_id === staff.id && sch.plan_date === selectedDate
                     )
 
                     if (!attendance && !staffSchedule) return null
 
                     const formatT = (iso?: string | null) => iso ? format(new Date(iso), 'HH:mm') : '-'
+                    
+                    const formatTimeString = (timeString: string) => timeString.substring(0, 5)
 
                     let scheduleText = '오늘 스케줄 없음'
                     if (staffSchedule) {
-                      scheduleText = `${formatT(staffSchedule.start_time)} ~ ${formatT(staffSchedule.end_time)}`
+                      scheduleText = `${formatTimeString(staffSchedule.start_time)} ~ ${formatTimeString(staffSchedule.end_time)}`
                     }
 
-                    const schStartTime = staffSchedule ? new Date(staffSchedule.start_time).getTime() : null
+                    const schStartTime = staffSchedule ? new Date(`${staffSchedule.plan_date}T${staffSchedule.start_time}`).getTime() : null
                     const attStartTime = attendance?.clock_in_time ? new Date(attendance.clock_in_time).getTime() : null
                     
                     const isLate = attendance && schStartTime && attStartTime && attStartTime > schStartTime + (5 * 60 * 1000)
@@ -744,7 +745,7 @@ export function AttendanceClientPage({
                 </div>
                 {sortedStaffList.filter(s => canManageAttendance || s.user_id === currentUserId).filter(staff => {
                     const attendance = attendanceData.find(a => a.member_id === staff.id)
-                    const staffSchedule = schedulesData.find(sch => sch.schedule_members?.some((sm: any) => sm.member_id === staff.id) && toKSTISOString(sch.start_time).startsWith(selectedDate))
+                    const staffSchedule = schedulesData.find(sch => sch.member_id === staff.id && sch.plan_date === selectedDate)
                     return attendance || staffSchedule
                   }).length === 0 && (
                   <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
