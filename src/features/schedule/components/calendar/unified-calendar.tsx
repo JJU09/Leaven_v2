@@ -1,61 +1,22 @@
 'use client'
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth } from 'date-fns'
+import { format, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Search, Sparkles, Plus, CalendarPlus, ChevronDown } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { updateTaskStatus } from '@/features/schedule/task-actions'
 import { updateScheduleTime, updateSchedule } from '@/features/schedule/actions'
 import { toast } from 'sonner'
-import { toUTCISOString, getDiffInMinutes, addMinutesToTime } from '@/shared/lib/date-utils'
-import { ScheduleDetailPanel, STATUS_INFO } from './schedule-detail-panel'
+import { getDiffInMinutes } from '@/shared/lib/date-utils'
+import { ScheduleDetailPanel } from './schedule-detail-panel'
 import { UnifiedAutoScheduleDialog } from './unified-auto-schedule-dialog'
 import { UnifiedBulkDeleteDialog } from './unified-bulk-delete-dialog'
-import { Trash2 } from 'lucide-react'
-import { deleteStaffSchedules } from '@/features/schedule/actions'
 import { CalendarHeader } from './calendar-header'
-import { TimelineTooltip } from './timeline-tooltip'
 import { SingleDayDeleteModal, ConfirmMoveModal } from './schedule-action-modals'
 import { StaffScheduleMatrix } from './staff-schedule-matrix'
 import { MonthlyCalendarView } from './monthly-calendar-view'
 import { DailyTimelineView } from './daily-timeline-view'
 import { useRouter } from 'next/navigation'
-
-// 자동 파생 상태 계산 헬퍼 (시간 기반)
-export function getDerivedTaskStatus(t: any, scheduleDateStr: string, now: Date): 'pending' | 'in_progress' | 'on_hold' | 'completed' | 'verified' {
-  if (t.status === 'completed' || t.status === 'verified' || t.status === 'done') return 'completed'
-  if (t.status === 'on_hold') return 'on_hold'
-  if (!t.start_time) return 'pending'
-
-  let taskDateObj = null;
-  if (t.start_time.includes('T')) {
-    taskDateObj = new Date(t.start_time)
-  } else {
-    const dateStr = t.assigned_date || scheduleDateStr
-    if (!dateStr) return 'pending'
-    // 만약 start_time이 "09:00" 처럼 초가 없으면 추가
-    const timeStr = t.start_time.length === 5 ? `${t.start_time}:00` : t.start_time
-    taskDateObj = new Date(`${dateStr}T${timeStr}`)
-  }
-
-  if (isNaN(taskDateObj.getTime())) return 'pending'
-
-  const startTimeMs = taskDateObj.getTime()
-  const nowMs = now.getTime()
-  const thirtyMinsMs = 30 * 60 * 1000
-
-  if (nowMs < startTimeMs) {
-    return 'pending'
-  } else if (nowMs >= startTimeMs && nowMs < startTimeMs + thirtyMinsMs) {
-    return 'in_progress'
-  } else {
-    return 'pending'
-  }
-}
 
 // 유틸리티: 색상 변환
 function hexToRgba(hex: string, alpha: number) {
@@ -88,19 +49,13 @@ export function UnifiedCalendar({
   currentUserId
 }: UnifiedCalendarProps) {
   const [viewMode, setViewMode] = useState<'timeline' | 'matrix' | 'calendar'>('matrix')
-  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null)
   
   const [timelineDate, setTimelineDate] = useState<Date>(new Date())
   const [matrixStartDate, setMatrixStartDate] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }))
   const [calendarDate, setCalendarDate] = useState<Date>(new Date())
-  
-  const tooltipRef = useRef<HTMLDivElement>(null)
-  const [tooltipData, setTooltipData] = useState<any>(null)
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
 
   // 모달/패널 상태
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isAutoScheduleModalOpen, setIsAutoScheduleModalOpen] = useState(false)
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false)
@@ -131,20 +86,6 @@ export function UnifiedCalendar({
   // 검색창 포커스 상태
   const [isSearchFocused, setIsSearchFocused] = useState(false)
 
-  // 드래그 상태 관리
-  const [dragState, setDragState] = useState<{
-    type: 'create_v' | 'create_h' | 'move_v' | 'resize_v';
-    scheduleId?: string;
-    staffId?: string;
-    startY: number; // 부모 컨테이너 기준 상대 Y 좌표 (생성 시)
-    startX: number;
-    startClientY: number; // 브라우저 창 기준 최초 클릭 절대 Y 좌표 (드래그 오차 방지용)
-    currentY: number; // 부모 컨테이너 기준 상대 Y 좌표 (생성 시)
-    currentX: number;
-    initialTop?: number;
-    initialHeight?: number;
-  } | null>(null)
-
   const [localSchedules, setLocalSchedules] = useState<any[]>([])
   
   const router = useRouter()
@@ -162,9 +103,6 @@ export function UnifiedCalendar({
       window.removeEventListener('schedule-updated', handleScheduleUpdate)
     }
   }, [router])
-
-  // 드래그 종료 직후 클릭 방지용 ref
-  const isDraggingRef = useRef(false)
 
   // 실시간 현재 시간 상태 (타임라인 지시선용)
   const [now, setNow] = useState(new Date())
@@ -249,195 +187,11 @@ export function UnifiedCalendar({
     });
   }
 
-  // 드래그 중 최신 상태를 참조하기 위한 ref (클로저 문제 해결)
-  const dragStateRef = useRef(dragState)
   const localSchedulesRef = useRef(localSchedules)
-  
-  useEffect(() => {
-    dragStateRef.current = dragState
-  }, [dragState])
   
   useEffect(() => {
     localSchedulesRef.current = localSchedules
   }, [localSchedules])
-
-  useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      const currentDragState = dragStateRef.current
-      if (!currentDragState) return
-      
-      let newY = e.clientY
-      if (currentDragState.type === 'create_v') {
-        // 매번 DOM을 찾지 않고, 최초 클릭한 상대좌표(startY)에 
-        // 마우스가 브라우저 상에서 이동한 순수 픽셀 변위량(deltaY)만 더함
-        const deltaY = e.clientY - currentDragState.startClientY
-        newY = Math.max(0, currentDragState.startY + deltaY)
-      }
-      
-      setDragState(prev => prev ? { ...prev, currentY: newY, currentX: e.clientX } : null)
-    }
-    
-    const handleGlobalMouseUp = (e: MouseEvent) => {
-      const currentDragState = dragStateRef.current
-      if (!currentDragState) return
-      
-      const { type, startY, currentY, startX, currentX, initialTop, initialHeight, scheduleId, staffId } = currentDragState
-      // 30분 단위 스냅 (1시간 = 40px -> 30분 = 20px)
-      const snappedDy = Math.round((currentY - startY) / 20) * 20
-      const dx = currentX - startX
-
-      // 드래그 거리가 5px 이상이면 드래그(이동/리사이즈/생성)로 간주
-      const isDrag = Math.abs(currentY - startY) > 5 || Math.abs(dx) > 5
-      if (isDrag) {
-        isDraggingRef.current = true
-        setTimeout(() => {
-          isDraggingRef.current = false
-        }, 100)
-      }
-
-      if (type === 'create_v') {
-        if (Math.abs(snappedDy) >= 20) {
-          const MAX_HEIGHT = hours.length * 40
-          const topY = Math.max(0, Math.min(MAX_HEIGHT - 20, Math.round(Math.min(startY, currentY) / 20) * 20))
-          const bottomY = Math.max(20, Math.min(MAX_HEIGHT, Math.round(Math.max(startY, currentY) / 20) * 20))
-          
-          const startHour = hours[0] + (topY / 40)
-          const endHour = hours[0] + (bottomY / 40)
-          
-          const formatTimeStr = (hourVal: number) => {
-            const h = Math.floor(hourVal)
-            const m = Math.floor((hourVal % 1) * 60)
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
-          }
-
-          // 드래그 기능은 매트릭스 뷰나 캘린더 뷰에서 일시적으로 제한하거나 현재 뷰의 기준일(예: new Date() 또는 셀의 날짜)을 사용해야 함.
-          // 현재 타임라인이 제거되었으므로 드래그 기능은 사용하지 않으나 컴파일 오류 방지를 위해 dateStr을 오늘 날짜로 대체
-          const dateStr = format(new Date(), 'yyyy-MM-dd')
-          const startTimeStr = formatTimeStr(startHour)
-          const endTimeStr = formatTimeStr(endHour)
-          
-          const newStartLocal = `${dateStr}T${startTimeStr}:00`
-          const newEndLocal = `${dateStr}T${endTimeStr}:00`
-          
-          // 최신 schedules 참조
-          const startUtcDate = new Date(newStartLocal)
-          const endUtcDate = new Date(newEndLocal)
-          const isOverlap = localSchedulesRef.current.some(s => {
-            if (s.member_id !== staffId) return false;
-            if (!isSameDay(new Date(s.start_time), startUtcDate)) return false;
-            return startUtcDate < new Date(s.end_time) && endUtcDate > new Date(s.start_time);
-          });
-          
-          if (staffId && isOverlap) {
-            toast.error('해당 시간대에 이미 스케줄이 존재합니다.')
-          } else {
-            // 시간 표시용 포맷팅: 24 이상일 경우 -24
-            const displayStartHour = Math.floor(startHour) >= 24 ? Math.floor(startHour) - 24 : Math.floor(startHour)
-            const displayEndHour = Math.floor(endHour) >= 24 ? Math.floor(endHour) - 24 : Math.floor(endHour)
-            const displayStartStr = `${displayStartHour.toString().padStart(2, '0')}:${Math.floor((startHour % 1) * 60).toString().padStart(2, '0')}`
-            const displayEndStr = `${displayEndHour.toString().padStart(2, '0')}:${Math.floor((endHour % 1) * 60).toString().padStart(2, '0')}`
-            
-            // date는 자정을 넘겼을 경우 다음날로 넘기지 않고 선택한 기준일(dateStr)로 유지
-            setCreateForm({
-              title: '',
-              date: dateStr,
-              startTime: displayStartStr,
-              endTime: displayEndStr,
-              staffId: staffId || '',
-              scheduleType: 'regular'
-            })
-            setIsCreateModalOpen(true)
-          }
-        }
-      } else if (type === 'move_v' || type === 'resize_v') {
-        // 드래그 변위가 스냅 기준(20px, 30분)보다 작으면 단순 클릭으로 간주하고 무시
-        if (Math.abs(snappedDy) < 20) {
-          setDragState(null)
-          return
-        }
-
-        // 최신 schedules 참조
-        const sch = localSchedulesRef.current.find(s => s.id === scheduleId)
-        if (sch) {
-          let newTop = initialTop!
-          let newHeight = initialHeight!
-          
-          const MAX_HEIGHT = hours.length * 40
-          
-          if (type === 'move_v') {
-            newTop = Math.max(0, Math.min(initialTop! + snappedDy, MAX_HEIGHT - newHeight))
-          } else if (type === 'resize_v') {
-            newHeight = Math.max(20, Math.min(newHeight + snappedDy, MAX_HEIGHT - newTop))
-          }
-          
-          const startHour = hours[0] + (newTop / 40)
-          const endHour = startHour + (newHeight / 40)
-          
-          const formatTimeStr = (hourVal: number) => {
-            const h = Math.floor(hourVal)
-            const m = Math.floor((hourVal % 1) * 60)
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
-          }
-
-          const dateStr = format(new Date(), 'yyyy-MM-dd')
-          const startTimeStr = formatTimeStr(startHour)
-          const endTimeStr = formatTimeStr(endHour)
-          
-          const newStartLocal = `${dateStr}T${startTimeStr}:00`
-          const newEndLocal = `${dateStr}T${endTimeStr}:00`
-          
-          // 기존 시간과 동일하면 업데이트 하지 않음 (클릭만 한 경우)
-          if (sch.start_time === newStartLocal && sch.end_time === newEndLocal) {
-            setDragState(null)
-            return
-          }
-          
-          const startUtcDate = new Date(newStartLocal)
-          const endUtcDate = new Date(newEndLocal)
-          const isOverlap = localSchedulesRef.current.some(s => {
-            if (s.id === sch.id) return false;
-            if (s.member_id !== staffId) return false;
-            if (!isSameDay(new Date(s.start_time), startUtcDate)) return false;
-            return startUtcDate < new Date(s.end_time) && endUtcDate > new Date(s.start_time);
-          });
-          
-          if (staffId && isOverlap) {
-            toast.error('해당 시간대에 이미 다른 스케줄이 있어 변경할 수 없습니다.')
-          } else {
-            // 개별 시간 지정 업무가 있는지 확인
-            const hasTimeSpecificTasks = sch.tasks?.some((t: any) => t.start_time)
-            const deltaMinutes = getDiffInMinutes(sch.start_time, newStartLocal)
-            
-            if (hasTimeSpecificTasks) {
-              // 개별 업무가 있으면 모달 띄우기
-              setConfirmMoveModal({
-                isOpen: true,
-                scheduleId: sch.id,
-                newStartUTC: newStartLocal,
-                newEndUTC: newEndLocal,
-                deltaMinutes
-              })
-            } else {
-              // 개별 업무가 없으면 즉시 업데이트
-              processScheduleUpdate(sch.id, newStartLocal, newEndLocal, false, deltaMinutes)
-            }
-          }
-        }
-      }
-      
-      setDragState(null)
-    }
-
-    // 의존성 배열을 비워두어 한 번만 이벤트가 붙고 해제되도록 최적화
-    // (대신 내부에서 dragStateRef.current 를 참조하여 최신 상태 확보)
-    window.addEventListener('mousemove', handleGlobalMouseMove)
-    window.addEventListener('mouseup', handleGlobalMouseUp)
-    
-    return () => {
-      window.removeEventListener('mousemove', handleGlobalMouseMove)
-      window.removeEventListener('mouseup', handleGlobalMouseUp)
-    }
-  }, [])
 
   const processScheduleUpdate = (scheduleId: string, newStartUTC: string, newEndUTC: string, moveTasks: boolean, deltaMinutes: number = 0) => {
     // API 호출
@@ -495,7 +249,7 @@ export function UnifiedCalendar({
         const start = new Date(newStartUTC)
         const end = new Date(newEndUTC)
         
-        let startHour = start.getHours() + start.getMinutes() / 60
+        const startHour = start.getHours() + start.getMinutes() / 60
         let endHour = end.getHours() + end.getMinutes() / 60
         if (endHour <= startHour || end.getDate() !== start.getDate()) {
           endHour += 24
@@ -539,43 +293,6 @@ export function UnifiedCalendar({
     })
   }
 
-  const handleTaskToggle = async (taskId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed'
-    
-    // Optimistic UI update
-    setSelectedSchedule((prev: any) => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        tasks: prev.tasks?.map((t: any) => 
-          t.id === taskId 
-            ? { ...t, status: newStatus }
-            : t
-        )
-      }
-    })
-    
-    // localSchedules 도 함께 업데이트 (tooltip 등에 반영되도록)
-    setLocalSchedules(prev => prev.map(s => {
-      if (s.id === selectedSchedule?.id) {
-        return {
-          ...s,
-          tasks: s.tasks?.map((t: any) => 
-            t.id === taskId 
-              ? { ...t, status: newStatus }
-              : t
-          )
-        }
-      }
-      return s
-    }))
-
-    const result = await updateTaskStatus(taskId, newStatus)
-    if (result.error) {
-      toast.error('업무 상태 변경에 실패했습니다.')
-    }
-  }
-
   // 직원 객체의 역할 정보를 확실하게 찾아주는 헬퍼
   const getStaffRoleInfo = (staff: any) => {
     if (staff?.role_info) return staff.role_info
@@ -586,7 +303,7 @@ export function UnifiedCalendar({
     const start = new Date(sch.start_time)
     const end = new Date(sch.end_time)
     
-    let startHour = start.getHours() + start.getMinutes() / 60
+    const startHour = start.getHours() + start.getMinutes() / 60
     let endHour = end.getHours() + end.getMinutes() / 60
     
     // 종료 시간이 시작 시간보다 작거나, 날짜가 다음 날이면 +24시간 (자정 넘김)
@@ -613,53 +330,6 @@ export function UnifiedCalendar({
       editStartTime: format(start, 'HH:mm'),
       editEndTime: format(end, 'HH:mm'),
       scheduleType: sch.schedule_type || 'regular'
-    })
-    setIsModalOpen(true)
-    setTooltipData(null) // 모달 열릴 때 툴팁 닫기
-  }
-
-  // 실제 데이터 기반 스케줄 체크 로직 연동 (timezone 오차 방지)
-  const hasScheduleOnDate = (date: Date, staffId?: string) => {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    return localSchedules.some(sch => {
-      if (!sch.start_time) return false;
-      
-      // Timezone 오차 방지: Date 객체 파싱 후 로컬 포맷으로 변환하여 안전하게 비교
-      const parsedDate = new Date(sch.start_time);
-      if (isNaN(parsedDate.getTime())) return false; // Invalid Date 에러 방지
-      
-      const schDateStr = format(parsedDate, 'yyyy-MM-dd')
-      
-      const isSameDate = schDateStr === dateStr
-      if (!isSameDate) return false
-      
-      if (staffId) {
-        return sch.schedule_members?.some((sm: any) => sm.member_id === staffId)
-      }
-      return true
-    })
-  }
-
-  const hasScheduleInWeek = (startOfWeekDate: Date, staffId?: string) => {
-    const startDateStr = format(startOfWeekDate, 'yyyy-MM-dd')
-    const endOfWeekDate = addDays(startOfWeekDate, 6)
-    const endDateStr = format(endOfWeekDate, 'yyyy-MM-dd')
-    
-    return localSchedules.some(sch => {
-      if (!sch.start_time) return false;
-      
-      const parsedDate = new Date(sch.start_time);
-      if (isNaN(parsedDate.getTime())) return false;
-      
-      const schDateStr = format(parsedDate, 'yyyy-MM-dd')
-      
-      // 해당 주의 범위 내에 있는지 확인
-      if (schDateStr < startDateStr || schDateStr > endDateStr) return false;
-      
-      if (staffId) {
-        return sch.schedule_members?.some((sm: any) => sm.member_id === staffId)
-      }
-      return true
     })
   }
 
@@ -732,28 +402,6 @@ export function UnifiedCalendar({
     return Array.from({ length: maxHour - minHour + 1 }, (_, i) => i + minHour);
   }, [storeOpeningHours]);
 
-  // 툴팁 위치 제어 로직
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!tooltipData || !tooltipRef.current) return
-    const tw = 220, th = 180
-    const vw = window.innerWidth, vh = window.innerHeight
-    const x = e.clientX, y = e.clientY
-    
-    setTooltipPos({
-      x: x + tw + 12 > vw ? x - tw - 8 : x + 12,
-      y: y + th > vh ? y - th : y + 8
-    })
-  }
-
-  useEffect(() => {
-    if (tooltipData) {
-      window.addEventListener('mousemove', handleMouseMove)
-    } else {
-      window.removeEventListener('mousemove', handleMouseMove)
-    }
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [tooltipData])
-
   return (
     <div className="flex flex-col h-full text-[#1a1a1a]" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       
@@ -793,7 +441,6 @@ export function UnifiedCalendar({
               currentDate={timelineDate}
               staffList={filteredStaff}
               localSchedules={localSchedules}
-              roles={roles}
               activeRoleIds={activeRoleIds}
               getStaffRoleInfo={getStaffRoleInfo}
               approvedLeaves={approvedLeaves}
@@ -884,7 +531,6 @@ export function UnifiedCalendar({
               daysCount={7}
               staffList={filteredStaff}
               localSchedules={localSchedules}
-              roles={roles}
               activeRoleIds={activeRoleIds}
               getStaffRoleInfo={getStaffRoleInfo}
               approvedLeaves={approvedLeaves}
@@ -1051,7 +697,6 @@ export function UnifiedCalendar({
               currentDate={calendarDate}
               staffList={filteredStaff}
               localSchedules={localSchedules}
-              roles={roles}
               activeRoleIds={activeRoleIds}
               getStaffRoleInfo={getStaffRoleInfo}
               approvedLeaves={approvedLeaves}
@@ -1121,8 +766,6 @@ export function UnifiedCalendar({
                 const loadingToast = toast.loading('스케줄을 이동 중입니다...')
                 
                 const targetStaff = staffList.find(st => st.id === targetStaffId)
-                const targetRoleInfo = targetStaff ? getStaffRoleInfo(targetStaff) : null
-                const newColor = targetRoleInfo?.color || sch.color
 
                 try {
                   const formData = new FormData()
@@ -1237,8 +880,6 @@ export function UnifiedCalendar({
               staffList={staffList}
               setLocalSchedules={setLocalSchedules}
               localSchedules={localSchedules}
-              handleTaskToggle={handleTaskToggle}
-              now={now}
               approvedLeaves={approvedLeaves}
               createForm={createForm}
               setCreateForm={setCreateForm}
@@ -1300,13 +941,6 @@ export function UnifiedCalendar({
           }}
         />
       )}
-
-      {/* Tooltip Overlay */}
-      <TimelineTooltip 
-        tooltipData={tooltipData}
-        tooltipPos={tooltipPos}
-        tooltipRef={tooltipRef}
-      />
     </div>
   )
 }

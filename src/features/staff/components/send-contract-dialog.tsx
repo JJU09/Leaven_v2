@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Loader2, FileSignature, Mail, MessageCircle } from 'lucide-react'
-import { formatPhoneNumber } from '@/lib/utils'
+import { formatPhoneNumber } from '@/lib/formatters'
 
 interface SendContractDialogProps {
   open: boolean

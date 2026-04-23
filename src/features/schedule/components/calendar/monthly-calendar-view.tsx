@@ -1,6 +1,5 @@
 import React from 'react'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from 'date-fns'
-import { ko } from 'date-fns/locale'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -16,7 +15,6 @@ interface MonthlyCalendarViewProps {
   currentDate: Date
   staffList: any[]
   localSchedules: any[]
-  roles: any[]
   activeRoleIds: string[]
   getStaffRoleInfo: (staff: any) => any
   approvedLeaves?: any[]
@@ -30,7 +28,6 @@ export function MonthlyCalendarView({
   currentDate,
   staffList,
   localSchedules,
-  roles,
   activeRoleIds,
   getStaffRoleInfo,
   approvedLeaves = [],
@@ -42,7 +39,7 @@ export function MonthlyCalendarView({
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(monthStart)
   const startDate = startOfWeek(monthStart, { weekStartsOn: 0 })
-  let endDate = endOfWeek(monthEnd, { weekStartsOn: 0 })
+  const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 })
   
   const calendarDays = []
   let day = startDate

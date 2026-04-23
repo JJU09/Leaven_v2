@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Store, UserPlus, CheckCircle2, ArrowRight, X } from 'lucide-react'
+import { formatPhoneNumber } from '@/lib/formatters'
 
 export default async function JoinStorePage(props: { params: Promise<{ code: string }> }) {
   const { code } = await props.params
@@ -69,7 +70,7 @@ export default async function JoinStorePage(props: { params: Promise<{ code: str
     .single()
 
   const defaultName = profile?.full_name || user.email?.split('@')[0] || ''
-  const defaultPhone = profile?.phone || ''
+  const defaultPhone = formatPhoneNumber(profile?.phone || '')
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -114,15 +115,18 @@ export default async function JoinStorePage(props: { params: Promise<{ code: str
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="text-xs font-bold text-slate-600">전화번호 (- 제외)</Label>
+                  <Label htmlFor="phone" className="text-xs font-bold text-slate-600">전화번호</Label>
                   <Input 
                     id="phone" 
                     name="phone" 
-                    placeholder="01012345678" 
+                    placeholder="010-1234-5678" 
                     required 
                     defaultValue={defaultPhone} 
                     className="bg-white border-blue-100 focus-visible:ring-blue-500 font-mono" 
+                    maxLength={13}
                   />
+                  {/* Note: This is a Server Component form, so real-time formatting via onChange is not possible here. 
+                      The default value is formatted, and the server action will handle the submitted value. */}
                   <p className="text-[10px] text-muted-foreground mt-1 px-1">
                     * 점장님이 입력한 번호와 일치하면 즉시 합류 승인됩니다.
                   </p>

@@ -1,11 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '@/components/ui/resizable'
 import { Sidebar } from '@/shared/components/layout/sidebar'
 import { StaffSidebar } from '@/features/staff/components/staff-sidebar'
 import { Header } from '@/shared/components/layout/header'
@@ -50,15 +45,8 @@ export function DashboardClientLayout({
   storeName,
   storeList,
   staffList,
-  defaultLayout = [15, 85],
-  navCollapsedSize = 4,
   permissions = {},
 }: DashboardLayoutProps) {
-  // defaultLayout이 3개 요소라면 2개로 줄임 (이전 버전 호환성)
-  const safeDefaultLayout = defaultLayout && defaultLayout.length === 3 
-    ? [defaultLayout[0], defaultLayout[1] + defaultLayout[2]] 
-    : defaultLayout || [20, 80]
-
   return (
     <div className="h-screen w-full bg-background overflow-hidden flex">
       {/* Mobile Layout (Hidden on LG and above) */}
@@ -128,52 +116,25 @@ export function DashboardClientLayout({
           </Link>
         </div>
 
-        {/* Resizable Area & Overlay Container */}
-        <div className="flex-1 h-full min-w-0 relative">
-          {/* @ts-ignore */}
-          <ResizablePanelGroup
-            direction="horizontal"
-            className="h-full items-stretch"
-            id="dashboard-layout-group"
-          >
-            {/* 2. Management Menu Sidebar (Resizable, Not Collapsible) */}
-            <ResizablePanel
-              /* @ts-ignore */
-              defaultSize={safeDefaultLayout[0].toString()}
-              minSize={safeDefaultLayout[0].toString()}
-              maxSize="50"
-              collapsible={false}
-              className="bg-background"
-              id="dashboard-sidebar-panel"
-            >
-              <Sidebar 
-                user={user} 
-                memberId={memberId}
-                role={role} 
-                roleName={roleName}
-                roleColor={roleColor}
-                isCollapsed={false}
-                permissions={permissions}
-              />
-            </ResizablePanel>
+        {/* 2. Management Menu Sidebar (Fixed Width: 240px) */}
+        <div className="w-[240px] flex-none border-r bg-background h-full overflow-hidden">
+          <Sidebar 
+            user={user} 
+            memberId={memberId}
+            role={role} 
+            roleName={roleName}
+            roleColor={roleColor}
+            isCollapsed={false}
+            permissions={permissions}
+          />
+        </div>
 
-            <ResizableHandle withHandle id="dashboard-sidebar-handle" />
-
-            {/* 3. Main Content */}
-            <ResizablePanel 
-              /* @ts-ignore */
-              defaultSize={safeDefaultLayout[1].toString()} 
-              minSize="10"
-              id="dashboard-main-panel"
-            >
-              <div className="flex flex-col h-full min-w-0 overflow-hidden">
-                <Header storeName={storeName} />
-                <main className="flex-1 overflow-auto p-6 bg-muted/5">
-                  {children}
-                </main>
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+        {/* 3. Main Content */}
+        <div className="flex-1 h-full min-w-0 flex flex-col overflow-hidden relative">
+          <Header storeName={storeName} />
+          <main className="flex-1 overflow-auto p-6 bg-muted/5">
+            {children}
+          </main>
         </div>
       </div>
     </div>

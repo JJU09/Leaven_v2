@@ -110,9 +110,15 @@ export default async function DashboardLayout({
   }))
 
   // 쿠키에서 레이아웃 설정 읽기 (키 이름 변경으로 초기화 효과)
-  const layout = cookieStore.get('react-resizable-panels:layout-v8')
+  const layout = cookieStore.get('react-resizable-panels:layout-v10')
   
-  const defaultLayout = layout ? JSON.parse(layout.value) : undefined
+  // 캐시된 레이아웃이 있더라도 사이드바 영역(인덱스 0)이 35 미만이라면 35 이상이 되도록 보장
+  let defaultLayout = layout ? JSON.parse(layout.value) : undefined
+  if (defaultLayout && Array.isArray(defaultLayout) && defaultLayout.length >= 2) {
+    if (defaultLayout[0] < 35) {
+      defaultLayout = [35, 65];
+    }
+  }
 
   // 권한 확인
   const permissions = {

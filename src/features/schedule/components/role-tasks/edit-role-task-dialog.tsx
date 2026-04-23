@@ -54,10 +54,8 @@ export function EditRoleTaskDialog({ storeId, task, open, onOpenChange, hideRole
         id: task.id,
         title: data.title,
         description: data.description,
-        is_critical: data.is_critical,
         task_type: data.task_type,
         start_time: start_time,
-        end_time: end_time,
         assigned_role_ids: data.assigned_role_ids,
         checklist: data.checklist,
       })

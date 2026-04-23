@@ -14,7 +14,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { CalendarDays, Wallet, ShieldCheck, FileText, CheckCircle2 } from 'lucide-react'
-import { cn, formatPhoneNumber } from '@/lib/utils'
+import { cn } from '@/lib/utils';
+import { formatPhoneNumber } from '@/lib/formatters'
 
 // --- Types ---
 export interface WorkSchedule {

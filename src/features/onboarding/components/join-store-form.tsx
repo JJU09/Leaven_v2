@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Check, Loader2 } from 'lucide-react'
 import { joinStoreByCode } from '@/features/onboarding/actions'
 import { toast } from 'sonner'
+import { formatPhoneNumber } from '@/lib/formatters'
 
 interface JoinStoreFormProps {
   defaultName: string
@@ -54,8 +55,19 @@ export function JoinStoreForm({ defaultName, defaultPhone, variant = 'large' }: 
             <Input id="name-phase4" name="name" defaultValue={defaultName} required className="h-8 text-xs bg-white" />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="phone-phase4" className="text-xs text-muted-foreground">전화번호 (-제외)</Label>
-            <Input id="phone-phase4" name="phone" defaultValue={defaultPhone} required className="h-8 text-xs bg-white" placeholder="01012345678" />
+            <Label htmlFor="phone-phase4" className="text-xs text-muted-foreground">전화번호</Label>
+            <Input 
+              id="phone-phase4" 
+              name="phone" 
+              defaultValue={formatPhoneNumber(defaultPhone)} 
+              onChange={(e) => {
+                e.target.value = formatPhoneNumber(e.target.value)
+              }}
+              required 
+              className="h-8 text-xs bg-white" 
+              placeholder="010-1234-5678" 
+              maxLength={13}
+            />
           </div>
         </div>
       </form>
@@ -75,7 +87,18 @@ export function JoinStoreForm({ defaultName, defaultPhone, variant = 'large' }: 
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="phone-phase1" className="text-xs font-bold text-slate-600">전화번호</Label>
-          <Input id="phone-phase1" name="phone" defaultValue={defaultPhone} placeholder="01012345678" required className="bg-slate-50" />
+          <Input 
+            id="phone-phase1" 
+            name="phone" 
+            defaultValue={formatPhoneNumber(defaultPhone)} 
+            onChange={(e) => {
+              e.target.value = formatPhoneNumber(e.target.value)
+            }}
+            placeholder="010-1234-5678" 
+            required 
+            className="bg-slate-50" 
+            maxLength={13}
+          />
         </div>
       </div>
       

@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react'
 import { format, addDays, isSameDay } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Plus, CheckSquare } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 
 function hexToRgba(hex: string, alpha: number) {
@@ -19,7 +18,6 @@ interface StaffScheduleMatrixProps {
   daysCount: number
   staffList: any[]
   localSchedules: any[]
-  roles: any[]
   activeRoleIds: string[]
   getStaffRoleInfo: (staff: any) => any
   approvedLeaves?: any[]
@@ -35,7 +33,6 @@ export function StaffScheduleMatrix({
   daysCount = 7,
   staffList,
   localSchedules,
-  roles,
   activeRoleIds,
   getStaffRoleInfo,
   approvedLeaves = [],
@@ -330,8 +327,6 @@ export function StaffScheduleMatrix({
                                 });
 
                                 const currentType = isActuallyOnLeave ? 'leave' : sch.schedule_type;
-                                const isTraining = currentType === 'training'
-                                const isEtc = currentType === 'etc'
                                 const isLeave = currentType === 'leave'
                                 
                                 // 색상 동적 결정: 휴가는 무조건 회색, 나머지는 본래 색상(또는 직급 색상)
@@ -347,10 +342,8 @@ export function StaffScheduleMatrix({
                                 const displayTitle = typeLabelMap[currentType] || sch.title || '근무'
 
                                 return (
-                                  <TooltipProvider key={sch.id} delayDuration={300}>
-                                    <Tooltip>
-                                    <TooltipTrigger asChild>
                                       <div 
+                                        key={sch.id}
                                         draggable={canManage && !isLeave}
                                         onDragStart={(e) => {
                                           if (!canManage || isLeave) return
@@ -387,38 +380,6 @@ export function StaffScheduleMatrix({
                                           {displayTitle}
                                         </div>
                                       </div>
-                                    </TooltipTrigger>
-                                    {!isLeave && (
-                                      <TooltipContent side="top" className="p-3 max-w-[250px] bg-white border border-black/10 shadow-lg text-[#1a1a1a]">
-                                        <div className="font-semibold text-[12px] mb-2 border-b border-black/5 pb-1 flex justify-between items-center">
-                                          <span>세부 할 일 ({(sch.tasks || []).length}개)</span>
-                                          <span className="text-[10px] text-muted-foreground font-normal bg-black/5 px-1.5 py-0.5 rounded">
-                                            {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
-                                          </span>
-                                        </div>
-                                        <div className="flex flex-col gap-1.5 max-h-[150px] overflow-y-auto no-scrollbar">
-                                          {(sch.tasks || []).length > 0 ? (
-                                            (sch.tasks || []).map((t: any) => (
-                                              <div key={t.id} className="flex items-start gap-1.5 text-[11px]">
-                                                <CheckSquare className={cn(
-                                                  "w-3.5 h-3.5 shrink-0 mt-[1px]", 
-                                                  t.status === 'done' ? "text-[#1D9E75]" : "text-muted-foreground/50"
-                                                )} />
-                                                <span className={cn("leading-tight", t.status === 'done' && "line-through text-muted-foreground")}>
-                                                  {t.title || '할 일'}
-                                                </span>
-                                              </div>
-                                            ))
-                                          ) : (
-                                            <div className="text-[11px] text-muted-foreground text-center py-2">
-                                              등록된 세부 할 일이 없습니다.
-                                            </div>
-                                          )}
-                                        </div>
-                                      </TooltipContent>
-                                    )}
-                                    </Tooltip>
-                                  </TooltipProvider>
                                 )
                               })}
                             </div>

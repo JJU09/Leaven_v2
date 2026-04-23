@@ -194,7 +194,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "relative flex flex-col h-full w-full bg-background border-r",
+        "relative flex flex-col h-full w-full bg-background overflow-hidden",
         className
       )}
     >
@@ -210,14 +210,14 @@ export function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-3 p-2 overflow-y-auto py-4">
+      <nav className="flex-1 space-y-3 p-2 overflow-y-auto overflow-x-hidden py-4 w-full">
         <TooltipProvider delayDuration={0}>
           {navGroups.map((group, index) => {
             if (group.items.length === 0) return null;
             return (
-            <div key={index} className="space-y-1">
+            <div key={index} className="space-y-1 w-full">
               {!isCollapsed && (
-                <h4 className="px-2 text-xs font-semibold text-muted-foreground mb-1">
+                <h4 className="px-2 text-xs font-semibold text-muted-foreground mb-1 truncate whitespace-nowrap">
                   {group.title}
                 </h4>
               )}
@@ -230,12 +230,12 @@ export function Sidebar({
                         href={item.href}
                         onClick={(e) => handleUpcomingClick(e, item.isUpcoming)}
                         className={cn(
-                          "flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted hover:text-foreground mb-1 relative",
+                          "flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted hover:text-foreground mb-1 relative shrink-0",
                           isActive ? "bg-muted text-primary" : "text-muted-foreground",
                           item.isUpcoming && "opacity-60 hover:opacity-100"
                         )}
                       >
-                        <item.icon className="h-5 w-5" />
+                        <item.icon className="h-5 w-5 shrink-0" />
                         {item.isUpcoming && (
                           <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/40 opacity-75"></span>
@@ -258,14 +258,14 @@ export function Sidebar({
                     href={item.href}
                     onClick={(e) => handleUpcomingClick(e, item.isUpcoming)}
                     className={cn(
-                      "flex items-center justify-between rounded-md pl-6 pr-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground overflow-hidden group",
+                      "flex items-center justify-between rounded-md pl-6 pr-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground overflow-hidden group w-full",
                       isActive ? "bg-muted text-primary" : "text-muted-foreground",
                       item.isUpcoming && "opacity-70 hover:opacity-100"
                     )}
                   >
-                    <div className="flex items-center gap-3 truncate">
+                    <div className="flex items-center gap-3 truncate min-w-0 flex-1">
                       <item.icon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{item.title}</span>
+                      <span className="truncate whitespace-nowrap">{item.title}</span>
                     </div>
                     {item.isUpcoming && (
                       <span className="shrink-0 ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary group-hover:bg-primary/20 transition-colors">

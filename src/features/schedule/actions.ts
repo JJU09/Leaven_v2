@@ -548,20 +548,92 @@ export async function generateStaffSchedules(
     return { error: '권한이 없습니다.' }
   }
 
-  // Call RPC
-  const { data, error } = await supabase.rpc('generate_staff_schedules', {
-    p_store_id: storeId,
-    p_start_date: startDate,
-    p_end_date: endDate,
-    p_target_staff_ids: targetStaffIds
-  })
+  let count = 0;
 
-  if (error) {
-    return { error: error.message }
+  // 1. 선택된 직원들의 근무 스케줄(work_schedules) 가져오기
+  const { data: members, error: membersError } = await supabase
+    .from('store_members')
+    .select('id, work_schedules')
+    .in('id', targetStaffIds)
+    .eq('store_id', storeId)
+
+  if (membersError) {
+    console.error('Error fetching member schedules:', membersError)
+    return { error: membersError.message }
+  }
+
+  // 2. 이미 존재하는 스케줄 가져오기 (중복 생성 방지용)
+  const { data: existingSchedules, error: existError } = await supabase
+    .from('schedules')
+    .select('member_id, plan_date')
+    .eq('store_id', storeId)
+    .in('member_id', targetStaffIds)
+    .gte('plan_date', startDate)
+    .lte('plan_date', endDate)
+
+  if (existError) {
+    console.error('Error fetching existing schedules:', existError)
+    return { error: existError.message }
+  }
+
+  const existingSet = new Set(
+    existingSchedules?.map(s => `${s.member_id}_${s.plan_date}`) || []
+  )
+
+  const newSchedules = []
+
+  // 3. 날짜별로 순회하며 생성할 스케줄 계산
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+
+  for (const member of members) {
+    const schedules = member.work_schedules || []
+    if (schedules.length === 0) continue
+
+    const currentDate = new Date(start)
+    while (currentDate <= end) {
+      // getDay(): 일(0) ~ 토(6)
+      const dayOfWeek = currentDate.getDay()
+      const dateStr = currentDate.toISOString().split('T')[0]
+
+      // 해당 요일의 패턴 찾기
+      const pattern = schedules.find((s: any) => s.day === dayOfWeek)
+
+      if (pattern && !pattern.is_holiday) {
+        const key = `${member.id}_${dateStr}`
+        
+        // 이미 스케줄이 존재하지 않는 경우에만 추가
+        if (!existingSet.has(key)) {
+          newSchedules.push({
+            store_id: storeId,
+            member_id: member.id,
+            plan_date: dateStr,
+            start_time: pattern.start_time,
+            end_time: pattern.end_time,
+            schedule_type: 'regular'
+          })
+          existingSet.add(key) // 같은 루프 내 중복 방지
+        }
+      }
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+  }
+
+  // 4. 일괄 생성 (insert)
+  if (newSchedules.length > 0) {
+    const { error: insertError } = await supabase
+      .from('schedules')
+      .insert(newSchedules)
+
+    if (insertError) {
+      console.error('Error inserting auto schedules:', insertError)
+      return { error: insertError.message }
+    }
+    count = newSchedules.length
   }
 
   revalidatePath('/dashboard/schedule')
-  return { success: true, count: data }
+  return { success: true, count }
 }
 
 // 스케줄 일괄 삭제 (직원, 기간)
@@ -582,18 +654,37 @@ export async function deleteStaffSchedules(
     return { error: '권한이 없습니다.' }
   }
 
-  // Call RPC
-  const { data, error } = await supabase.rpc('delete_staff_schedules', {
-    p_store_id: storeId,
-    p_start_date: startDate,
-    p_end_date: endDate,
-    p_target_staff_ids: targetStaffIds
-  })
+  // 1. 삭제할 스케줄의 ID 목록을 먼저 조회 (count를 정확히 알기 위함, 선택사항)
+  const { data: schedulesToDelete, error: selectError } = await supabase
+    .from('schedules')
+    .select('id')
+    .eq('store_id', storeId)
+    .in('member_id', targetStaffIds)
+    .gte('plan_date', startDate)
+    .lte('plan_date', endDate)
 
-  if (error) {
-    return { error: error.message }
+  if (selectError) {
+    console.error('Error finding schedules to delete:', selectError)
+    return { error: selectError.message }
+  }
+
+  const count = schedulesToDelete?.length || 0
+
+  if (count > 0) {
+    const { error: deleteError } = await supabase
+      .from('schedules')
+      .delete()
+      .eq('store_id', storeId)
+      .in('member_id', targetStaffIds)
+      .gte('plan_date', startDate)
+      .lte('plan_date', endDate)
+
+    if (deleteError) {
+      console.error('Error deleting schedules:', deleteError)
+      return { error: deleteError.message }
+    }
   }
 
   revalidatePath('/dashboard/schedule')
-  return { success: true, count: data }
+  return { success: true, count }
 }

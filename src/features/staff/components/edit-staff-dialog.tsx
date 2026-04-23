@@ -28,7 +28,8 @@ import { toast } from 'sonner'
 import { Loader2, User, FileSignature, Check, X, Mail, Phone, AlertTriangle, Link2, Link2Off } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { cn, formatPhoneNumber } from '@/lib/utils'
+import { cn } from '@/lib/utils';
+import { formatPhoneNumber } from '@/lib/formatters'
 
 // 분리된 UI 컴포넌트 임포트
 import { 

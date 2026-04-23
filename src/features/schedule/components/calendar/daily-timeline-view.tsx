@@ -2,13 +2,11 @@
 
 import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { format, isSameDay } from 'date-fns'
-import { ko } from 'date-fns/locale'
 
 interface DailyTimelineViewProps {
   currentDate: Date
   staffList: any[]
   localSchedules: any[]
-  roles: any[]
   activeRoleIds: string[]
   getStaffRoleInfo: (staff: any) => any
   approvedLeaves: any[]
@@ -43,7 +41,6 @@ export function DailyTimelineView({
   currentDate,
   staffList,
   localSchedules,
-  roles,
   activeRoleIds,
   getStaffRoleInfo,
   approvedLeaves,
@@ -94,7 +91,7 @@ export function DailyTimelineView({
     // Only process if it belongs to currentDate
     if (!isSameDay(start, currentDate) && !isSameDay(end, currentDate)) return null
 
-    let startHour = start.getHours() + start.getMinutes() / 60
+    const startHour = start.getHours() + start.getMinutes() / 60
     let endHour = end.getHours() + end.getMinutes() / 60
 
     if (endHour <= startHour || end.getDate() !== start.getDate()) {
@@ -122,7 +119,7 @@ export function DailyTimelineView({
     const totalHours = hours[hours.length - 1] - hours[0]
     const totalMins = totalHours * 60
     const percentage = Math.max(0, Math.min(x / trackWidth, 1))
-    let mins = Math.round((percentage * totalMins) / 30) * 30
+    const mins = Math.round((percentage * totalMins) / 30) * 30
     return mins + hours[0] * 60
   }
 
@@ -139,7 +136,7 @@ export function DailyTimelineView({
       if (!trackElement) return
       
       const rect = trackElement.getBoundingClientRect()
-      let x = e.clientX - rect.left
+      const x = e.clientX - rect.left
       
       if (Math.abs(x - interactionState.startPx) > 5) {
         draggedRef.current = true
@@ -148,7 +145,7 @@ export function DailyTimelineView({
       setInteractionState(prev => prev ? { ...prev, currentPx: x } : null)
     }
 
-    const handleMouseUp = (e: MouseEvent) => {
+    const handleMouseUp = () => {
       if (!interactionState) return
       
       const { type, staffId, scheduleId, startPx, currentPx, trackWidth, originalStartMins, originalEndMins } = interactionState
@@ -159,7 +156,7 @@ export function DailyTimelineView({
       if (type === 'create') {
         const minPx = Math.min(startPx, currentPx)
         const maxPx = Math.max(startPx, currentPx)
-        let startMins = pxToMins(minPx, trackWidth)
+        const startMins = pxToMins(minPx, trackWidth)
         let endMins = pxToMins(maxPx, trackWidth)
         if (endMins === startMins) endMins = startMins + 60 // 기본 1시간
         if (Math.abs(currentPx - startPx) > 10) { // 약간의 드래그가 있었을 때만
@@ -210,7 +207,7 @@ export function DailyTimelineView({
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [interactionState, currentDate, onScheduleCreateDrag, onScheduleUpdateDrag, hours])
+  }, [interactionState, currentDate, onScheduleCreateDrag, onScheduleUpdateDrag, hours]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg border border-black/10 overflow-hidden shadow-sm">

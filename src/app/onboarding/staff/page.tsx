@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner'
 import { joinStoreByCode, verifyInviteCode } from '@/features/onboarding/actions'
 import { Loader2, Store } from 'lucide-react'
+import { formatPhoneNumber } from '@/lib/formatters'
 
 const formSchema = z.object({
   inviteCode: z.string().min(8, '매장 코드는 8자리입니다.').max(8),
@@ -160,7 +161,12 @@ export default function StaffOnboardingPage() {
                     <FormItem>
                       <FormLabel>전화번호</FormLabel>
                       <FormControl>
-                        <Input placeholder="010-1234-5678" {...field} />
+                        <Input 
+                          placeholder="010-1234-5678" 
+                          {...field} 
+                          onChange={(e) => field.onChange(formatPhoneNumber(e.target.value))}
+                          maxLength={13}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

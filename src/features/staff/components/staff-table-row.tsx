@@ -13,7 +13,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
-import { cn, formatPhoneNumber } from '@/lib/utils'
+import { cn } from '@/lib/utils';
+import { formatPhoneNumber } from '@/lib/formatters'
 import { StaffMember } from './staff-list'
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']

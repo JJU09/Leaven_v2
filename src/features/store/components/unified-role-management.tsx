@@ -113,7 +113,6 @@ function PlaybookItem({ task, storeId }: { task: Task, storeId: string }) {
           <div className="flex items-start justify-between gap-2">
             <span className="font-medium text-[13px] text-foreground flex items-center gap-1.5">
               {task.title}
-              {task.is_critical && <Star className="w-3 h-3 fill-destructive text-destructive" />}
             </span>
           </div>
           {task.description && (

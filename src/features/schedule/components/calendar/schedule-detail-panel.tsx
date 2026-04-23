@@ -1,18 +1,12 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo } from 'react'
-import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Switch } from '@/components/ui/switch'
 import { TimePicker } from '@/components/ui/time-picker'
 import { toast } from 'sonner'
 import { updateSchedule, deleteSchedule, createSchedule } from '@/features/schedule/actions'
-import { createTask, assignTask, deleteTask, updateTask, toggleTaskCheckitem, createDirectScheduleTask } from '@/features/schedule/task-actions'
 import { useRouter } from 'next/navigation'
-import { Pencil, Trash2 } from 'lucide-react'
-import { toKSTISOString, toUTCISOString, addMinutesToTime } from '@/shared/lib/date-utils'
 import { Button } from '@/components/ui/button'
 
 function hexToRgba(hex: string, alpha: number) {
@@ -143,37 +137,6 @@ export function TimeSlider({
   )
 }
 
-// 자동 파생 상태 계산 헬퍼 (시간 기반)
-export function getDerivedTaskStatus(t: any, scheduleDateStr: string, now: Date): 'todo' | 'in_progress' | 'pending' | 'done' {
-  if (t.status === 'done') return 'done'
-  if (!t.start_time) return 'todo'
-
-  let taskDateObj = null;
-  if (t.start_time.includes('T')) {
-    taskDateObj = new Date(t.start_time)
-  } else {
-    const dateStr = t.assigned_date || scheduleDateStr
-    if (!dateStr) return 'todo'
-    // 만약 start_time이 "09:00" 처럼 초가 없으면 추가
-    const timeStr = t.start_time.length === 5 ? `${t.start_time}:00` : t.start_time
-    taskDateObj = new Date(`${dateStr}T${timeStr}`)
-  }
-
-  if (isNaN(taskDateObj.getTime())) return 'todo'
-
-  const startTimeMs = taskDateObj.getTime()
-  const nowMs = now.getTime()
-  const thirtyMinsMs = 30 * 60 * 1000
-
-  if (nowMs < startTimeMs) {
-    return 'todo'
-  } else if (nowMs >= startTimeMs && nowMs < startTimeMs + thirtyMinsMs) {
-    return 'in_progress'
-  } else {
-    return 'pending'
-  }
-}
-
 interface ScheduleDetailPanelProps {
   mode: 'create' | 'edit'
   storeId: string
@@ -182,8 +145,6 @@ interface ScheduleDetailPanelProps {
   staffList: any[]
   setLocalSchedules: React.Dispatch<React.SetStateAction<any[]>>
   localSchedules?: any[]
-  handleTaskToggle?: (taskId: string, currentStatus: string) => Promise<void>
-  now?: Date
   approvedLeaves?: any[]
   createForm?: any
   setCreateForm?: (form: any) => void
@@ -206,8 +167,6 @@ export function ScheduleDetailPanel({
   staffList,
   setLocalSchedules,
   localSchedules = [],
-  handleTaskToggle,
-  now = new Date(),
   approvedLeaves = [],
   createForm,
   setCreateForm,
@@ -236,7 +195,7 @@ export function ScheduleDetailPanel({
     // 2. Optimistic update for main calendar (localSchedules)
     setLocalSchedules(prev => prev.map(s => {
       if (s.id === newSchedule.id) {
-        let endDateTime = new Date(`${newSchedule.editDate}T${newSchedule.editEndTime}:00`)
+        const endDateTime = new Date(`${newSchedule.editDate}T${newSchedule.editEndTime}:00`)
         if (newSchedule.editStartTime > newSchedule.editEndTime) {
           endDateTime.setDate(endDateTime.getDate() + 1)
         }
@@ -412,9 +371,6 @@ export function ScheduleDetailPanel({
                       toast.error('변경할 수 없습니다.', { description: '승인된 휴가가 존재합니다.', duration: 4000 })
                       if (!isCreate && setSelectedSchedule) setSelectedSchedule((prev: any) => ({ ...prev }))
                       return;
-                    }
-                    const typeLabelMap: Record<string, string> = {
-                      'regular': '근무', 'leave': '휴가', 'training': '교육', 'etc': '기타'
                     }
                     if (isCreate) {
                       if (setCreateForm) setCreateForm({ ...createForm, scheduleType: val })

@@ -53,6 +53,7 @@ export default async function UnifiedSchedulePage() {
       id,
       user_id,
       name,
+      work_schedules,
       profiles (full_name),
       role_info:store_roles(id, name, color, hierarchy_level)
     `)

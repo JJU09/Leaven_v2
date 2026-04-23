@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { format, addDays, startOfWeek } from 'date-fns'
+import { format, addDays } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Search, Sparkles, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -61,7 +61,8 @@ export function CalendarHeader({
   const [isMounted, setIsMounted] = useState(false)
   
   useEffect(() => {
-    setIsMounted(true)
+    const timer = setTimeout(() => setIsMounted(true), 0)
+    return () => clearTimeout(timer)
   }, [])
 
   if (!isMounted) {

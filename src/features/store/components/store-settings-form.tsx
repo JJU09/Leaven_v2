@@ -37,7 +37,8 @@ import { AlertTriangle, Search, MapPin, Save, RotateCcw, Plus, Trash2, Crosshair
 import { ImageUpload } from './image-upload'
 import { OpeningHours } from './opening-hours'
 import { StoreLocationMap } from './store-location-map'
-import { cn, formatPhoneNumber } from '@/lib/utils'
+import { cn } from '@/lib/utils';
+import { formatPhoneNumber } from '@/lib/formatters'
 
 const formatBusinessNumber = (value: string) => {
   const v = value.replace(/\D/g, '')
