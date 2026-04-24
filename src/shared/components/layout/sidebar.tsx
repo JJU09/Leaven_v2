@@ -103,12 +103,12 @@ export function Sidebar({
           icon: Umbrella,
           isUpcoming: false
         }] : []),
-        {
+        ...(permissions.view_salary ? [{
           title: '급여 정산',
           href: '/dashboard/payroll',
           icon: Calculator,
-          isUpcoming: true
-        }
+          isUpcoming: false
+        }] : [])
       ]
     },
     {

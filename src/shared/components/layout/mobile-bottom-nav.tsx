@@ -10,7 +10,8 @@ import {
   CheckSquare,
   ClipboardList,
   Umbrella,
-  LayoutDashboard
+  LayoutDashboard,
+  Calculator
 } from 'lucide-react'
 
 interface MobileBottomNavProps {
@@ -56,6 +57,13 @@ export function MobileBottomNav({ role, permissions = {} }: MobileBottomNavProps
       href: '/dashboard/leave',
       icon: Umbrella,
     },
+    ...(permissions.view_salary ? [
+      {
+        title: '급여 정산',
+        href: '/dashboard/payroll',
+        icon: Calculator,
+      }
+    ] : []),
     {
       title: '마이페이지',
       href: '/dashboard/mypage',

@@ -351,6 +351,111 @@ export type Database = {
           },
         ]
       }
+      payroll_records: {
+        Row: {
+          base_pay: number
+          confirmed_at: string | null
+          created_at: string
+          employment_insurance: number
+          gross_pay: number
+          health_insurance: number
+          id: string
+          income_tax: number
+          local_income_tax: number
+          long_term_care: number
+          national_pension: number
+          net_pay: number
+          note: string | null
+          overtime_hours: number
+          overtime_pay: number
+          paid_at: string | null
+          period_month: number
+          period_year: number
+          staff_id: string
+          status: Database["public"]["Enums"]["payroll_status"]
+          store_id: string
+          total_deduction: number
+          updated_at: string
+          wage_type: Database["public"]["Enums"]["wage_type"]
+          weekly_holiday_pay: number
+          work_days: number
+          work_hours: number
+        }
+        Insert: {
+          base_pay?: number
+          confirmed_at?: string | null
+          created_at?: string
+          employment_insurance?: number
+          gross_pay?: number
+          health_insurance?: number
+          id?: string
+          income_tax?: number
+          local_income_tax?: number
+          long_term_care?: number
+          national_pension?: number
+          net_pay?: number
+          note?: string | null
+          overtime_hours?: number
+          overtime_pay?: number
+          paid_at?: string | null
+          period_month: number
+          period_year: number
+          staff_id: string
+          status?: Database["public"]["Enums"]["payroll_status"]
+          store_id: string
+          total_deduction?: number
+          updated_at?: string
+          wage_type: Database["public"]["Enums"]["wage_type"]
+          weekly_holiday_pay?: number
+          work_days?: number
+          work_hours?: number
+        }
+        Update: {
+          base_pay?: number
+          confirmed_at?: string | null
+          created_at?: string
+          employment_insurance?: number
+          gross_pay?: number
+          health_insurance?: number
+          id?: string
+          income_tax?: number
+          local_income_tax?: number
+          long_term_care?: number
+          national_pension?: number
+          net_pay?: number
+          note?: string | null
+          overtime_hours?: number
+          overtime_pay?: number
+          paid_at?: string | null
+          period_month?: number
+          period_year?: number
+          staff_id?: string
+          status?: Database["public"]["Enums"]["payroll_status"]
+          store_id?: string
+          total_deduction?: number
+          updated_at?: string
+          wage_type?: Database["public"]["Enums"]["wage_type"]
+          weekly_holiday_pay?: number
+          work_days?: number
+          work_hours?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_records_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "store_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_records_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -446,6 +551,7 @@ export type Database = {
       }
       store_announcements: {
         Row: {
+          announcement_type: string | null
           author_id: string
           content: string
           created_at: string
@@ -453,10 +559,12 @@ export type Database = {
           id: string
           is_pinned: boolean | null
           store_id: string
+          target_member_ids: string[] | null
           title: string
           updated_at: string
         }
         Insert: {
+          announcement_type?: string | null
           author_id: string
           content: string
           created_at?: string
@@ -464,10 +572,12 @@ export type Database = {
           id?: string
           is_pinned?: boolean | null
           store_id: string
+          target_member_ids?: string[] | null
           title: string
           updated_at?: string
         }
         Update: {
+          announcement_type?: string | null
           author_id?: string
           content?: string
           created_at?: string
@@ -475,6 +585,7 @@ export type Database = {
           id?: string
           is_pinned?: boolean | null
           store_id?: string
+          target_member_ids?: string[] | null
           title?: string
           updated_at?: string
         }
@@ -1097,6 +1208,8 @@ export type Database = {
         Row: {
           assigned_date: string | null
           assigned_role_ids: string[] | null
+          assignee_id: string | null
+          assigner_id: string | null
           category: string | null
           checklist: Json | null
           completed_at: string | null
@@ -1104,9 +1217,13 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          done_at: string | null
+          due_date: string | null
           id: string
+          is_done: boolean | null
           is_routine: boolean | null
           is_template: boolean | null
+          priority: string | null
           schedule_id: string | null
           start_time: string | null
           status: Database["public"]["Enums"]["task_status"]
@@ -1119,6 +1236,8 @@ export type Database = {
         Insert: {
           assigned_date?: string | null
           assigned_role_ids?: string[] | null
+          assignee_id?: string | null
+          assigner_id?: string | null
           category?: string | null
           checklist?: Json | null
           completed_at?: string | null
@@ -1126,9 +1245,13 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          done_at?: string | null
+          due_date?: string | null
           id?: string
+          is_done?: boolean | null
           is_routine?: boolean | null
           is_template?: boolean | null
+          priority?: string | null
           schedule_id?: string | null
           start_time?: string | null
           status?: Database["public"]["Enums"]["task_status"]
@@ -1141,6 +1264,8 @@ export type Database = {
         Update: {
           assigned_date?: string | null
           assigned_role_ids?: string[] | null
+          assignee_id?: string | null
+          assigner_id?: string | null
           category?: string | null
           checklist?: Json | null
           completed_at?: string | null
@@ -1148,9 +1273,13 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          done_at?: string | null
+          due_date?: string | null
           id?: string
+          is_done?: boolean | null
           is_routine?: boolean | null
           is_template?: boolean | null
+          priority?: string | null
           schedule_id?: string | null
           start_time?: string | null
           status?: Database["public"]["Enums"]["task_status"]
@@ -1161,6 +1290,20 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "store_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_assigner_id_fkey"
+            columns: ["assigner_id"]
+            isOneToOne: false
+            referencedRelation: "store_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_schedule_id_fkey"
             columns: ["schedule_id"]
@@ -1379,6 +1522,7 @@ export type Database = {
         | "canceled"
       leave_status: "pending" | "approved" | "rejected" | "canceled"
       member_status: "active" | "invited" | "pending_approval" | "inactive"
+      payroll_status: "draft" | "confirmed" | "paid"
       task_status:
         | "pending"
         | "in_progress"
@@ -1536,6 +1680,7 @@ export const Constants = {
       ],
       leave_status: ["pending", "approved", "rejected", "canceled"],
       member_status: ["active", "invited", "pending_approval", "inactive"],
+      payroll_status: ["draft", "confirmed", "paid"],
       task_status: [
         "pending",
         "in_progress",
