@@ -50,11 +50,13 @@ export async function createStore(formData: FormData) {
   // 3. 점주 이름 가져오기
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name')
+    .select('full_name, phone')
     .eq('id', user.id)
     .single()
 
   const ownerName = profile?.full_name || user.user_metadata?.full_name || '점주'
+  const ownerPhone = profile?.phone || ''
+  const ownerEmail = user.email || ''
 
   // 4. 매장 멤버로 점주 등록
   const { error: memberError } = await supabase
@@ -65,6 +67,10 @@ export async function createStore(formData: FormData) {
       role_id: ownerRoleId,
       status: 'active',
       wage_type: 'monthly', // 점주 기본값
+      name: ownerName,
+      phone: ownerPhone,
+      email: ownerEmail,
+      role: 'owner',
     })
 
   if (memberError) {
@@ -291,6 +297,13 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
 
   // 매칭 성공 시 종료
   if (claimed) {
+    // 수기 등록 직원의 경우 프로필 데이터(이름, 전화번호, 이메일)로 스토어 멤버 정보 덮어쓰기
+    await supabase
+      .from('store_members')
+      .update({ name, phone, email: user.email || '' })
+      .eq('store_id', storeId)
+      .eq('user_id', user.id)
+
     revalidatePath('/', 'layout')
     redirect('/home')
   }
@@ -303,6 +316,9 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
     user_id: user.id,
     status: 'pending_approval',
     joined_at: new Date().toISOString(),
+    name,
+    phone,
+    email: user.email || '',
   })
 
   if (error) {
