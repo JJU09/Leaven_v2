@@ -11,9 +11,10 @@ import { User } from '@supabase/supabase-js'
 
 interface AccountSettingsFormProps {
   user: User
+  profile?: { full_name?: string | null, phone?: string | null } | null
 }
 
-export function AccountSettingsForm({ user }: AccountSettingsFormProps) {
+export function AccountSettingsForm({ user, profile }: AccountSettingsFormProps) {
   const [profileMessage, setProfileMessage] = useState<string | null>(null)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
@@ -72,8 +73,19 @@ export function AccountSettingsForm({ user }: AccountSettingsFormProps) {
                 <Input 
                   id="fullName" 
                   name="fullName" 
-                  defaultValue={user.user_metadata.full_name || ''} 
+                  defaultValue={profile?.full_name || user.user_metadata.full_name || ''} 
                   placeholder="이름을 입력하세요"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">전화번호</Label>
+                <Input 
+                  id="phone" 
+                  name="phone" 
+                  defaultValue={profile?.phone || user.user_metadata.phone || ''} 
+                  placeholder="전화번호를 입력하세요 (- 제외)"
+                  required
                 />
               </div>
               {profileMessage && <p className="text-sm text-green-600">{profileMessage}</p>}

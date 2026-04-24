@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { logout } from '@/features/auth/actions'
+import { LogoutButton } from '@/features/auth/components/logout-button'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { ActionButtons } from './components/action-buttons'
@@ -138,19 +138,11 @@ export default async function MyPage() {
         </div>
 
         {/* 로그아웃 및 버전 */}
-        <div className="mt-6 flex flex-col items-center gap-3">
-          <form action={async () => {
-            'use server'
-            await logout()
-          }} className="w-full">
-            <Button 
-              variant="outline" 
-              className="w-full h-11 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-2 text-sm shadow-sm"
-            >
-              <LogOut className="w-4 h-4" />
-              로그아웃
-            </Button>
-          </form>
+        <div className="mt-6 flex flex-col items-center gap-3 w-full">
+          <LogoutButton 
+            variant="outline" 
+            className="w-full h-11 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-2 text-sm shadow-sm"
+          />
           <p className="text-[10px] text-muted-foreground opacity-50">Leaven v1.0.0</p>
         </div>
       </div>

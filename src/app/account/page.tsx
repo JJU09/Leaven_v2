@@ -27,6 +27,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     redirect('/login')
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, phone')
+    .eq('id', user.id)
+    .single()
+
+  const isProfileComplete = profile?.full_name && profile?.phone
+
   // 모바일 네비게이션을 위한 권한 및 역할 정보 조회
   const cookieStore = await cookies()
   const selectedStoreId = cookieStore.get('leaven_current_store_id')?.value
@@ -85,8 +93,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             <p className="text-muted-foreground">
               개인 프로필과 보안 설정을 관리합니다.
             </p>
+            {!isProfileComplete && (
+              <div className="mt-4 p-4 bg-yellow-50 text-yellow-800 rounded-md border border-yellow-200">
+                <p className="font-medium">⚠️ 필수 정보 입력이 필요합니다.</p>
+                <p className="text-sm mt-1">원활한 서비스 이용을 위해 이름과 전화번호를 입력해주세요.</p>
+              </div>
+            )}
           </div>
-          <AccountSettingsForm user={user} />
+          <AccountSettingsForm user={user} profile={profile} />
         </div>
       </main>
 

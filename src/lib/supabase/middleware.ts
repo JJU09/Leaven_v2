@@ -37,20 +37,39 @@ export async function updateSession(request: NextRequest) {
   if (!user && (
     request.nextUrl.pathname.startsWith('/dashboard') || 
     request.nextUrl.pathname.startsWith('/onboarding') ||
-    request.nextUrl.pathname.startsWith('/home')
+    request.nextUrl.pathname.startsWith('/home') ||
+    request.nextUrl.pathname.startsWith('/account')
   )) {
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // 2. 로그인 사용자: 로그인/회원가입 페이지 또는 루트 접근 시 홈으로 리다이렉트
-  if (user && (
-    request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/signup') ||
-    request.nextUrl.pathname === '/'
-  )) {
-    url.pathname = '/home'
-    return NextResponse.redirect(url)
+  // 2. 로그인 사용자 처리
+  if (user) {
+    // 2.1 로그인/회원가입/루트 접근 시 홈으로 리다이렉트
+    if (
+      request.nextUrl.pathname.startsWith('/login') ||
+      request.nextUrl.pathname.startsWith('/signup') ||
+      request.nextUrl.pathname === '/'
+    ) {
+      url.pathname = '/home'
+      return NextResponse.redirect(url)
+    }
+
+    // 2.2 프로필(이름, 전화번호) 필수 입력 체크
+    // /account 경로가 아닐 때만 체크하여 무한 루프 방지
+    if (!request.nextUrl.pathname.startsWith('/account')) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, phone')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile || !profile.full_name || !profile.phone) {
+        url.pathname = '/account'
+        return NextResponse.redirect(url)
+      }
+    }
   }
 
   return response

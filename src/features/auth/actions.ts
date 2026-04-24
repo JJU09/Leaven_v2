@@ -49,13 +49,31 @@ export async function updatePasswordSettings(formData: FormData) {
 export async function updateProfile(formData: FormData) {
   const supabase = await createClient()
   const fullName = formData.get('fullName') as string
+  const phone = formData.get('phone') as string
 
-  const { error } = await supabase.auth.updateUser({
+  // 1. auth_users 메타데이터 업데이트 (full_name)
+  const { data: { user }, error: authError } = await supabase.auth.updateUser({
     data: { full_name: fullName },
   })
 
-  if (error) {
-    return { error: error.message }
+  if (authError) {
+    return { error: authError.message }
+  }
+
+  if (user) {
+    // 2. profiles 테이블 직접 업데이트 (phone, full_name 보장)
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        email: user.email,
+        full_name: fullName,
+        phone: phone || null,
+      }, { onConflict: 'id' })
+
+    if (profileError) {
+      return { error: '프로필 정보 업데이트에 실패했습니다.' }
+    }
   }
 
   revalidatePath('/', 'layout')
@@ -139,12 +157,13 @@ export async function signInWithKakao(formData?: FormData) {
   }
 }
 
-export async function logout() {
+export async function logout(formData?: FormData) {
   const supabase = await createClient()
   const { error } = await supabase.auth.signOut()
 
   if (error) {
-    return { error: error.message }
+    // throw error instead of returning object to match form action signature void
+    throw new Error(error.message)
   }
 
   const cookieStore = await cookies()

@@ -32,7 +32,7 @@ import {
   Sliders
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { logout } from '@/features/auth/actions'
+import { LogoutButton } from '@/features/auth/components/logout-button'
 import { toast } from 'sonner'
 
 interface SidebarProps {
@@ -317,14 +317,11 @@ export function Sidebar({
                  계정 설정
                </Button>
              </Link>
-             <form action={async () => {
-               await logout()
-             }} className="flex-1">
-               <Button variant="outline" size="sm" className="w-full h-8 text-xs font-normal text-destructive hover:text-destructive hover:bg-destructive/10">
-                 <LogOut className="mr-2 h-3.5 w-3.5" />
-                 로그아웃
-               </Button>
-             </form>
+             <LogoutButton 
+               className="flex-1 w-full h-8 text-xs font-normal text-destructive hover:text-destructive hover:bg-destructive/10"
+               variant="outline"
+               size="sm"
+             />
            </div>
         ) : (
            <div className="flex flex-col gap-2 mt-4 items-center border-t pt-4 w-full">
@@ -343,14 +340,12 @@ export function Sidebar({
                
                <Tooltip>
                  <TooltipTrigger asChild>
-                   <form action={async () => {
-                     await logout()
-                   }}>
-                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                       <LogOut className="h-4 w-4" />
-                       <span className="sr-only">로그아웃</span>
-                     </Button>
-                   </form>
+                   <LogoutButton 
+                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                     variant="ghost"
+                     size="icon"
+                     showText={false}
+                   />
                  </TooltipTrigger>
                  <TooltipContent side="right">로그아웃</TooltipContent>
                </Tooltip>

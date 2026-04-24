@@ -15,7 +15,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { logout } from '@/features/auth/actions'
+import { LogoutButton } from '@/features/auth/components/logout-button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,15 +95,10 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <form action={async () => {
-                    'use server'
-                    await logout()
-                  }} className="w-full cursor-pointer">
-                    <Button type="submit" variant="ghost" className="flex w-full items-center justify-start text-red-600 hover:text-red-700 hover:bg-red-50 p-0 h-auto font-normal">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>로그아웃</span>
-                    </Button>
-                  </form>
+                  <LogoutButton 
+                    className="flex w-full items-center justify-start text-red-600 hover:text-red-700 hover:bg-red-50 h-auto font-normal" 
+                    asDropdownItem
+                  />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
