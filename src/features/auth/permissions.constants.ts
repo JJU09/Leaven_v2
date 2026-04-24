@@ -22,8 +22,8 @@ export const STATIC_PERMISSIONS = [
   { code: 'view_schedule', name: '스케줄 관리 조회', description: '전체 직원의 근무 일정 조회', category: '업무 및 일정 관리' },
   { code: 'manage_schedule', name: '스케줄 관리 관리', description: '근무 일정 등록, 수정 및 삭제', category: '업무 및 일정 관리' },
 
-  { code: 'view_tasks', name: '업무 조회', description: '할 일 및 업무 일지 조회', category: '업무 및 일정 관리' },
-  { code: 'manage_tasks', name: '업무 관리', description: '업무 지시, 템플릿 생성 및 결과 확인', category: '업무 및 일정 관리' },
+  { code: 'view_tasks', name: '업무 관리 조회', description: '할 일 및 업무 일지 조회', category: '업무 및 일정 관리' },
+  { code: 'manage_tasks', name: '업무 관리 관리', description: '업무 지시, 템플릿 생성 및 결과 확인', category: '업무 및 일정 관리' },
 
   // 📦 자산 및 거래처 관리
   { code: 'view_asset', name: '자산 관리 조회', description: '매장 자산 및 유지보수 내역 조회', category: '자산 및 거래처 관리' },

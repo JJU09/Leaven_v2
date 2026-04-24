@@ -7,8 +7,19 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { createAnnouncement, updateAnnouncement } from '../actions'
 import { toast } from 'sonner'
+
+import { Badge } from '@/components/ui/badge'
+import { X } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface AnnouncementDialogProps {
   open: boolean
@@ -18,21 +29,66 @@ interface AnnouncementDialogProps {
     id: string
     title: string
     content: string
+    announcement_type?: 'notice' | 'handover'
+    target_member_ids?: string[] | null
   } | null
+  storeMembers?: { id: string; name: string }[]
 }
 
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 
-export function AnnouncementDialog({ open, onOpenChange, storeId, initialData }: AnnouncementDialogProps) {
+import { useEffect } from 'react'
+
+export function AnnouncementDialog({ open, onOpenChange, storeId, initialData, storeMembers = [] }: AnnouncementDialogProps) {
   const [loading, setLoading] = useState(false)
-  
+  const [type, setType] = useState<'notice' | 'handover'>('notice')
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
+
   const isEditing = !!initialData
+
+  useEffect(() => {
+    if (open) {
+      if (initialData?.announcement_type) {
+        setType(initialData.announcement_type)
+      } else {
+        setType('notice')
+      }
+      
+      if (initialData?.target_member_ids) {
+        setSelectedMemberIds(initialData.target_member_ids)
+      } else {
+        setSelectedMemberIds([])
+      }
+    }
+  }, [open, initialData])
+
+  const toggleMember = (memberId: string) => {
+    setSelectedMemberIds(prev => 
+      prev.includes(memberId) 
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    )
+  }
+
+  const removeMember = (memberId: string) => {
+    setSelectedMemberIds(prev => prev.filter(id => id !== memberId))
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    
+    if (type === 'handover' && selectedMemberIds.length === 0) {
+      toast.error('인수인계를 받을 대상을 1명 이상 선택해주세요.')
+      return
+    }
+    
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
+    
+    if (type === 'handover') {
+      formData.set('target_member_ids', JSON.stringify(selectedMemberIds))
+    }
 
     try {
       let result
@@ -58,7 +114,7 @@ export function AnnouncementDialog({ open, onOpenChange, storeId, initialData }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] w-[95vw] h-[90vh] sm:h-[80vh] flex flex-col p-0 gap-0 overflow-hidden bg-white border-slate-200">
+      <DialogContent showCloseButton={false} className="sm:max-w-[800px] w-[95vw] h-[90vh] sm:h-[80vh] flex flex-col p-0 gap-0 overflow-hidden bg-white border-slate-200">
         <VisuallyHidden>
           <DialogTitle>{isEditing ? '공지사항 수정' : '새 공지사항 작성'}</DialogTitle>
         </VisuallyHidden>
@@ -77,10 +133,70 @@ export function AnnouncementDialog({ open, onOpenChange, storeId, initialData }:
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto p-6 md:p-10 md:px-16 flex flex-col gap-6">
-            <Input 
-              id="title" 
-              name="title" 
-              placeholder="제목 없음" 
+            <div className="flex items-center space-x-6 px-2">
+              <RadioGroup defaultValue="notice" name="announcement_type" value={type} onValueChange={(val: any) => setType(val)} className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="notice" id="type-notice" />
+                  <Label htmlFor="type-notice" className="text-base cursor-pointer">일반 공지</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="handover" id="type-handover" />
+                  <Label htmlFor="type-handover" className="text-base cursor-pointer">인수인계</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {type === 'handover' && (
+              <div className="flex flex-col gap-2 px-2 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <Label className="text-sm font-semibold text-slate-700">수신 대상 (인수인계 받을 사람)</Label>
+                
+                {/* Selected Members Display */}
+                {selectedMemberIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {selectedMemberIds.map(id => {
+                      const member = storeMembers.find(m => m.id === id)
+                      if (!member) return null
+                      return (
+                        <Badge key={id} variant="secondary" className="bg-white border-slate-200 text-slate-700 flex items-center gap-1 py-1 px-2">
+                          {member.name}
+                          <button 
+                            type="button" 
+                            onClick={() => removeMember(id)}
+                            className="text-slate-400 hover:text-slate-600 ml-1 focus:outline-none"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                )}
+                
+                <Select onValueChange={toggleMember} value="">
+                  <SelectTrigger className="w-full sm:w-[300px] bg-white">
+                    <SelectValue placeholder="직원 선택..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {storeMembers.filter(m => !selectedMemberIds.includes(m.id)).length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground text-center">선택 가능한 직원이 없습니다.</div>
+                    ) : (
+                      storeMembers
+                        .filter(m => !selectedMemberIds.includes(m.id))
+                        .map(member => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {member.name}
+                          </SelectItem>
+                        ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <Input
+              id="title"
+              name="title"
+              placeholder="제목 없음"
               defaultValue={initialData?.title || ''} 
               required 
               className="w-full text-3xl md:text-4xl font-bold text-slate-800 placeholder:text-slate-300 border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-0 bg-transparent rounded-none h-auto py-2"

@@ -6,7 +6,21 @@ import { hasPermission } from '@/features/auth/permissions'
 
 export async function getStoreAnnouncements(storeId: string) {
   const supabase = await createClient()
-  
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return []
+
+  const canManage = await hasPermission(user.id, storeId, 'manage_announcements')
+
+  const { data: memberData } = await supabase
+    .from('store_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('store_id', storeId)
+    .single()
+
+  const memberId = memberData?.id
+
   const { data, error } = await supabase
     .from('store_announcements')
     .select(`
@@ -14,6 +28,8 @@ export async function getStoreAnnouncements(storeId: string) {
       title,
       content,
       created_at,
+      announcement_type,
+      target_member_ids,
       author:store_members!store_announcements_author_id_fkey (
         id,
         user:profiles!store_members_user_id_fkey(full_name)
@@ -29,8 +45,22 @@ export async function getStoreAnnouncements(storeId: string) {
 
   if (!data || data.length === 0) return []
 
+  let filteredData = data
+  if (!canManage && memberId) {
+    filteredData = data.filter(item => {
+      if (!item.announcement_type || item.announcement_type === 'notice') return true
+      if (item.announcement_type === 'handover') {
+        const authorId = Array.isArray(item.author) ? item.author[0]?.id : (item.author as any)?.id;
+        if (authorId === memberId) return true
+        if (item.target_member_ids && Array.isArray(item.target_member_ids) && item.target_member_ids.includes(memberId)) return true
+        return false
+      }
+      return true
+    })
+  }
+
   // Map the announcements to include the correct author name
-  return data.map((item: any) => {
+  return filteredData.map((item: any) => {
     const userProfile = Array.isArray(item.author?.user) ? item.author.user[0] : item.author?.user
     const displayName = userProfile?.full_name || '이름 없음'
 
@@ -71,6 +101,17 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
 
   const title = formData.get('title') as string
   const content = formData.get('content') as string
+  const announcement_type = (formData.get('announcement_type') as string) || 'notice'
+  const target_member_ids_str = formData.get('target_member_ids') as string
+
+  let target_member_ids = null
+  if (announcement_type === 'handover' && target_member_ids_str) {
+    try {
+      target_member_ids = JSON.parse(target_member_ids_str)
+    } catch(e) {
+      target_member_ids = null
+    }
+  }
 
   if (!title) {
     return { error: 'Title is required' }
@@ -82,7 +123,9 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
       store_id: storeId,
       title,
       content,
-      author_id: memberData.id
+      author_id: memberData.id,
+      announcement_type,
+      target_member_ids
     })
 
   if (error) {
@@ -110,6 +153,17 @@ export async function updateAnnouncement(id: string, storeId: string, formData: 
 
   const title = formData.get('title') as string
   const content = formData.get('content') as string
+  const announcement_type = (formData.get('announcement_type') as string) || 'notice'
+  const target_member_ids_str = formData.get('target_member_ids') as string
+
+  let target_member_ids = null
+  if (announcement_type === 'handover' && target_member_ids_str) {
+    try {
+      target_member_ids = JSON.parse(target_member_ids_str)
+    } catch(e) {
+      target_member_ids = null
+    }
+  }
 
   if (!title) {
     return { error: 'Title is required' }
@@ -119,7 +173,9 @@ export async function updateAnnouncement(id: string, storeId: string, formData: 
     .from('store_announcements')
     .update({
       title,
-      content
+      content,
+      announcement_type,
+      target_member_ids
     })
     .eq('id', id)
     .eq('store_id', storeId) // Security check

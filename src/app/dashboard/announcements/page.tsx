@@ -49,7 +49,21 @@ export default async function AnnouncementsPage() {
   }
 
   const announcements = await getStoreAnnouncements(store.id)
-  
+
+  const { data: storeMembers } = await supabase
+    .from('store_members')
+    .select('id, name, user:profiles!store_members_user_id_fkey(full_name)')
+    .eq('store_id', store.id)
+    .eq('status', 'active')
+
+  const formattedMembers = (storeMembers || []).map(m => {
+    const userProfile = Array.isArray(m.user) ? m.user[0] : m.user
+    return {
+      id: m.id,
+      name: userProfile?.full_name || m.name || '이름 없음'
+    }
+  })
+
   // 권한 확인
   const [canView, canManage] = await Promise.all([
     hasPermission(user.id, store.id, 'view_announcements'),
@@ -64,18 +78,19 @@ export default async function AnnouncementsPage() {
     <div className="flex flex-col gap-6 h-full p-4 md:p-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">공지사항</h1>
+          <h1 className="text-2xl font-bold tracking-tight">인계 및 공지</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            매장의 중요 소식과 일정을 공유합니다.
+            매장의 중요 소식과 인수인계 사항을 공유합니다.
           </p>
         </div>
       </div>
       
       <div className="flex-1">
-        <AnnouncementList 
-          storeId={store.id} 
-          announcements={announcements || []} 
-          canManage={canManage} 
+        <AnnouncementList
+          storeId={store.id}
+          announcements={announcements || []}
+          canManage={canManage}
+          storeMembers={formattedMembers}
         />
       </div>
     </div>

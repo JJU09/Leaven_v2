@@ -8,6 +8,7 @@ import {
   CalendarRange,
   User, 
   CheckSquare,
+  ClipboardList,
   Umbrella,
   LayoutDashboard
 } from 'lucide-react'
@@ -40,6 +41,11 @@ export function MobileBottomNav({ role, permissions = {} }: MobileBottomNavProps
         icon: LayoutDashboard,
       }
     ] : []),
+    {
+      title: '업무',
+      href: '/dashboard/tasks',
+      icon: ClipboardList,
+    },
     {
       title: '할 일',
       href: '/dashboard/my-tasks',

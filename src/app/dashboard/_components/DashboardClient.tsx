@@ -5,11 +5,13 @@ import { DashboardGreeting } from './DashboardGreeting'
 import { MetricCard } from './MetricCard'
 import { AlertList } from './AlertList'
 import { AttendanceList } from './AttendanceList'
-import { WeeklyScheduleChart } from './WeeklyScheduleChart'
 import { LeavePanel } from './LeavePanel'
 import { AssetSummaryCard } from './AssetSummaryCard'
 import { VendorSummaryCard } from './VendorSummaryCard'
+import { DashboardTaskCard } from './DashboardTaskCard'
 import { Users, Palmtree, Monitor, Building2 } from 'lucide-react'
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 interface DashboardClientProps {
   storeId: string
@@ -19,6 +21,34 @@ interface DashboardClientProps {
 
 export default function DashboardClient({ storeId, storeName, userName }: DashboardClientProps) {
   const { data, isLoading } = useDashboard(storeId)
+  const [currentMember, setCurrentMember] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadMember() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data: member } = await supabase
+        .from('store_members')
+        .select(`
+          id,
+          role_id,
+          role:store_roles(hierarchy_level)
+        `)
+        .eq('store_id', storeId)
+        .eq('user_id', user.id)
+        .single();
+        
+      if (member) {
+        setCurrentMember({
+          id: member.id,
+          role_info: Array.isArray(member.role) ? member.role[0] : member.role
+        });
+      }
+    }
+    loadMember();
+  }, [storeId]);
 
   if (isLoading || !data) {
     return (
@@ -67,25 +97,25 @@ export default function DashboardClient({ storeId, storeName, userName }: Dashbo
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 내 업무 */}
+        <div className="h-[400px]">
+          <DashboardTaskCard storeId={storeId} currentStaffId={currentMember?.id || ''} canManageTasks={currentMember?.role_info?.hierarchy_level <= 2} />
+        </div>
+
         {/* 알림·할일 */}
         <div className="h-[400px]">
           <AlertList alerts={alerts} hasMore={hasMoreAlerts} />
         </div>
-        
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 오늘 출퇴근 현황 */}
         <div className="h-[400px]">
           <AttendanceList storeId={storeId} />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 주간 근무 바 차트 */}
-        <div className="h-[350px]">
-          <WeeklyScheduleChart data={weeklyData} />
-        </div>
         
         {/* 연차·휴가 현황 */}
-        <div className="h-[350px]">
+        <div className="h-[400px]">
           <LeavePanel monthLeaves={monthLeaves} staffLeaves={staffLeaves} />
         </div>
       </div>

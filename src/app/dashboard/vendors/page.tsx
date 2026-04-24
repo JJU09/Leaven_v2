@@ -3,11 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { getVendors, getVendorSummary } from '@/features/vendor/actions';
 import { VendorsPageClient } from './_components/VendorsPageClient';
 
-export default async function VendorsPage({
-  searchParams,
-}: {
-  searchParams: { page?: string; search?: string; category?: string; type?: string }
+export default async function VendorsPage(props: {
+  searchParams: Promise<{ page?: string; search?: string; category?: string; type?: string }>
 }) {
+  const searchParams = await props.searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 

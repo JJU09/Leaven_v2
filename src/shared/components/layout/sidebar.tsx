@@ -75,7 +75,7 @@ export function Sidebar({
           isUpcoming: false
         }] : []),
         {
-          title: '공지사항',
+          title: '인계 및 공지',
           href: '/dashboard/announcements',
           icon: Megaphone,
           isUpcoming: false
@@ -91,12 +91,6 @@ export function Sidebar({
           icon: Users,
           isUpcoming: false
         }] : []),
-        {
-          title: '계약 관리',
-          href: '/dashboard/contracts',
-          icon: FileText,
-          isUpcoming: true
-        },
         ...(permissions.view_attendance ? [{
           title: '출퇴근 관리',
           href: '/dashboard/attendance',
@@ -127,17 +121,17 @@ export function Sidebar({
           isUpcoming: false
         }] : []),
         ...(permissions.view_tasks ? [{
+          title: '업무 관리',
+          href: '/dashboard/tasks',
+          icon: ClipboardList,
+          isUpcoming: false
+        }] : []),
+        ...(permissions.view_tasks ? [{
           title: '체크리스트',
           href: permissions.view_dashboard ? '/dashboard/my-tasks' : '/dashboard',
           icon: CheckSquare,
           isUpcoming: false
-        }] : []),
-        {
-          title: '인수인계 리포트',
-          href: '/dashboard/handover',
-          icon: ClipboardList,
-          isUpcoming: true
-        }
+        }] : [])
       ]
     },
     {

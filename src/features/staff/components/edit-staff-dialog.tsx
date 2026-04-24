@@ -445,7 +445,7 @@ export function EditStaffDialog({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[950px] w-[95vw] p-0 gap-0 overflow-hidden flex flex-col bg-slate-50">
+      <SheetContent className="sm:!max-w-[65vw] !w-[90vw] p-0 gap-0 overflow-hidden flex flex-col bg-slate-50">
         <SheetHeader className="px-6 py-5 border-b bg-white shrink-0 shadow-sm z-10 relative">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-primary/10 rounded-xl text-primary border border-primary/20">
