@@ -48,11 +48,6 @@ export function MobileBottomNav({ role, permissions = {} }: MobileBottomNavProps
       icon: ClipboardList,
     },
     {
-      title: '할 일',
-      href: '/dashboard/my-tasks',
-      icon: CheckSquare,
-    },
-    {
       title: '휴가',
       href: '/dashboard/leave',
       icon: Umbrella,

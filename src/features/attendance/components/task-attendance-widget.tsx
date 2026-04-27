@@ -48,7 +48,7 @@ export function TaskAttendanceWidget({ storeId, currentUserId, myStaffId, onStat
     try {
       const res = await getDailyAttendanceOverview(storeId, todayDate, Date.now())
       
-      const myRecord = res.attendance?.find(a => a.member_id === myStaffId)
+      const myRecord = res.attendance?.find((a: any) => a.member_id === myStaffId)
       
       if (myRecord) {
         setAttendance(myRecord)

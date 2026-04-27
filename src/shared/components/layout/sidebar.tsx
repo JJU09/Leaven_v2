@@ -125,12 +125,6 @@ export function Sidebar({
           href: '/dashboard/tasks',
           icon: ClipboardList,
           isUpcoming: false
-        }] : []),
-        ...(permissions.view_tasks ? [{
-          title: '체크리스트',
-          href: permissions.view_dashboard ? '/dashboard/my-tasks' : '/dashboard',
-          icon: CheckSquare,
-          isUpcoming: false
         }] : [])
       ]
     },
