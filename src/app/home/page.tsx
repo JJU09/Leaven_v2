@@ -24,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { EnterStoreButton } from './_components/enter-store-button'
 
 export default async function HomePage(props: { searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const supabase = await createClient()
@@ -313,18 +314,7 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
                   </CardContent>
                   <CardFooter className="pt-0 pb-4 sm:pb-5 px-4 sm:px-5">
                     {member.status === 'active' ? (
-                      <form action={async () => {
-                        'use server'
-                        const { cookies } = await import('next/headers')
-                        const cookieStore = await cookies()
-                        cookieStore.set('leaven_current_store_id', member.store.id, { path: '/' })
-                        redirect('/dashboard')
-                      }} className="w-full">
-                        <Button type="submit" className="w-full group font-bold tracking-wide" variant="default" size="lg">
-                          입장하기 
-                          <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                        </Button>
-                      </form>
+                      <EnterStoreButton storeId={member.store.id} />
                     ) : member.status === 'pending_approval' ? (
                       <div className="w-full text-center">
                         <span className="text-xs text-muted-foreground">승인 대기 중에는 입장 불가</span>
