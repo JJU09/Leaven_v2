@@ -81,8 +81,12 @@ export async function clockIn(
     } catch {
       return { error: '타인의 출퇴근을 대리 체크할 권한이 없습니다.' }
     }
-  } else if (location) {
+  } else {
     // Verify location if it's the user themselves
+    if (!location) {
+      return { error: '출퇴근을 위해 위치 정보가 필요합니다. 브라우저의 위치 권한을 허용해주세요.' }
+    }
+
     const { data: store } = await supabase
       .from('stores')
       .select('latitude, longitude, auth_radius')
@@ -165,8 +169,12 @@ export async function clockOut(
     } catch {
       return { error: '타인의 퇴근을 대리 체크할 권한이 없습니다.' }
     }
-  } else if (location) {
+  } else {
     // Verify location if it's the user themselves
+    if (!location) {
+      return { error: '출퇴근을 위해 위치 정보가 필요합니다. 브라우저의 위치 권한을 허용해주세요.' }
+    }
+
     const { data: store } = await supabase
       .from('stores')
       .select('latitude, longitude, auth_radius')

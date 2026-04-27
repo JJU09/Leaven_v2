@@ -9,6 +9,7 @@ import { LeavePanel } from './LeavePanel'
 import { AssetSummaryCard } from './AssetSummaryCard'
 import { VendorSummaryCard } from './VendorSummaryCard'
 import { DashboardTaskCard } from './DashboardTaskCard'
+import { ClockInOutCard } from './ClockInOutCard'
 import { Users, Palmtree, Monitor, Building2 } from 'lucide-react'
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -64,8 +65,13 @@ export default function DashboardClient({ storeId, storeName, userName }: Dashbo
     <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       <DashboardGreeting storeName={storeName} userName={userName} />
       
-      {/* 4 Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* 4 Metrics + 1 Clock In/Out */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {/* 출퇴근 카드 */}
+        <div className="col-span-2 md:col-span-1">
+          <ClockInOutCard storeId={storeId} memberId={currentMember?.id} />
+        </div>
+        
         <MetricCard 
           title="오늘 출근 현황" 
           value={metrics.attendance.value} 
