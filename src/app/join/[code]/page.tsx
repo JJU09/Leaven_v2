@@ -3,10 +3,9 @@ import { redirect } from 'next/navigation'
 import { verifyInviteCode, joinStoreByCode } from '@/features/onboarding/actions'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Store, UserPlus, CheckCircle2, ArrowRight, X } from 'lucide-react'
+import { Store, X } from 'lucide-react'
 import { formatPhoneNumber } from '@/lib/formatters'
+import { JoinStoreClientForm } from './_components/join-store-client-form'
 
 export default async function JoinStorePage(props: { params: Promise<{ code: string }> }) {
   const { code } = await props.params
@@ -89,55 +88,11 @@ export default async function JoinStorePage(props: { params: Promise<{ code: str
         </CardHeader>
         
         <CardContent>
-          <form action={async (formData) => {
-            'use server'
-            const name = formData.get('name') as string
-            const phone = formData.get('phone') as string
-            await joinStoreByCode(code, name, phone)
-            redirect('/home') // 합류 신청 완료 후 홈(대기 상태)으로 리다이렉트
-          }} className="space-y-5">
-            
-            <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl space-y-4">
-              <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm mb-1">
-                <UserPlus className="w-4 h-4" /> 내 프로필 확인
-              </div>
-              
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="name" className="text-xs font-bold text-slate-600">이름 (본명)</Label>
-                  <Input 
-                    id="name" 
-                    name="name" 
-                    placeholder="홍길동" 
-                    required 
-                    defaultValue={defaultName} 
-                    className="bg-white border-blue-100 focus-visible:ring-blue-500" 
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="text-xs font-bold text-slate-600">전화번호</Label>
-                  <Input 
-                    id="phone" 
-                    name="phone" 
-                    placeholder="010-1234-5678" 
-                    required 
-                    defaultValue={defaultPhone} 
-                    className="bg-white border-blue-100 focus-visible:ring-blue-500 font-mono" 
-                    maxLength={13}
-                  />
-                  {/* Note: This is a Server Component form, so real-time formatting via onChange is not possible here. 
-                      The default value is formatted, and the server action will handle the submitted value. */}
-                  <p className="text-[10px] text-muted-foreground mt-1 px-1">
-                    * 점장님이 입력한 번호와 일치하면 즉시 합류 승인됩니다.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full h-12 text-base font-bold bg-[#1D9E75] hover:bg-[#1D9E75]/90 shadow-md">
-              <CheckCircle2 className="w-5 h-5 mr-2" /> 매장 합류하기
-            </Button>
-          </form>
+          <JoinStoreClientForm 
+            code={code} 
+            defaultName={defaultName} 
+            defaultPhone={defaultPhone} 
+          />
         </CardContent>
       </Card>
     </div>

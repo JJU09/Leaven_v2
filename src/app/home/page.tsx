@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { Store, Plus, Mail, Check, X, Building, Loader2, ArrowRight, LogOut, Package2, Settings, MapPin, User, ShieldCheck } from 'lucide-react'
 import { CancelRequestButton } from '@/features/onboarding/components/cancel-request-button'
-import { JoinStoreForm } from '@/features/onboarding/components/join-store-form'
 import { InvitationButtons } from '@/features/onboarding/components/invitation-buttons'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -56,8 +55,14 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
   const userAvatar = profile?.avatar_url || ''
 
   // 컨텍스트 판별 (Phase 1, 2, 4)
-  const phase = (stores.length === 0 && invitations.length === 0) ? 1 : 
-                (stores.length === 0 && invitations.length > 0) ? 2 : 4;
+  // 매장이 하나도 없고 대기 중인 항목이나 초대장도 없을 때 Phase 1 (백지)
+  // 매장은 없고(active) 초대장만 있거나 가입 대기중인 항목(pending_approval)만 있을 때 Phase 2 (대기)
+  // 그 외(active 매장이 있거나 섞여있을 때) Phase 4 (통합 허브 뷰)
+  const activeStores = stores.filter(s => s.status === 'active')
+  const pendingStores = stores.filter(s => s.status === 'pending_approval')
+  
+  const phase = (activeStores.length === 0 && pendingStores.length === 0 && invitations.length === 0) ? 1 : 
+                (activeStores.length === 0 && (pendingStores.length > 0 || invitations.length > 0)) ? 2 : 4;
 
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-gray-950 flex flex-col">
@@ -150,10 +155,10 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-gray-900">직원이신가요?</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-                  점장님에게 전달받은 6자리 합류 코드를 입력하고<br/>매장에 합류하세요.
+                  더 이상 코드를 직접 입력할 필요가 없습니다.<br/>점장님에게 전달받은 초대 링크를 클릭하여 매장에 합류하세요.
                 </p>
-                <div className="w-full mt-auto">
-                  <JoinStoreForm defaultName={userName !== '사용자' ? userName : ''} defaultPhone={userPhone} variant="large" />
+                <div className="w-full mt-auto p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 text-emerald-700 font-medium text-sm flex items-center justify-center">
+                  점장님께 초대 링크를 요청해주세요!
                 </div>
               </Card>
             </div>
@@ -336,14 +341,16 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
                 <Card className="bg-slate-50/50 border-dashed border-2 hover:border-primary/40 transition-colors shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Store className="w-5 h-5 text-emerald-600" /> 초대코드로 매장 가입하기
+                      <Store className="w-5 h-5 text-emerald-600" /> 링크로 매장 가입하기
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      6자리 코드를 입력해 매장에 가입하세요.
+                      점장님에게 전달받은 초대 링크를 클릭하여 가입하세요.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <JoinStoreForm defaultName={userName !== '사용자' ? userName : ''} defaultPhone={userPhone} variant="compact" />
+                    <div className="w-full p-3 bg-emerald-50/50 rounded-lg border border-emerald-100 text-emerald-700 font-medium text-xs text-center flex items-center justify-center">
+                      점장님께 초대 링크를 요청해주세요!
+                    </div>
                   </CardContent>
                 </Card>
 

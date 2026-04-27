@@ -76,7 +76,14 @@ export async function updateProfile(formData: FormData) {
     }
   }
 
+  const nextUrl = formData.get('nextUrl') as string
+
   revalidatePath('/', 'layout')
+  
+  if (nextUrl && nextUrl !== '/account') {
+    redirect(nextUrl)
+  }
+
   return { message: '프로필이 업데이트되었습니다.' }
 }
 

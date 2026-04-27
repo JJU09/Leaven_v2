@@ -125,6 +125,8 @@ export async function getUserStores() {
       )
     `)
     .eq('user_id', user.id)
+    // 초대를 제외한 내역 (가입 대기, 활성, 비활성) 모두 조회
+    .neq('status', 'invited')
     .order('joined_at', { ascending: false })
 
   if (error) {

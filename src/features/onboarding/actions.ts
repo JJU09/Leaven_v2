@@ -88,6 +88,7 @@ export async function createStore(formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
+  revalidatePath('/home')
   redirect('/home') // 변경: dashboard -> home
 }
 
@@ -184,6 +185,7 @@ export async function acceptInvitation(storeId: string) {
   }
 
   revalidatePath('/', 'layout')
+  revalidatePath('/home')
   redirect('/home')
 }
 
@@ -253,16 +255,33 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
 
   const storeId = verifyResult.store.id
 
-  // 2. 중복 신청 확인
+  // 2. 중복 신청 확인 (모든 상태를 포함하여 검사)
   const { data: existing } = await supabase
     .from('store_members')
-    .select('id')
+    .select('id, status')
     .eq('store_id', storeId)
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (existing) {
-    return { error: '이미 해당 매장의 멤버이거나 신청 중입니다.' }
+    // 이미 존재하는 멤버라면, 상황에 따라 다르게 처리
+    if (existing.status === 'active') {
+      return { error: '이미 해당 매장의 직원입니다.' }
+    } else if (existing.status === 'pending_approval') {
+      // 이미 승인 대기중이면 굳이 에러를 띄우지 않고 홈으로 보내버림
+      return { success: true }
+    } else if (existing.status === 'invited') {
+      // 초대 상태라면 pending_approval로 업데이트 해줌
+      await supabase
+        .from('store_members')
+        .update({ status: 'pending_approval' })
+        .eq('id', existing.id)
+      revalidatePath('/', 'layout')
+      revalidatePath('/home')
+      return { success: true }
+    } else {
+      return { error: '이미 해당 매장에 가입 요청 내역이 존재합니다.' }
+    }
   }
 
   // 3. 프로필 정보 업데이트
@@ -316,15 +335,43 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
       .eq('user_id', user.id)
 
     revalidatePath('/', 'layout')
-    redirect('/home')
+    revalidatePath('/home')
+    return { success: true }
   }
 
   // 5. 가입 요청 (Pending Approval) - 매칭된 직원이 없을 경우
-  // V2 스키마: name, phone, email, role 등은 profiles/roles 테이블에 의존하거나 컬럼명이 변경됨.
-  // 주의: role_id가 필수값일 수 있음. 기본 역할 ID가 필요할 수 있으나 임시 조치.
+  // V2 스키마: role_id가 필수이므로 매장의 기본 '미지정' 직급을 찾아 연결
+  let { data: defaultRole } = await supabase
+    .from('store_roles')
+    .select('id')
+    .eq('store_id', storeId)
+    .eq('name', '미지정')
+    .single()
+    
+  let roleId = defaultRole?.id
+  
+  // 만약 미지정 역할이 없다면, RPC를 사용해서 RLS를 우회하여 '미지정' 역할을 강제로 생성합니다.
+  if (!roleId) {
+    const { data: rpcRoleId, error: rpcError } = await supabase.rpc('create_unassigned_role_if_not_exists', {
+      p_store_id: storeId
+    })
+
+    if (rpcError) {
+      console.error('RPC create_unassigned_role_if_not_exists failed:', rpcError)
+    } else if (rpcRoleId) {
+      roleId = rpcRoleId
+    }
+  }
+
+  if (!roleId) {
+    console.error('Failed to get or create unassigned role for store:', storeId)
+    return { error: '매장 정보(기본 직급)가 아직 완전히 설정되지 않았습니다. 점장님이 매장에 한 번 접속해야 완료됩니다.' }
+  }
+
   const { error } = await supabase.from('store_members').insert({
     store_id: storeId,
     user_id: user.id,
+    role_id: roleId,
     status: 'pending_approval',
     joined_at: new Date().toISOString(),
     name: finalProfileName,
@@ -333,9 +380,16 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
   })
 
   if (error) {
+    // 혹시라도 동시성 문제로 unique 제약 조건 에러가 난다면, 이미 가입된 것으로 간주하고 성공 처리
+    if (error.code === '23505' || error.message.includes('duplicate key')) {
+      revalidatePath('/', 'layout')
+      revalidatePath('/home')
+      return { success: true }
+    }
     return { error: '가입 요청 중 오류가 발생했습니다: ' + error.message }
   }
 
   revalidatePath('/', 'layout')
-  redirect('/home')
+  revalidatePath('/home')
+  return { success: true }
 }

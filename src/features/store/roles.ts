@@ -24,6 +24,7 @@ export async function getStoreRoles(storeId: string) {
       .from('store_roles')
       .select('*')
       .eq('store_id', storeId)
+      .neq('hierarchy_level', -1) // 미지정(-1) 직급은 제외
       .order('hierarchy_level', { ascending: false })
       .order('created_at', { ascending: true })
 
@@ -185,51 +186,102 @@ export async function ensureDefaultRoles(storeId: string) {
     .select('id, name')
     .eq('store_id', storeId)
   
+  // 기존 역할이 있는 경우 '미지정' 역할이 있는지 확인
+  let unassignedRoleId: string | undefined;
+  let ownerRoleId: string | undefined;
+  let staffRoleId: string | undefined;
+
   if (existingRoles && existingRoles.length > 0) {
-    return { 
-      ownerRoleId: existingRoles.find(r => r.name === '점주')?.id 
+    ownerRoleId = existingRoles.find(r => r.name === '점주')?.id;
+    staffRoleId = existingRoles.find(r => r.name === '직원')?.id;
+    unassignedRoleId = existingRoles.find(r => r.name === '미지정')?.id;
+
+    // 점주나 직원은 있는데 미지정이 없다면 미지정만 생성
+    if (!unassignedRoleId) {
+      const { data: newUnassignedRole, error: insertError } = await supabase
+        .from('store_roles')
+        .insert({
+          store_id: storeId,
+          name: '미지정',
+          color: '#cbd5e1', // Slate 300
+          is_system: true,
+          hierarchy_level: -1, // 직급 체계 최하단
+          permissions: [] // 권한 없음
+        })
+        .select()
+        .single();
+      
+      if (insertError) {
+        console.error('Failed to create unassigned role:', insertError);
+      }
+      
+      if (newUnassignedRole) {
+        unassignedRoleId = newUnassignedRole.id;
+      }
+    }
+
+    // 만약 점주, 직원이 모두 있었다면 여기서 리턴
+    // (완전 빈 상태가 아니라면 기존 세팅 유지)
+    if (ownerRoleId && staffRoleId && unassignedRoleId) {
+      return { ownerRoleId, staffRoleId, unassignedRoleId };
     }
   }
 
-  // 2. Create default roles
-  const defaultRoles = [
-    {
-      store_id: storeId,
-      name: '점주',
-      color: '#7c3aed', // Violet
-      is_system: true,
-      hierarchy_level: 100,
-      permissions: DEFAULT_ROLE_PERMISSIONS['점주']
-    },
-    {
-      store_id: storeId,
-      name: '매니저',
-      color: '#4f46e5', // Indigo
-      is_system: false,
-      hierarchy_level: 50,
-      permissions: DEFAULT_ROLE_PERMISSIONS['매니저']
-    },
-    {
-      store_id: storeId,
-      name: '직원',
-      color: '#808080', // Gray
-      is_system: false,
-      hierarchy_level: 0,
-      permissions: DEFAULT_ROLE_PERMISSIONS['직원']
-    }
-  ]
-  
-  const { data: createdRoles, error } = await supabase
-    .from('store_roles')
-    .insert(defaultRoles)
-    .select()
+  // 2. Create default roles (빈 매장일 경우 전체 생성)
+  // 위에서 부분적으로 있었던 건 무시하고(주로 빈 껍데기일 때) 전체 생성을 시도하거나, 
+  // 없는 것들만 채워넣는 방식이지만, 보통 매장 생성 시 일괄 생성되므로 배열 전체 삽입 시도.
+  if (!existingRoles || existingRoles.length === 0) {
+    const defaultRoles = [
+      {
+        store_id: storeId,
+        name: '점주',
+        color: '#7c3aed', // Violet
+        is_system: true,
+        hierarchy_level: 100,
+        permissions: DEFAULT_ROLE_PERMISSIONS['점주']
+      },
+      {
+        store_id: storeId,
+        name: '매니저',
+        color: '#4f46e5', // Indigo
+        is_system: false,
+        hierarchy_level: 50,
+        permissions: DEFAULT_ROLE_PERMISSIONS['매니저']
+      },
+      {
+        store_id: storeId,
+        name: '직원',
+        color: '#808080', // Gray
+        is_system: false,
+        hierarchy_level: 0,
+        permissions: DEFAULT_ROLE_PERMISSIONS['직원']
+      },
+      {
+        store_id: storeId,
+        name: '미지정',
+        color: '#cbd5e1', // Slate 300
+        is_system: true,
+        hierarchy_level: -1,
+        permissions: []
+      }
+    ]
+    
+    const { data: createdRoles, error } = await supabase
+      .from('store_roles')
+      .insert(defaultRoles)
+      .select()
 
-  if (error) {
-    console.error('Failed to create default roles:', error)
-    return {}
+    if (error) {
+      console.error('Failed to create default roles:', error)
+      return { ownerRoleId, staffRoleId, unassignedRoleId } // 위에서 찾은게 있으면 반환
+    }
+    
+    return {
+      ownerRoleId: createdRoles?.find(r => r.name === '점주')?.id,
+      staffRoleId: createdRoles?.find(r => r.name === '직원')?.id,
+      unassignedRoleId: createdRoles?.find(r => r.name === '미지정')?.id
+    }
   }
-  
-  return {
-    ownerRoleId: createdRoles?.find(r => r.name === '점주')?.id
-  }
+
+  return { ownerRoleId, staffRoleId, unassignedRoleId }
 }

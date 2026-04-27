@@ -8,18 +8,33 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { User } from '@supabase/supabase-js'
+import { formatPhoneNumber } from '@/lib/formatters'
 
 interface AccountSettingsFormProps {
   user: User
   profile?: { full_name?: string | null, phone?: string | null } | null
 }
 
+import { useSearchParams } from 'next/navigation'
+
 export function AccountSettingsForm({ user, profile }: AccountSettingsFormProps) {
   const [profileMessage, setProfileMessage] = useState<string | null>(null)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const nextUrl = searchParams.get('next')
+
+  const initialPhone = profile?.phone || user.user_metadata?.phone || ''
+  const [phoneValue, setPhoneValue] = useState(formatPhoneNumber(initialPhone))
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhoneValue(formatPhoneNumber(e.target.value))
+  }
 
   async function handleUpdateProfile(formData: FormData) {
+    if (nextUrl) {
+      formData.append('nextUrl', nextUrl)
+    }
     const result = await updateProfile(formData)
     if (result?.message) {
       setProfileMessage(result.message)
@@ -83,9 +98,11 @@ export function AccountSettingsForm({ user, profile }: AccountSettingsFormProps)
                 <Input 
                   id="phone" 
                   name="phone" 
-                  defaultValue={profile?.phone || user.user_metadata.phone || ''} 
+                  value={phoneValue}
+                  onChange={handlePhoneChange}
                   placeholder="전화번호를 입력하세요 (- 제외)"
                   required
+                  maxLength={13}
                 />
               </div>
               {profileMessage && <p className="text-sm text-green-600">{profileMessage}</p>}
