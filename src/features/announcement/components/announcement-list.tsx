@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { AnnouncementDialog } from './announcement-dialog'
-import { deleteAnnouncement } from '../actions'
+import { deleteAnnouncement, markAnnouncementAsRead } from '../actions'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -75,8 +75,17 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
     setIsDeleteDialogOpen(true)
   }
 
-  const handleView = (announcement: Announcement) => {
+  const handleView = async (announcement: Announcement) => {
     setViewingData(announcement)
+    
+    // Mark as read if it's a handover
+    if (announcement.announcement_type === 'handover') {
+      try {
+        await markAnnouncementAsRead(announcement.id, storeId)
+      } catch (err) {
+        console.error('Failed to mark announcement as read', err)
+      }
+    }
   }
 
   const handleDeleteClickWrapper = (id: string) => {

@@ -5,6 +5,7 @@ import { getStoreRoles } from '@/features/store/actions'
 import { cookies } from 'next/headers'
 import { AttendanceClientPage } from '@/features/attendance/components/attendance-client'
 import { getTodayDateString } from '@/shared/lib/date-utils'
+import { getMemberDisplayName } from '@/lib/utils'
 
 export default async function AttendancePage() {
   const supabase = await createClient()
@@ -54,6 +55,7 @@ export default async function AttendancePage() {
 
   const staffList = rawStaffList?.map((staff: any) => ({
     ...staff,
+    name: getMemberDisplayName(staff),
     role_info: Array.isArray(staff.role_info) ? staff.role_info[0] : staff.role_info,
   })) || []
 

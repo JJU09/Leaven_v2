@@ -4,6 +4,7 @@ import { hasPermission } from '@/features/auth/permissions'
 import { getStoreRoles } from '@/features/store/actions'
 import { cookies } from 'next/headers'
 import { UnifiedCalendar } from '@/features/schedule/components/calendar/unified-calendar'
+import { getMemberDisplayName } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -62,7 +63,7 @@ export default async function UnifiedSchedulePage() {
 
   const staffList = rawStaffList?.map((staff: any) => ({
     ...staff,
-    name: staff.name || staff.profiles?.full_name || '이름 없음',
+    name: getMemberDisplayName(staff),
     role_info: Array.isArray(staff.role_info) ? staff.role_info[0] : staff.role_info,
   })) || []
 

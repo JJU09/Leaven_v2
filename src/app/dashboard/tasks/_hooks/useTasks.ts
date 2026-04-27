@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { formatInTimeZone } from 'date-fns-tz';
 import { Task } from '../_types/task.types';
+import { getMemberDisplayName } from '@/lib/utils';
 
 export function useTodayTasks(storeId: string) {
   return useQuery({
@@ -38,8 +39,8 @@ export function useTodayTasks(storeId: string) {
       // Transform profile data to match Staff type
       return (data as any[]).map(task => ({
         ...task,
-        assignee: task.assignee ? { id: task.assignee.id, name: task.assignee.profile?.full_name || task.assignee.name || '알 수 없음' } : null,
-        assigner: task.assigner ? { id: task.assigner.id, name: task.assigner.profile?.full_name || task.assigner.name || '알 수 없음' } : null,
+        assignee: task.assignee ? { id: task.assignee.id, name: getMemberDisplayName(task.assignee) } : null,
+        assigner: task.assigner ? { id: task.assigner.id, name: getMemberDisplayName(task.assigner) } : null,
       })) as Task[];
     },
     enabled: !!storeId,
@@ -79,8 +80,8 @@ export function useOngoingTasks(storeId: string) {
       
       return (data as any[]).map(task => ({
         ...task,
-        assignee: task.assignee ? { id: task.assignee.id, name: task.assignee.profile?.full_name || task.assignee.name || '알 수 없음' } : null,
-        assigner: task.assigner ? { id: task.assigner.id, name: task.assigner.profile?.full_name || task.assigner.name || '알 수 없음' } : null,
+        assignee: task.assignee ? { id: task.assignee.id, name: getMemberDisplayName(task.assignee) } : null,
+        assigner: task.assigner ? { id: task.assigner.id, name: getMemberDisplayName(task.assigner) } : null,
       })) as Task[];
     },
     enabled: !!storeId,
@@ -121,8 +122,8 @@ export function useOverdueTasks(storeId: string) {
       
       return (data as any[]).map(task => ({
         ...task,
-        assignee: task.assignee ? { id: task.assignee.id, name: task.assignee.profile?.full_name || task.assignee.name || '알 수 없음' } : null,
-        assigner: task.assigner ? { id: task.assigner.id, name: task.assigner.profile?.full_name || task.assigner.name || '알 수 없음' } : null,
+        assignee: task.assignee ? { id: task.assignee.id, name: getMemberDisplayName(task.assignee) } : null,
+        assigner: task.assigner ? { id: task.assigner.id, name: getMemberDisplayName(task.assigner) } : null,
       })) as Task[];
     },
     enabled: !!storeId,

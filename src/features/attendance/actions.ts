@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { unstable_noStore as noStore } from 'next/cache'
 import { getCurrentISOString } from '@/shared/lib/date-utils'
 import { requirePermission } from '@/features/auth/permissions'
 import { isWithinRadius } from '@/shared/lib/geo-utils'
@@ -55,10 +54,10 @@ export async function getDailyAttendanceOverview(storeId: string, date: string, 
     console.error('Error fetching schedules:', schedulesError)
   }
 
-  return {
+  return JSON.parse(JSON.stringify({
     attendance: attendanceData || [],
     schedules: schedulesData || []
-  }
+  }))
 }
 
 export async function clockIn(
@@ -281,7 +280,6 @@ export async function endBreak(attendanceId: string, storeId: string) {
 }
 
 export async function getAttendanceRequests(storeId: string, _ts?: number) {
-  noStore()
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -309,7 +307,7 @@ export async function getAttendanceRequests(storeId: string, _ts?: number) {
     return []
   }
 
-  return data as any[]
+  return JSON.parse(JSON.stringify(data || []))
 }
 
 export async function updateAttendanceDirectly(

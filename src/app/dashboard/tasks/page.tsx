@@ -13,6 +13,7 @@ import { Task } from './_types/task.types';
 
 import { useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { getMemberDisplayName } from '@/lib/utils';
 
 export default function TasksPage() {
   const [storeId, setStoreId] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export default function TasksPage() {
           .from('store_members')
           .select(`
             id,
+            name,
             profile:profiles(full_name)
           `)
           .eq('store_id', activeMember.store_id);
@@ -97,7 +99,7 @@ export default function TasksPage() {
 
   const staffList = storeMembers.map((m: any) => ({
     id: m.id,
-    name: m.profile?.full_name || '알 수 없음',
+    name: getMemberDisplayName(m),
   }));
 
   const handleTaskClick = (task: Task) => {

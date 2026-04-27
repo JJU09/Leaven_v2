@@ -55,7 +55,7 @@ export function TaskCard({ task, storeId, currentStaffId, canManageTasks, onClic
           
           <div className="flex items-center text-xs text-muted-foreground gap-1.5 truncate">
             {task.assignee ? (
-              <span className="truncate max-w-[100px]">{task.assignee.name || '알 수 없음'}</span>
+              <span className="truncate max-w-[100px]">{task.assignee.name}</span>
             ) : (
               <span className="italic text-muted-foreground/70">미배정</span>
             )}

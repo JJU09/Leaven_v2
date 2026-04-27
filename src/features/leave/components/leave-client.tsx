@@ -22,9 +22,11 @@ import { LeaveAttachmentUpload } from '@/features/leave/components/leave-attachm
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
+import koLocale from '@fullcalendar/core/locales/ko'
 
 import { calculateAnnualLeave } from '@/features/leave/utils'
 import { differenceInMonths, differenceInYears, differenceInDays, parseISO } from 'date-fns'
+import { getMemberDisplayName } from '@/lib/utils'
 
 interface LeaveClientPageProps {
   storeId: string
@@ -293,7 +295,7 @@ export function LeaveClientPage({
                   ref={calendarRef}
                   plugins={[dayGridPlugin, interactionPlugin]}
                   initialView="dayGridMonth"
-                  locale={ko}
+                  locale={koLocale}
                   customButtons={{
                     today: {
                       text: '오늘',
@@ -318,7 +320,7 @@ export function LeaveClientPage({
                     if (r.leave_type === 'annual') color = '#3b82f6'
                     if (r.leave_type === 'sick') color = '#ef4444'
                     if (r.leave_type.startsWith('half')) color = '#60a5fa'
-                    const name = r.member?.profiles?.full_name || r.member?.name || '직원'
+                    const name = getMemberDisplayName(r.member)
                     const label = r.leave_type === 'annual' ? '연차' : r.leave_type === 'sick' ? '병가' : r.leave_type === 'unpaid' ? '무급' : '반차'
                     const endDateObj = new Date(r.end_date)
                     endDateObj.setDate(endDateObj.getDate() + 1)
@@ -363,7 +365,7 @@ export function LeaveClientPage({
                             <div className="flex items-center gap-2.5 md:gap-3">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-bold text-sm md:text-base truncate">{req.member?.profiles?.full_name || req.member?.name || '이름 없음'}</span>
+                                  <span className="font-bold text-sm md:text-base truncate">{getMemberDisplayName(req.member)}</span>
                                   <Badge variant="outline" className="text-[9px] md:text-[10px] px-1 h-4 md:h-5 shrink-0 font-normal" style={{ color: roleInfo?.color, borderColor: roleInfo?.color }}>{roleInfo?.name || '직원'}</Badge>
                                 </div>
                                 <div className="text-xs md:text-sm text-muted-foreground mt-0.5 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
@@ -490,7 +492,7 @@ export function LeaveClientPage({
                           <TableCell className="text-center">
                             <div className="flex flex-col items-center gap-1">
                               <div className="flex items-center gap-1.5 justify-center">
-                                <span className="font-medium">{staff.name}</span>
+                                <span className="font-medium">{getMemberDisplayName(staff)}</span>
                                 {roleInfo && (
                                   <Badge variant="outline" className="text-[9px] px-1 h-4 font-normal" style={{ color: roleInfo?.color, borderColor: roleInfo?.color }}>
                                     {roleInfo.name}
@@ -529,7 +531,7 @@ export function LeaveClientPage({
                       <div key={staff.id} className="p-5 flex flex-col items-center">
                         {/* Name & Role (Centered) */}
                         <div className="flex flex-col items-center gap-1.5 mb-6">
-                          <span className="text-base font-bold">{staff.name}</span>
+                          <span className="text-base font-bold">{getMemberDisplayName(staff)}</span>
                           {roleInfo && (
                             <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-normal" style={{ color: roleInfo?.color, borderColor: roleInfo?.color }}>
                               {roleInfo.name}
@@ -599,7 +601,7 @@ export function LeaveClientPage({
                     {staffList.filter(s => {
                       const rInfo = getStaffRoleInfo(s);
                       return s.role !== 'owner' && (!rInfo || rInfo.hierarchy_level < 100);
-                    }).map(s => <SelectItem key={s.id} value={s.id} className="text-xs">{s.name}</SelectItem>)}
+                    }).map(s => <SelectItem key={s.id} value={s.id} className="text-xs">{getMemberDisplayName(s)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -607,7 +609,7 @@ export function LeaveClientPage({
               <div className="flex flex-col gap-1">
                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">신청자</Label>
                 <div className="flex h-9 w-full items-center justify-between rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2 text-xs opacity-70 cursor-not-allowed">
-                  <span className="text-foreground">{myStaff?.name}</span>
+                  <span className="text-foreground">{getMemberDisplayName(myStaff)}</span>
                 </div>
               </div>
             )}

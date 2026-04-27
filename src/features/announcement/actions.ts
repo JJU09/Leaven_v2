@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { hasPermission } from '@/features/auth/permissions'
+import { summarizeHandover } from '@/lib/openai'
 
 export async function getStoreAnnouncements(storeId: string) {
   const supabase = await createClient()
@@ -117,6 +118,11 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
     return { error: 'Title is required' }
   }
 
+  let ai_summary = null
+  if (announcement_type === 'handover' && content) {
+    ai_summary = await summarizeHandover(content)
+  }
+
   const { error } = await supabase
     .from('store_announcements')
     .insert({
@@ -125,7 +131,8 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
       content,
       author_id: memberData.id,
       announcement_type,
-      target_member_ids
+      target_member_ids,
+      ai_summary
     })
 
   if (error) {
@@ -169,13 +176,19 @@ export async function updateAnnouncement(id: string, storeId: string, formData: 
     return { error: 'Title is required' }
   }
 
+  let ai_summary = null
+  if (announcement_type === 'handover' && content) {
+    ai_summary = await summarizeHandover(content)
+  }
+
   const { error } = await supabase
     .from('store_announcements')
     .update({
       title,
       content,
       announcement_type,
-      target_member_ids
+      target_member_ids,
+      ai_summary
     })
     .eq('id', id)
     .eq('store_id', storeId) // Security check
@@ -216,5 +229,49 @@ export async function deleteAnnouncement(id: string, storeId: string) {
 
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/my-tasks')
+  return { success: true }
+}
+
+export async function markAnnouncementAsRead(announcementId: string, storeId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'Unauthorized' }
+
+  // Get user's member ID for this store
+  const { data: memberData } = await supabase
+    .from('store_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('store_id', storeId)
+    .single()
+
+  if (!memberData) return { error: 'Member not found' }
+
+  // Check if already read
+  const { data: existing } = await supabase
+    .from('announcement_reads')
+    .select('id')
+    .eq('announcement_id', announcementId)
+    .eq('member_id', memberData.id)
+    .single()
+
+  if (existing) return { success: true } // Already read
+
+  // Insert read record
+  const { error } = await supabase
+    .from('announcement_reads')
+    .insert({
+      announcement_id: announcementId,
+      member_id: memberData.id
+    })
+
+  if (error) {
+    console.error('Error marking as read:', error)
+    return { error: error.message }
+  }
+
+  // Revalidate dashboard to update alerts
+  revalidatePath('/dashboard')
   return { success: true }
 }

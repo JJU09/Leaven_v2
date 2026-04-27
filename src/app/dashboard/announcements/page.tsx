@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { getStoreAnnouncements } from '@/features/announcement/actions'
 import { AnnouncementList } from '@/features/announcement/components/announcement-list'
 import { hasPermission } from '@/features/auth/permissions'
+import { getMemberDisplayName } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,10 +58,9 @@ export default async function AnnouncementsPage() {
     .eq('status', 'active')
 
   const formattedMembers = (storeMembers || []).map(m => {
-    const userProfile = Array.isArray(m.user) ? m.user[0] : m.user
     return {
       id: m.id,
-      name: userProfile?.full_name || m.name || '이름 없음'
+      name: getMemberDisplayName(m)
     }
   })
 

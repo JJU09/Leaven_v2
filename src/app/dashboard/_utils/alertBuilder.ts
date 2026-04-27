@@ -1,4 +1,4 @@
-export type AlertType = 'asset_warning' | 'vendor_contract' | 'leave_pending' | 'attendance_late'
+export type AlertType = 'asset_warning' | 'vendor_contract' | 'leave_pending' | 'attendance_late' | 'handover_notice'
 export type AlertSeverity = 'red' | 'amber' | 'blue'
 
 export type AlertItem = {

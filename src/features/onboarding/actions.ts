@@ -47,18 +47,27 @@ export async function createStore(formData: FormData) {
     return { error: '기본 직급 생성에 실패했습니다.' }
   }
 
-  // 3. 점주 이름 가져오기
-  const { data: profile } = await supabase
+  // 3. 점주 프로필 가져오기 및 필요시 생성 (프로필이 비어있다면)
+  let { data: profile } = await supabase
     .from('profiles')
     .select('full_name, phone')
     .eq('id', user.id)
     .single()
 
-  const ownerName = profile?.full_name || user.user_metadata?.full_name || '점주'
+  const fallbackName = user.user_metadata?.full_name || '점주'
+  if (!profile || !profile.full_name) {
+    await supabase.from('profiles').upsert({
+      id: user.id,
+      full_name: fallbackName,
+    })
+    profile = { full_name: fallbackName, phone: profile?.phone || null }
+  }
+
+  const ownerName = profile?.full_name || fallbackName
   const ownerPhone = profile?.phone || ''
   const ownerEmail = user.email || ''
 
-  // 4. 매장 멤버로 점주 등록
+  // 4. 매장 멤버로 점주 등록 - profile 연동을 위해 수기 등록용 이름(name)에도 초기값 세팅
   const { error: memberError } = await supabase
     .from('store_members')
     .insert({
@@ -256,25 +265,27 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
     return { error: '이미 해당 매장의 멤버이거나 신청 중입니다.' }
   }
 
-  // 3. 프로필 정보 업데이트 (비어있는 경우에만)
+  // 3. 프로필 정보 업데이트
+  // 직원이 입력한 정보가 최신이라고 가정하고, 프로필이 비어있으면 업데이트합니다.
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, phone')
     .eq('id', user.id)
     .single()
 
-  if (profile) {
-    const updates: { full_name?: string; phone?: string } = {}
-    if (!profile.full_name) updates.full_name = name
-    if (!profile.phone) updates.phone = phone
+  const updates: { full_name?: string; phone?: string, id?: string } = {}
+  if (!profile?.full_name) updates.full_name = name
+  if (!profile?.phone) updates.phone = phone
 
-    if (Object.keys(updates).length > 0) {
-      await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id)
-    }
+  if (Object.keys(updates).length > 0) {
+    await supabase
+      .from('profiles')
+      .upsert({ id: user.id, ...updates }, { onConflict: 'id' })
   }
+  
+  // 방금 업데이트했거나 기존에 있던 프로필 정보
+  const finalProfileName = updates.full_name || profile?.full_name || name
+  const finalProfilePhone = updates.phone || profile?.phone || phone
 
   // 4. 수기 등록 직원 매칭 시도
   // 이름과 전화번호가 일치하는 수기 등록 직원(user_id is null)이 있으면 해당 레코드를 승계합니다.
@@ -297,10 +308,10 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
 
   // 매칭 성공 시 종료
   if (claimed) {
-    // 수기 등록 직원의 경우 프로필 데이터(이름, 전화번호, 이메일)로 스토어 멤버 정보 덮어쓰기
+    // 수기 등록 직원의 경우 프로필 데이터(이름, 전화번호, 이메일)로 스토어 멤버 정보 동기화
     await supabase
       .from('store_members')
-      .update({ name, phone, email: user.email || '' })
+      .update({ name: finalProfileName, phone: finalProfilePhone, email: user.email || '' })
       .eq('store_id', storeId)
       .eq('user_id', user.id)
 
@@ -316,8 +327,8 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
     user_id: user.id,
     status: 'pending_approval',
     joined_at: new Date().toISOString(),
-    name,
-    phone,
+    name: finalProfileName,
+    phone: finalProfilePhone,
     email: user.email || '',
   })
 
