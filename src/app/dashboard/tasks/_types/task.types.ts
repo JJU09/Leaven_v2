@@ -12,6 +12,7 @@ export interface Task {
   title: string;
   description: string | null;
   priority: TaskPriority;
+  start_time: string | null; // ISO string
   due_date: string | null; // YYYY-MM-DD
   assignee_id: string | null;
   assigner_id: string | null;
@@ -30,6 +31,7 @@ export interface TaskFormData {
   title: string;
   description: string;
   assignee_ids: string[]; // for multi-select
+  start_time?: string;
   due_date: Date;
   priority: TaskPriority;
 }

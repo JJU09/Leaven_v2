@@ -71,7 +71,7 @@ export function TaskCard({ task, storeId, currentStaffId, canManageTasks, onClic
           </div>
           
           {task.description && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
+            <p className="text-xs text-muted-foreground line-clamp-2 break-all mt-0.5 max-w-full">
               {task.description}
             </p>
           )}

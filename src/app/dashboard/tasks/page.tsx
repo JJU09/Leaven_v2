@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { TaskTabs } from './_components/TaskTabs';
 import { TaskFormDialog } from './_components/TaskFormDialog';
-import { TaskDetailSheet } from './_components/TaskDetailSheet';
+import { TaskAnnouncementBanner } from './_components/TaskAnnouncementBanner';
+import { useRouter } from 'next/navigation';
 import { useDashboard } from '../_hooks/useDashboard';
 import { useTodayTasks } from './_hooks/useTasks';
 import { Task } from './_types/task.types';
@@ -16,6 +17,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getMemberDisplayName } from '@/lib/utils';
 
 export default function TasksPage() {
+  const router = useRouter();
   const [storeId, setStoreId] = useState<string | null>(null);
   const [currentMember, setCurrentMember] = useState<any>(null);
   const [storeMembers, setStoreMembers] = useState<any[]>([]);
@@ -63,9 +65,10 @@ export default function TasksPage() {
           .select(`
             id,
             name,
-            profile:profiles(full_name)
+            profiles(full_name)
           `)
-          .eq('store_id', activeMember.store_id);
+          .eq('store_id', activeMember.store_id)
+          .neq('status', 'invited');
         
         if (allMembers) {
           setStoreMembers(allMembers);
@@ -76,7 +79,6 @@ export default function TasksPage() {
   }, []);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
   // Use a query hook here just to get the incomplete tasks count, or re-use useTodayTasks
@@ -103,17 +105,12 @@ export default function TasksPage() {
   }));
 
   const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
-  };
-
-  const handleEditTask = (task: Task) => {
-    setTaskToEdit(task);
-    setIsFormOpen(true);
+    router.push(`/dashboard/tasks/${task.id}`);
   };
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">업무 관리</h1>
@@ -134,6 +131,8 @@ export default function TasksPage() {
           </Button>
         )}
       </div>
+
+      <TaskAnnouncementBanner storeId={storeId} />
 
       <TaskTabs
         storeId={storeId}
@@ -156,17 +155,6 @@ export default function TasksPage() {
         />
       )}
 
-      {selectedTask && (
-        <TaskDetailSheet
-          task={selectedTask}
-          open={!!selectedTask}
-          onOpenChange={(open) => !open && setSelectedTask(null)}
-          storeId={storeId}
-          currentStaffId={currentMember.id}
-          canManageTasks={canManageTasks}
-          onEdit={handleEditTask}
-        />
-      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { DashboardClientLayout } from '@/shared/components/layout/dashboard-layo
 import { cookies } from 'next/headers'
 import { getUserStores } from '@/features/store/actions'
 import { hasPermission } from '@/features/auth/permissions'
+import { getMemberDisplayName } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,6 +59,7 @@ export default async function DashboardLayout({
       store_id,
       status,
       name,
+      profile:profiles(full_name),
       role_info:store_roles(id, name, color, hierarchy_level, is_system)
     `)
     .eq('user_id', user.id)
@@ -138,7 +140,7 @@ export default async function DashboardLayout({
     <DashboardClientLayout
       user={{
         email: user.email!,
-        full_name: finalMember.name || user.user_metadata.full_name,
+        full_name: finalMember ? getMemberDisplayName(finalMember) : user.user_metadata.full_name,
         avatar_url: user.user_metadata.avatar_url,
       }}
       memberId={finalMember.id}
