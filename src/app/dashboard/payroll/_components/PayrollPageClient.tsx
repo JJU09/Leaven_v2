@@ -114,7 +114,7 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
 
           <div className="flex items-center gap-3">
             <Select value={wageTypeFilter} onValueChange={setWageTypeFilter}>
-              <SelectTrigger className="w-[120px] bg-background">
+              <SelectTrigger className="w-30 bg-background">
                 <SelectValue placeholder="급여 유형" />
               </SelectTrigger>
               <SelectContent>
@@ -127,7 +127,7 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[120px] bg-background">
+              <SelectTrigger className="w-30 bg-background">
                 <SelectValue placeholder="상태" />
               </SelectTrigger>
               <SelectContent>

@@ -92,7 +92,7 @@ export default function TasksPage() {
 
   if (Object.keys(permissions).length > 0 && !permissions.view_tasks) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[400px] p-6 text-center">
+      <div className="flex flex-col items-center justify-center h-full min-h-100 p-6 text-center">
         <h2 className="text-2xl font-bold mb-2">접근 권한이 없습니다</h2>
         <p className="text-muted-foreground">이 페이지를 볼 수 있는 권한이 없습니다.</p>
       </div>

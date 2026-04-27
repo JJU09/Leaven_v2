@@ -140,7 +140,7 @@ export function LeaveClientPage({
           <TabsList className="bg-transparent h-full p-0 gap-4 md:gap-8 justify-start w-full md:w-auto overflow-x-auto overflow-y-hidden no-scrollbar">
             <TabsTrigger 
               value="calendar" 
-              className="relative rounded-none px-1 pb-3 pt-2 text-sm md:text-base font-semibold text-muted-foreground hover:text-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none outline-none focus-visible:outline-none !shadow-none bg-transparent group whitespace-nowrap"
+              className="relative rounded-none px-1 pb-3 pt-2 text-sm md:text-base font-semibold text-muted-foreground hover:text-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none outline-none focus-visible:outline-none shadow-none! bg-transparent group whitespace-nowrap"
             >
               <Calendar className="w-4 h-4 mr-1.5 md:mr-2" />
               <span className="hidden md:inline">휴가 현황 (캘린더)</span>
@@ -149,7 +149,7 @@ export function LeaveClientPage({
             </TabsTrigger>
             <TabsTrigger 
               value="requests" 
-              className="relative rounded-none px-1 pb-3 pt-2 text-sm md:text-base font-semibold text-muted-foreground hover:text-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none outline-none focus-visible:outline-none !shadow-none bg-transparent group flex items-center whitespace-nowrap"
+              className="relative rounded-none px-1 pb-3 pt-2 text-sm md:text-base font-semibold text-muted-foreground hover:text-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none outline-none focus-visible:outline-none shadow-none! bg-transparent group flex items-center whitespace-nowrap"
             >
               <FileText className="w-4 h-4 mr-1.5 md:mr-2" />
               휴가 신청함
@@ -162,7 +162,7 @@ export function LeaveClientPage({
             </TabsTrigger>
             <TabsTrigger 
               value="balances" 
-              className="relative rounded-none px-1 pb-3 pt-2 text-sm md:text-base font-semibold text-muted-foreground hover:text-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none outline-none focus-visible:outline-none !shadow-none bg-transparent group flex items-center gap-1.5 md:gap-2 whitespace-nowrap"
+              className="relative rounded-none px-1 pb-3 pt-2 text-sm md:text-base font-semibold text-muted-foreground hover:text-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none outline-none focus-visible:outline-none shadow-none! bg-transparent group flex items-center gap-1.5 md:gap-2 whitespace-nowrap"
             >
               <div className="flex items-center">
                 <Settings className="w-4 h-4 mr-1.5 md:mr-2" />
@@ -339,7 +339,7 @@ export function LeaveClientPage({
               </div>
               <div className="bg-slate-50/50 p-4 md:p-6 overflow-y-auto no-scrollbar flex-1">
                 {(canManage ? requests : myRequests).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-muted-foreground min-h-[200px] h-full bg-white rounded-xl border border-dashed border-border/50">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground min-h-50 h-full bg-white rounded-xl border border-dashed border-border/50">
                     <FileText className="w-12 h-12 mb-4 opacity-20" />
                     <p>등록된 휴가 신청이 없습니다.</p>
                   </div>
@@ -583,7 +583,7 @@ export function LeaveClientPage({
       )}
 
       <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
-        <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none sm:border sm:rounded-2xl shadow-2xl">
+        <DialogContent className="sm:max-w-100 p-0 overflow-hidden border-none sm:border sm:rounded-2xl shadow-2xl">
           {/* Mobile Handle Bar */}
           <div className="h-1 w-10 bg-slate-200 rounded-full mx-auto mt-2.5 mb-0.5 sm:hidden" />
           
@@ -651,7 +651,7 @@ export function LeaveClientPage({
 
             <div className="flex flex-col gap-1">
               <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-0.5">사유 및 증빙</Label>
-              <Textarea placeholder="사유를 입력하세요" value={requestDraft.reason} onChange={(e) => setRequestDraft(prev => ({...prev, reason: e.target.value}))} className="min-h-[60px] bg-slate-50/50 border-slate-100 focus:bg-white transition-colors resize-none rounded-lg py-[22px] px-2.5 text-xs text-center leading-[16px]" />
+              <Textarea placeholder="사유를 입력하세요" value={requestDraft.reason} onChange={(e) => setRequestDraft(prev => ({...prev, reason: e.target.value}))} className="min-h-15 bg-slate-50/50 border-slate-100 focus:bg-white transition-colors resize-none rounded-lg py-5.5 px-2.5 text-xs text-center leading-4" />
               <div className="mt-1 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 p-0.5">
                 <LeaveAttachmentUpload storeId={storeId} onUpload={(url) => setRequestDraft(prev => ({...prev, attachmentUrl: url || ''}))} />
               </div>
@@ -660,7 +660,7 @@ export function LeaveClientPage({
 
           <div className="px-5 pb-5 pt-1 flex gap-2">
             <Button variant="ghost" className="flex-1 h-12 rounded-xl text-slate-500 hover:bg-slate-100" onClick={() => setIsRequestModalOpen(false)}>취소</Button>
-            <Button disabled={submitLoading || !requestDraft.reason.trim()} className="flex-[2] h-12 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]" onClick={async () => {
+            <Button disabled={submitLoading || !requestDraft.reason.trim()} className="flex-2 h-12 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]" onClick={async () => {
               setSubmitLoading(true);
               try {
                 let days = differenceInDays(parseISO(requestDraft.endDate), parseISO(requestDraft.startDate)) + 1;

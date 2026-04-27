@@ -34,7 +34,7 @@ export function TaskCard({ task, storeId, currentStaffId, canManageTasks, onClic
       )}
     >
       <div className="flex items-start gap-3 flex-1 min-w-0">
-        <div className="mt-1 flex-shrink-0">
+        <div className="mt-1 shrink-0">
           <div className={cn('w-2.5 h-2.5 rounded-full', priorityColors[task.priority])} />
         </div>
         
@@ -47,7 +47,7 @@ export function TaskCard({ task, storeId, currentStaffId, canManageTasks, onClic
               {task.title}
             </h4>
             {isOverdue && (
-              <span className="text-[10px] sm:text-xs font-semibold text-red-500 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded flex-shrink-0">
+              <span className="text-[10px] sm:text-xs font-semibold text-red-500 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded shrink-0">
                 기한 초과
               </span>
             )}
@@ -55,7 +55,7 @@ export function TaskCard({ task, storeId, currentStaffId, canManageTasks, onClic
           
           <div className="flex items-center text-xs text-muted-foreground gap-1.5 truncate">
             {task.assignee ? (
-              <span className="truncate max-w-[100px]">{task.assignee.name}</span>
+              <span className="truncate max-w-25">{task.assignee.name}</span>
             ) : (
               <span className="italic text-muted-foreground/70">미배정</span>
             )}

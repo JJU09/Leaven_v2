@@ -140,13 +140,13 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              type="text"
-              placeholder="검색어 입력..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-9 w-full sm:w-[200px] border-slate-200"
-            />
+              <Input
+                type="text"
+                placeholder="검색어 입력..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-9 w-full sm:w-50 border-slate-200"
+              />
           </div>
           {canManage && (
             <Button size="sm" onClick={handleCreate} className="h-9 whitespace-nowrap">
@@ -166,11 +166,11 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
           <div className="flex flex-col divide-y divide-slate-100">
             {/* Table Header (Desktop only) */}
             <div className="hidden md:flex items-center py-3 px-4 bg-slate-50 text-xs font-medium text-slate-500">
-              <div className="w-[80px] shrink-0 text-center px-2">구분</div>
+              <div className="w-20 shrink-0 text-center px-2">구분</div>
               <div className="flex-1 min-w-0 px-2">제목</div>
-              <div className="w-[120px] shrink-0 text-center">작성자</div>
-              <div className="w-[120px] shrink-0 text-center">작성일</div>
-              {canManage && <div className="w-[80px] shrink-0"></div>}
+              <div className="w-30 shrink-0 text-center">작성자</div>
+              <div className="w-30 shrink-0 text-center">작성일</div>
+              {canManage && <div className="w-20 shrink-0"></div>}
             </div>
 
             {filteredAnnouncements.map((announcement) => (
@@ -180,7 +180,7 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
                 className="flex flex-col md:flex-row md:items-center p-4 transition-colors hover:bg-slate-50 group relative cursor-pointer"
               >
                 {/* Type (Desktop) */}
-                <div className="hidden md:flex w-[80px] shrink-0 justify-center px-2">
+                <div className="hidden md:flex w-20 shrink-0 justify-center px-2">
                   {announcement.announcement_type === 'handover' ? (
                     <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-none w-full justify-center">
                       인수인계
@@ -214,18 +214,18 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
                 </div>
                 
                 {/* Meta info (Author & Date) */}
-                <div className="flex items-center gap-3 text-sm text-slate-500 md:w-[240px] md:shrink-0 justify-start md:justify-center">
-                  <div className="md:w-[120px] md:text-center truncate">
+                <div className="flex items-center gap-3 text-sm text-slate-500 md:w-60 md:shrink-0 justify-start md:justify-center">
+                  <div className="md:w-30 md:text-center truncate">
                     {announcement.author?.full_name || '관리자'}
                   </div>
-                  <div className="md:w-[120px] md:text-center shrink-0">
+                  <div className="md:w-30 md:text-center shrink-0">
                     {format(new Date(announcement.created_at), 'yyyy-MM-dd')}
                   </div>
                 </div>
 
                 {/* Actions */}
                 {canManage && (
-                  <div className="absolute right-4 top-4 md:static md:w-[80px] md:shrink-0 md:flex md:justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute right-4 top-4 md:static md:w-20 md:shrink-0 md:flex md:justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="flex items-center gap-1 bg-white md:bg-transparent rounded-md shadow-sm md:shadow-none border md:border-none p-1 md:p-0">
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-200" onClick={(e) => handleEdit(e, announcement)}>
                         <Edit2 className="h-4 w-4" />
@@ -251,7 +251,7 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
       />
 
       <Dialog open={!!viewingData} onOpenChange={(open) => !open && setViewingData(null)}>
-        <DialogContent className="sm:max-w-[700px] w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden bg-white border-slate-200">
+        <DialogContent className="sm:max-w-175 w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden bg-white border-slate-200">
           <VisuallyHidden>
             <DialogTitle>공지사항 상세 내용</DialogTitle>
           </VisuallyHidden>
@@ -291,7 +291,7 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-6 md:p-10 bg-white">
-                <div className="text-base md:text-lg text-slate-700 leading-relaxed whitespace-pre-wrap break-all min-h-[200px]">
+                <div className="text-base md:text-lg text-slate-700 leading-relaxed whitespace-pre-wrap break-all min-h-50">
                   {viewingData.content}
                 </div>
               </div>

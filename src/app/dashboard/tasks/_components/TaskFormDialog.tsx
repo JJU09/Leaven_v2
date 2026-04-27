@@ -118,7 +118,7 @@ export function TaskFormDialog({ open, onOpenChange, storeId, assignerId, staffL
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-175 max-h-[90vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle>{taskToEdit ? '업무 편집' : '업무 추가'}</DialogTitle>
         </DialogHeader>
@@ -151,7 +151,7 @@ export function TaskFormDialog({ open, onOpenChange, storeId, assignerId, staffL
                       <FormControl>
                         <Textarea 
                           placeholder="업무 상세 내용을 입력하세요" 
-                          className="min-h-[100px] max-h-[250px]" 
+                          className="min-h-25 max-h-62.5" 
                           {...field} 
                         />
                       </FormControl>
@@ -222,7 +222,7 @@ export function TaskFormDialog({ open, onOpenChange, storeId, assignerId, staffL
                   render={() => (
                     <FormItem>
                       <FormLabel>담당자 (복수 선택 가능)</FormLabel>
-                      <ScrollArea className="h-[250px] w-full border rounded-md p-2">
+                      <ScrollArea className="h-62.5 w-full border rounded-md p-2">
                         {staffList.map((staff) => (
                           <FormField
                             key={staff.id}

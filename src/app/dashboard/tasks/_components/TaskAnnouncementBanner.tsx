@@ -61,7 +61,7 @@ export function TaskAnnouncementBanner({ storeId }: TaskAnnouncementBannerProps)
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[700px] w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden bg-white border-slate-200">
+        <DialogContent className="sm:max-w-175 w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden bg-white border-slate-200">
           <VisuallyHidden>
             <DialogTitle>공지사항 상세 내용</DialogTitle>
           </VisuallyHidden>
@@ -94,7 +94,7 @@ export function TaskAnnouncementBanner({ storeId }: TaskAnnouncementBannerProps)
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 md:p-10 bg-white">
-              <div className="text-base md:text-lg text-slate-700 leading-relaxed whitespace-pre-wrap break-all min-h-[200px]">
+              <div className="text-base md:text-lg text-slate-700 leading-relaxed whitespace-pre-wrap break-all min-h-50">
                 {latestAnnouncement.content}
               </div>
             </div>

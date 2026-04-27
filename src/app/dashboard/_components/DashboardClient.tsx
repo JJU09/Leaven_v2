@@ -104,36 +104,36 @@ export default function DashboardClient({ storeId, storeName, userName }: Dashbo
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 내 업무 */}
-        <div className="h-[400px]">
+        <div className="h-100">
           <DashboardTaskCard storeId={storeId} currentStaffId={currentMember?.id || ''} canManageTasks={currentMember?.role_info?.hierarchy_level <= 2} />
         </div>
 
         {/* 알림·할일 */}
-        <div className="h-[400px]">
+        <div className="h-100">
           <AlertList alerts={alerts} hasMore={hasMoreAlerts} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 오늘 출퇴근 현황 */}
-        <div className="h-[400px]">
+        <div className="h-100">
           <AttendanceList storeId={storeId} />
         </div>
         
         {/* 연차·휴가 현황 */}
-        <div className="h-[400px]">
+        <div className="h-100">
           <LeavePanel monthLeaves={monthLeaves} staffLeaves={staffLeaves} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
         {/* 자산 현황 요약 */}
-        <div className="h-[350px]">
+        <div className="h-87.5">
           <AssetSummaryCard assets={assetsSummary} />
         </div>
         
         {/* 거래처 현황 요약 */}
-        <div className="h-[350px]">
+        <div className="h-87.5">
           <VendorSummaryCard vendors={vendorsSummary} transactions={vendorTransactions} />
         </div>
       </div>
