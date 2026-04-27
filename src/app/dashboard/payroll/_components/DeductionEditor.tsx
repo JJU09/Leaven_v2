@@ -19,6 +19,11 @@ interface DeductionEditorProps {
     long_term_care: number;
   };
   disabled?: boolean;
+  onChange?: (updated: {
+    deductions: any;
+    total_deduction: number;
+    net_pay: number;
+  }) => void;
 }
 
 export function DeductionEditor({
@@ -29,6 +34,7 @@ export function DeductionEditor({
   grossPay,
   initialDeductions,
   disabled = false,
+  onChange,
 }: DeductionEditorProps) {
   const [deductions, setDeductions] = useState(initialDeductions);
   const updateMutation = useUpdatePayrollDeduction(storeId, year, month);
@@ -46,6 +52,11 @@ export function DeductionEditor({
 
     const totalDeduction = calculateTotalDeduction(newDeductions);
     const netPay = calculateNetPay(grossPay, totalDeduction);
+
+    // 부모 컴포넌트에 즉시 변경 알림
+    if (onChange) {
+      onChange({ deductions: newDeductions, total_deduction: totalDeduction, net_pay: netPay });
+    }
 
     // Debounce mutation
     const timeoutId = setTimeout(() => {

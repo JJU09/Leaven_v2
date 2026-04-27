@@ -7,12 +7,11 @@ import { usePayroll, PayrollRecordWithStaff } from "../_hooks/usePayroll";
 import { useConfirmPayroll, useMarkPayrollPaid } from "../_hooks/usePayrollMutations";
 import { PayrollSummaryCards } from "./PayrollSummaryCards";
 import { PayrollTable } from "./PayrollTable";
-import { PayrollDetailPanel } from "./PayrollDetailPanel";
-import { PayrollConfirmDialog } from "./PayrollConfirmDialog";
 import { PayrollPrintView } from "./PayrollPrintView";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, FileText, CheckCircle, Printer } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface PayrollPageClientProps {
   storeId: string;
@@ -20,23 +19,29 @@ interface PayrollPageClientProps {
 }
 
 export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps) {
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
   
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
 
-  const { data: records = [], isLoading } = usePayroll(storeId, year, month);
+  const { data: payrollData, isLoading } = usePayroll(storeId, year, month);
+  
+  // Array 반환 (초안 생성 전 등)과 Object 반환 분기 처리
+  const records = Array.isArray(payrollData) 
+    ? payrollData 
+    : (payrollData?.records || []);
+    
+  const period = !Array.isArray(payrollData) ? payrollData?.period : null;
+  
   const confirmMutation = useConfirmPayroll(storeId, year, month);
   const markPaidMutation = useMarkPayrollPaid(storeId, year, month);
 
   // Filters & State
   const [wageTypeFilter, setWageTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectedRecord, setSelectedRecord] = useState<PayrollRecordWithStaff | null>(null);
   
   // Dialog State
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [printMode, setPrintMode] = useState(false);
   const [printRecords, setPrintRecords] = useState<PayrollRecordWithStaff[]>([]);
 
@@ -51,37 +56,8 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
-  const handleToggleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleToggleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(filteredRecords.filter((r) => r.status === "draft").map((r) => r.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
-
-  const handleConfirmBatch = () => {
-    if (selectedIds.length === 0) return;
-    setConfirmDialogOpen(true);
-  };
-
-  const executeConfirmBatch = async () => {
-    await confirmMutation.mutateAsync(selectedIds);
-    setConfirmDialogOpen(false);
-    setSelectedIds([]);
-    if (selectedRecord && selectedIds.includes(selectedRecord.id)) {
-      setSelectedRecord(null); // 확정 후 패널 닫기 (상태 동기화 단순화를 위해)
-    }
-  };
-
   const handleConfirmSingle = async (id: string) => {
     await confirmMutation.mutateAsync([id]);
-    setSelectedRecord(null); // 확정 후 패널 닫기
   };
 
   const handleMarkPaid = async (id: string) => {
@@ -100,10 +76,6 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
     }, 100);
   };
 
-  const totalNetPayForSelected = records
-    .filter((r) => selectedIds.includes(r.id))
-    .reduce((sum, r) => sum + r.net_pay, 0);
-
   if (!storeId) return null;
 
   return (
@@ -117,23 +89,6 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
               직원들의 급여를 계산하고 명세서를 발급할 수 있습니다.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => handlePrint(filteredRecords.map(r => r.id))}
-              disabled={filteredRecords.length === 0}
-            >
-              <Printer className="mr-2 h-4 w-4" />
-              목록 전체 출력
-            </Button>
-            <Button
-              onClick={handleConfirmBatch}
-              disabled={selectedIds.length === 0 || confirmMutation.isPending}
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              급여 일괄 확정 ({selectedIds.length})
-            </Button>
-          </div>
         </div>
 
         {/* Toolbar (Month Picker & Filters) */}
@@ -142,8 +97,15 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
             <Button variant="ghost" size="icon" onClick={handlePrevMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="font-semibold text-lg w-32 text-center">
-              {format(currentDate, "yyyy년 MM월")}
+            <div className="flex flex-col items-center justify-center">
+              <div className="font-semibold text-lg w-32 text-center">
+                {format(currentDate, "yyyy년 MM월")}
+              </div>
+              {period && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  정산 기간: {period.start.replace(/-/g, '.')} ~ {period.end.replace(/-/g, '.')}
+                </div>
+              )}
             </div>
             <Button variant="ghost" size="icon" onClick={handleNextMonth}>
               <ChevronRight className="h-4 w-4" />
@@ -189,10 +151,7 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
             <div className="flex-1 min-h-0 overflow-auto">
               <PayrollTable
                 records={filteredRecords}
-                selectedIds={selectedIds}
-                onToggleSelect={handleToggleSelect}
-                onToggleSelectAll={handleToggleSelectAll}
-                onRowClick={(record) => setSelectedRecord(record)}
+                onRowClick={(record) => router.push(`/dashboard/payroll/${record.id}`)}
                 onMarkPaid={handleMarkPaid}
                 onConfirm={handleConfirmSingle}
                 onPrint={(id) => handlePrint([id])}
@@ -201,21 +160,6 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
           </>
         )}
       </div>
-
-      <PayrollDetailPanel
-        record={selectedRecord}
-        onClose={() => setSelectedRecord(null)}
-        onConfirm={handleConfirmSingle}
-        onPrint={(id) => handlePrint([id])}
-      />
-
-      <PayrollConfirmDialog
-        open={confirmDialogOpen}
-        onOpenChange={setConfirmDialogOpen}
-        onConfirm={executeConfirmBatch}
-        count={selectedIds.length}
-        totalNetPay={totalNetPayForSelected}
-      />
 
       {printMode && (
         <PayrollPrintView records={printRecords} storeName={storeName} />

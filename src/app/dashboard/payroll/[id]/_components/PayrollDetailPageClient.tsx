@@ -1,29 +1,34 @@
-import { PayrollRecordWithStaff } from "../_hooks/usePayroll";
+"use client";
+
+import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/formatters";
-import { DeductionEditor } from "./DeductionEditor";
+import { DeductionEditor } from "../../_components/DeductionEditor";
+import { PayrollPrintView } from "../../_components/PayrollPrintView";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, FileText, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, FileText, CheckCircle } from "lucide-react";
+import { PayrollRecordWithStaff } from "../../_hooks/usePayroll";
+import { useConfirmPayroll } from "../../_hooks/usePayrollMutations";
+import { useState } from "react";
+import { PayrollConfirmDialog } from "../../_components/PayrollConfirmDialog";
 
-interface PayrollDetailPanelProps {
-  record: PayrollRecordWithStaff | null;
-  onClose: () => void;
-  onConfirm: (id: string) => void;
-  onPrint: (id: string) => void;
+interface PayrollDetailPageClientProps {
+  initialRecord: PayrollRecordWithStaff;
 }
 
-export function PayrollDetailPanel({
-  record,
-  onClose,
-  onConfirm,
-  onPrint,
-}: PayrollDetailPanelProps) {
-  if (!record) return null;
+export function PayrollDetailPageClient({ initialRecord }: PayrollDetailPageClientProps) {
+  const router = useRouter();
+  const [record, setRecord] = useState(initialRecord);
+  const [printMode, setPrintMode] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const confirmMutation = useConfirmPayroll(record.store_id, record.period_year, record.period_month);
 
   const profile = record.store_members?.profiles;
+  const manualName = record.store_members?.name;
+  const displayName = profile?.full_name || manualName || "알 수 없음";
   const wageType = record.wage_type;
   const isDraft = record.status === "draft";
 
@@ -46,44 +51,72 @@ export function PayrollDetailPanel({
     long_term_care: record.long_term_care,
   };
 
+  const executeConfirm = async () => {
+    await confirmMutation.mutateAsync([record.id]);
+    setRecord((prev) => ({ ...prev, status: "confirmed" }));
+    setConfirmDialogOpen(false);
+  };
+
+  const handlePrint = () => {
+    setPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      setPrintMode(false);
+    }, 100);
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 transform bg-background border-t shadow-lg transition-transform duration-300 ease-in-out md:left-[16rem]">
-      <div className="flex flex-col h-full max-h-[80vh]">
-        <div className="flex items-center justify-between border-b p-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={profile?.avatar_url || undefined} />
-              <AvatarFallback>{profile?.full_name?.charAt(0) || "?"}</AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-lg">{profile?.full_name}</h3>
-                <Badge variant="secondary">{getWageTypeLabel(wageType)}</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {record.period_year}년 {record.period_month}월 급여
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onPrint(record.id)}>
-              <FileText className="mr-2 h-4 w-4" />
-              명세서 출력
-            </Button>
-            {isDraft && (
-              <Button size="sm" onClick={() => onConfirm(record.id)}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                확정하기
-              </Button>
-            )}
-            <Button variant="ghost" size="icon" onClick={onClose} className="ml-2">
-              <X className="h-5 w-5" />
-            </Button>
+    <>
+      <div className={`flex flex-col h-full gap-6 p-6 ${printMode ? "hidden" : ""}`}>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">급여 상세</h1>
+            <p className="text-muted-foreground">
+              {record.period_year}년 {record.period_month}월 급여 명세
+            </p>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto">
           <div className="grid gap-6 md:grid-cols-2">
+            {/* 직원 정보 및 요약 */}
+            <div className="space-y-6 md:col-span-2">
+              <Card>
+                <CardContent className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src={profile?.avatar_url || undefined} />
+                      <AvatarFallback className="text-xl">{displayName.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-xl">{displayName}</h3>
+                        <Badge variant="secondary">{getWageTypeLabel(wageType)}</Badge>
+                      </div>
+                      <p className="text-muted-foreground">
+                        {record.store_members?.store_roles?.name || "역할 없음"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handlePrint}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      명세서 출력
+                    </Button>
+                    {isDraft && (
+                      <Button onClick={() => setConfirmDialogOpen(true)} disabled={confirmMutation.isPending}>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        확정하기
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* 근무 내역 */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
@@ -174,6 +207,14 @@ export function PayrollDetailPanel({
                       grossPay={record.gross_pay}
                       initialDeductions={deductions}
                       disabled={!isDraft}
+                      onChange={({ deductions, total_deduction, net_pay }) => {
+                        setRecord((prev) => ({
+                          ...prev,
+                          ...deductions,
+                          total_deduction,
+                          net_pay,
+                        }));
+                      }}
                     />
 
                     <div className="flex justify-between items-center font-semibold pt-2 border-t text-destructive">
@@ -188,7 +229,7 @@ export function PayrollDetailPanel({
         </div>
 
         {/* 하단 합계 바 */}
-        <div className="border-t bg-muted/30 p-4">
+        <div className="border-t bg-muted/30 p-4 rounded-lg mt-auto">
           <div className="flex items-center justify-between max-w-4xl mx-auto">
             <div className="text-sm text-muted-foreground hidden sm:flex items-center gap-4">
               <span>총 지급액 {formatCurrency(record.gross_pay)}</span>
@@ -205,6 +246,18 @@ export function PayrollDetailPanel({
           </div>
         </div>
       </div>
-    </div>
+
+      <PayrollConfirmDialog
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        onConfirm={executeConfirm}
+        count={1}
+        totalNetPay={record.net_pay}
+      />
+
+      {printMode && (
+        <PayrollPrintView records={[record]} storeName="매장" />
+      )}
+    </>
   );
 }

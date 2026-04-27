@@ -6,7 +6,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatters";
@@ -25,9 +24,6 @@ import {
 
 interface PayrollTableProps {
   records: PayrollRecordWithStaff[];
-  selectedIds: string[];
-  onToggleSelect: (id: string) => void;
-  onToggleSelectAll: (checked: boolean) => void;
   onRowClick: (record: PayrollRecordWithStaff) => void;
   onMarkPaid: (id: string) => void;
   onConfirm: (id: string) => void;
@@ -59,39 +55,23 @@ const getStatusBadge = (status: PayrollStatus) => {
 
 export function PayrollTable({
   records,
-  selectedIds,
-  onToggleSelect,
-  onToggleSelectAll,
   onRowClick,
   onMarkPaid,
   onConfirm,
   onPrint,
 }: PayrollTableProps) {
-  const allDraftSelected =
-    records.length > 0 &&
-    records.filter((r) => r.status === "draft").every((r) => selectedIds.includes(r.id));
-  const someDraftSelected =
-    records.filter((r) => r.status === "draft").some((r) => selectedIds.includes(r.id));
-
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-12 text-center">
-              <Checkbox
-                checked={allDraftSelected || (someDraftSelected ? "indeterminate" : false)}
-                onCheckedChange={(checked) => onToggleSelectAll(!!checked)}
-                aria-label="Select all"
-              />
-            </TableHead>
-            <TableHead>직원</TableHead>
-            <TableHead>유형</TableHead>
-            <TableHead className="text-right">근무일/시간</TableHead>
-            <TableHead className="text-right">기본급</TableHead>
-            <TableHead className="text-right">추가수당</TableHead>
-            <TableHead className="text-right">공제액</TableHead>
-            <TableHead className="text-right">실수령액</TableHead>
+            <TableHead className="text-center">직원</TableHead>
+            <TableHead className="text-center">유형</TableHead>
+            <TableHead className="text-center">근무일/시간</TableHead>
+            <TableHead className="text-center">기본급</TableHead>
+            <TableHead className="text-center">추가수당</TableHead>
+            <TableHead className="text-center">공제액</TableHead>
+            <TableHead className="text-center">실수령액</TableHead>
             <TableHead className="text-center">상태</TableHead>
             <TableHead className="w-12"></TableHead>
           </TableRow>
@@ -105,9 +85,10 @@ export function PayrollTable({
             </TableRow>
           ) : (
             records.map((record) => {
-              const isSelected = selectedIds.includes(record.id);
               const extraPay = (record.overtime_pay || 0) + (record.weekly_holiday_pay || 0);
               const profile = record.store_members?.profiles;
+              const manualName = record.store_members?.name;
+              const displayName = profile?.full_name || manualName || "알 수 없음";
               const roleName = record.store_members?.store_roles?.name;
 
               return (
@@ -116,32 +97,24 @@ export function PayrollTable({
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => onRowClick(record)}
                 >
-                  <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={isSelected}
-                      disabled={record.status !== "draft"}
-                      onCheckedChange={() => onToggleSelect(record.id)}
-                      aria-label={`Select ${profile?.full_name}`}
-                    />
-                  </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center gap-3">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={profile?.avatar_url || undefined} />
                         <AvatarFallback>
-                          {profile?.full_name?.charAt(0) || "?"}
+                          {displayName.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-sm">{profile?.full_name}</span>
+                      <div className="flex flex-col text-left">
+                        <span className="font-medium text-sm">{displayName}</span>
                         <span className="text-xs text-muted-foreground">{roleName}</span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <Badge variant="outline">{getWageTypeLabel(record.wage_type)}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-center">
                     <div className="flex flex-col">
                       <span className="text-sm">{record.work_days}일</span>
                       <span className="text-xs text-muted-foreground">
@@ -149,10 +122,10 @@ export function PayrollTable({
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className="text-center font-medium">
                     {formatCurrency(record.base_pay)}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-center">
                     {extraPay > 0 ? (
                       <span className="text-green-600 font-medium">
                         +{formatCurrency(extraPay)}
@@ -161,7 +134,7 @@ export function PayrollTable({
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-center">
                     {record.total_deduction > 0 ? (
                       <span className="text-destructive font-medium">
                         -{formatCurrency(record.total_deduction)}
@@ -170,7 +143,7 @@ export function PayrollTable({
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right font-bold text-primary">
+                  <TableCell className="text-center font-bold text-primary">
                     {formatCurrency(record.net_pay)}
                   </TableCell>
                   <TableCell className="text-center">

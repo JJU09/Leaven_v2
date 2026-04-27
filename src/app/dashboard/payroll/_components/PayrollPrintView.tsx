@@ -15,6 +15,8 @@ export function PayrollPrintView({ records, storeName }: PayrollPrintViewProps) 
     <div className="hidden print:block print:w-full">
       {records.map((record, index) => {
         const profile = record.store_members?.profiles;
+        const manualName = record.store_members?.name;
+        const displayName = profile?.full_name || manualName || "알 수 없음";
         const roleName = record.store_members?.store_roles?.name;
 
         return (
@@ -35,7 +37,7 @@ export function PayrollPrintView({ records, storeName }: PayrollPrintViewProps) 
                 <h2 className="text-sm font-semibold text-gray-500 mb-4">근로자 정보</h2>
                 <div className="grid grid-cols-3 gap-2 text-sm border p-4 bg-gray-50">
                   <div className="font-medium text-gray-500">성명</div>
-                  <div className="col-span-2">{profile?.full_name}</div>
+                  <div className="col-span-2">{displayName}</div>
                   <div className="font-medium text-gray-500">직급</div>
                   <div className="col-span-2">{roleName || "-"}</div>
                 </div>
