@@ -50,16 +50,16 @@ export function useDashboard(storeId: string) {
         { data: recentHandovers },
         { data: myReads }
       ] = await Promise.all([
-        supabase.from('attendance').select('id').eq('store_id', storeId).eq('date', todayDateStr).not('clock_in', 'is', null),
+        supabase.from('store_attendance').select('id').eq('store_id', storeId).eq('target_date', todayDateStr).not('clock_in_time', 'is', null),
         supabase.from('leave_requests').select('id').eq('store_id', storeId).eq('status', 'approved').gte('start_date', mondayStr).lte('start_date', fridayStr),
         supabase.from('store_assets').select('id, status, next_inspection_date, warranty_expiry_date, name').eq('store_id', storeId).is('deleted_at', null),
         supabase.from('vendors').select('id, name, contract_end_date, is_auto_renewal, contract_type').eq('store_id', storeId).is('deleted_at', null),
         supabase.from('leave_requests').select('id, status').eq('store_id', storeId).eq('status', 'pending'),
-        supabase.from('attendance').select('date').eq('store_id', storeId).gte('date', mondayStr).lte('date', fridayStr).not('clock_in', 'is', null),
+        supabase.from('store_attendance').select('target_date').eq('store_id', storeId).gte('target_date', mondayStr).lte('target_date', fridayStr).not('clock_in_time', 'is', null),
         supabase.from('leave_requests').select('*, member:store_members!leave_requests_member_id_fkey(name, profiles(full_name), role:store_roles(name))').eq('store_id', storeId).eq('status', 'pending').gte('start_date', startOfMonthStr).lte('start_date', endOfMonthStr).order('start_date', { ascending: true }),
         supabase.from('leave_balances').select('*, member:store_members!inner(id, status, name, profiles(full_name))').eq('store_id', storeId).eq('year', new Date().getFullYear()).eq('member.status', 'active'),
         supabase.from('vendor_transactions').select('id, vendor_id, amount, payment_status, transaction_date, vendors(name)').eq('store_id', storeId).in('payment_status', ['unpaid', 'partial']).is('deleted_at', null).order('transaction_date', { ascending: true }).limit(3),
-        supabase.from('schedules').select('id, member_id, start_time').eq('store_id', storeId).eq('date', todayDateStr),
+        supabase.from('schedules').select('id, member_id, start_time').eq('store_id', storeId).eq('plan_date', todayDateStr),
         supabase.from('store_announcements').select('id, title, ai_summary, target_member_ids, created_at, author:store_members!store_announcements_author_id_fkey(user:profiles!store_members_user_id_fkey(full_name))').eq('store_id', storeId).eq('announcement_type', 'handover').gte('created_at', sevenDaysAgoStr).order('created_at', { ascending: false }),
         currentMember ? supabase.from('announcement_reads').select('announcement_id').eq('member_id', currentMember.id) : Promise.resolve({ data: [] })
       ])
@@ -185,7 +185,7 @@ export function useDashboard(storeId: string) {
         monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0
       }
       weeklyAttendance?.forEach(a => {
-        const day = new Date(a.date).getDay()
+        const day = new Date(a.target_date).getDay()
         if (day === 1) weeklyData.monday++
         if (day === 2) weeklyData.tuesday++
         if (day === 3) weeklyData.wednesday++
