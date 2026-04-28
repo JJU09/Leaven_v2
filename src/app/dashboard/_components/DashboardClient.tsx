@@ -81,9 +81,10 @@ export default function DashboardClient({ storeId, storeName, userName }: Dashbo
           icon={Users}
         />
         <MetricCard 
-          title="이번 주 연차" 
-          value={metrics.leavesThisWeek.value}
-          subText="승인된 연차 수"
+          title="승인 대기 연차" 
+          value={metrics.leavesPending?.value || 0}
+          subText="승인 대기 중인 연차"
+          subType={(metrics.leavesPending?.value || 0) > 0 ? 'warn' : 'ok'}
           icon={Palmtree}
         />
         <MetricCard 

@@ -38,7 +38,6 @@ export function useDashboard(storeId: string) {
       // Fetch all required data in parallel
       const [
         { data: attendanceToday },
-        { data: thisWeekLeaves },
         { data: assets },
         { data: vendors },
         { data: pendingLeaves },
@@ -51,7 +50,6 @@ export function useDashboard(storeId: string) {
         { data: myReads }
       ] = await Promise.all([
         supabase.from('store_attendance').select('id').eq('store_id', storeId).eq('target_date', todayDateStr).not('clock_in_time', 'is', null),
-        supabase.from('leave_requests').select('id').eq('store_id', storeId).eq('status', 'approved').gte('start_date', mondayStr).lte('start_date', fridayStr),
         supabase.from('store_assets').select('id, status, next_inspection_date, warranty_expiry_date, name').eq('store_id', storeId).is('deleted_at', null),
         supabase.from('vendors').select('id, name, contract_end_date, is_auto_renewal, contract_type').eq('store_id', storeId).is('deleted_at', null),
         supabase.from('leave_requests').select('id, status').eq('store_id', storeId).eq('status', 'pending'),
@@ -84,7 +82,7 @@ export function useDashboard(storeId: string) {
 
       const metrics = {
         attendance: { value: clockedInCount, total: scheduledCount },
-        leavesThisWeek: { value: thisWeekLeaves?.length || 0 },
+        leavesPending: { value: pendingLeaves?.length || 0 },
         assetsWarning: { value: assetWarningCount },
         vendorsWarning: { value: vendorWarningCount }
       }
