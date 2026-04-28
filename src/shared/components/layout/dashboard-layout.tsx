@@ -63,56 +63,68 @@ export function DashboardClientLayout({
         {/* 1. Store List Sidebar (Fixed Width) */}
         <div className="w-18 flex-none border-r bg-muted/10 flex flex-col items-center py-4 space-y-4 overflow-y-auto hide-scrollbar z-10">
           {/* Home Button (Workspace Switcher / Bypass) */}
-          <Link href="/home?bypass=true" className="group relative flex items-center justify-center">
-             <div className={cn(
-                  "flex items-center justify-center w-12 h-12 rounded-[24px] bg-background hover:bg-primary transition-all duration-300 group-hover:rounded-3xl shadow-sm border border-black/5",
-                  "text-foreground hover:text-white"
-                )}
-                title="모든 매장 보기 및 추가"
-              >
-                <Home className="w-6 h-6" />
+          <Link href="/home?bypass=true" className="group relative flex items-center justify-center w-full">
+            <div className={cn(
+              "absolute left-0 w-1 bg-foreground rounded-r-full transition-all duration-300",
+              "h-0 opacity-0 group-hover:h-5 group-hover:opacity-100"
+            )} />
+            <div className={cn(
+              "flex items-center justify-center w-12 h-12 rounded-[24px] bg-background transition-all duration-300 group-hover:rounded-2xl group-hover:bg-primary shadow-sm border border-black/5",
+              "text-foreground group-hover:text-white"
+            )}
+              title="모든 매장 보기 및 추가"
+            >
+              <Home className="w-6 h-6" />
             </div>
           </Link>
 
           <div className="w-8 h-0.5 bg-border rounded-full mx-auto" />
 
-          {storeList.map((store) => (
-            <div key={store.id} className="group relative flex items-center justify-center">
-              {/* Active Indicator (Optional - assuming first is active for now) */}
-              {store.name === storeName && (
-                <div className="absolute left-0 w-1 h-9 bg-primary rounded-r-full" />
-              )}
-              
-              <Button 
-                variant="ghost"
-                className={cn(
-                  "relative flex items-center justify-center w-12 h-12 rounded-[24px] group-hover:rounded-3xl transition-all duration-300 overflow-hidden p-0 border-0 outline-none ring-0",
-                  store.name === storeName ? "bg-primary hover:bg-primary rounded-3xl" : "bg-background hover:bg-primary"
-                )}
-                title={store.name}
-                onClick={() => setCurrentStore(store.id)}
-              >
-                <Avatar className="w-full h-full bg-transparent">
-                  {/* TODO: Add store logo url */}
-                  <AvatarFallback className={cn(
-                    "text-foreground font-semibold bg-transparent group-hover:text-primary-foreground",
-                    store.name === storeName && "text-primary-foreground"
-                  )}>
-                    {store.name.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </div>
-          ))}
+          {storeList.map((store) => {
+            const isActive = store.name === storeName;
+            return (
+              <div key={store.id} className="group relative flex items-center justify-center w-full">
+                {/* Active/Hover Indicator */}
+                <div className={cn(
+                  "absolute left-0 w-1 bg-primary rounded-r-full transition-all duration-300",
+                  isActive ? "h-10 opacity-100" : "h-0 opacity-0 group-hover:h-5 group-hover:opacity-100"
+                )} />
+                
+                <Button 
+                  variant="ghost"
+                  className={cn(
+                    "relative flex items-center justify-center w-12 h-12 rounded-[24px] transition-all duration-300 overflow-hidden p-0 border border-black/5 shadow-sm outline-none ring-0",
+                    isActive ? "bg-primary rounded-2xl" : "bg-background hover:bg-primary group-hover:rounded-2xl"
+                  )}
+                  title={store.name}
+                  onClick={() => setCurrentStore(store.id)}
+                >
+                  <Avatar className="w-full h-full bg-transparent">
+                    {/* TODO: Add store logo url */}
+                    <AvatarFallback className={cn(
+                      "text-foreground font-semibold bg-transparent transition-colors duration-300",
+                      isActive ? "text-primary-foreground" : "group-hover:text-primary-foreground"
+                    )}>
+                      {store.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </div>
+            );
+          })}
           
           <div className="w-8 h-0.5 bg-border rounded-full mx-auto" />
           
           <Link 
             href="/home?bypass=true"
-            className="flex items-center justify-center w-12 h-12 rounded-[24px] bg-background hover:bg-green-500 hover:text-white transition-all duration-300 group hover:rounded-3xl shadow-sm border border-black/5"
+            className="group relative flex items-center justify-center w-full"
             title="새 매장 추가 및 합류"
           >
-            <PlusIcon className="w-6 h-6 text-green-500 group-hover:text-white transition-colors" />
+            <div className={cn(
+              "flex items-center justify-center w-12 h-12 rounded-[24px] bg-background transition-all duration-300 group-hover:rounded-2xl group-hover:bg-green-500 shadow-sm border border-black/5"
+            )}>
+              <PlusIcon className="w-6 h-6 text-green-500 transition-colors duration-300 group-hover:text-white" />
+            </div>
           </Link>
         </div>
 
