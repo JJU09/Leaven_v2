@@ -35,7 +35,7 @@ export async function summarizeHandover(content: string) {
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gemini/gemini-2.5-flash',
+      model: 'gemini/gemini-3-flash-preview',
       messages: [
         { role: 'system', content: SUMMARIZER_SYSTEM_PROMPT },
         { role: 'user', content: trimmedContent },

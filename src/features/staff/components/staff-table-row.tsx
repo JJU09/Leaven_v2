@@ -13,17 +13,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils';
+import { cn, getMemberDisplayName } from '@/lib/utils';
 import { formatPhoneNumber } from '@/lib/formatters'
 import { StaffMember } from './staff-list'
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
-
-const getDisplayName = (staff: StaffMember) => {
-  if (staff.name && staff.name.trim() !== '') return staff.name
-  if (staff.profile?.full_name && staff.profile.full_name.trim() !== '') return staff.profile.full_name
-  return '이름 없음'
-}
 
 const getDisplayEmail = (staff: StaffMember) => {
   if (staff.email && staff.email.trim() !== '') return staff.email
@@ -188,7 +182,7 @@ export function StaffTableRow({
           <div className="flex flex-col justify-center items-center min-w-0 gap-0.5 flex-1 text-center">
             <div className="flex items-center justify-center gap-1.5 flex-wrap">
               <span className="font-bold text-sm tracking-tight text-foreground truncate max-w-[120px]">
-                {getDisplayName(staff)}
+                {getMemberDisplayName(staff)}
               </span>
               
               {/* 아주 작고 심플한 앱 연동 고리 */}
@@ -334,7 +328,7 @@ export function StaffTableRow({
                 size="sm" 
                 variant="outline" 
                 className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 shadow-sm transition-colors text-xs"
-                onClick={() => onReject(staff.id, getDisplayName(staff))}
+                onClick={() => onReject(staff.id, getMemberDisplayName(staff))}
                 disabled={processingId === staff.id}
               >
                 <X className="h-3 w-3 mr-1" />
@@ -343,7 +337,7 @@ export function StaffTableRow({
               <Button 
                 size="sm" 
                 className="h-8 px-2 bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors text-xs"
-                onClick={() => onApprove(staff.id, getDisplayName(staff))}
+                onClick={() => onApprove(staff.id, getMemberDisplayName(staff))}
                 disabled={processingId === staff.id}
               >
                 <Check className="h-3 w-3 mr-1" />
@@ -359,7 +353,7 @@ export function StaffTableRow({
                   size="sm" 
                   variant="outline" 
                   className="h-8 px-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 shadow-sm transition-colors text-[10px]"
-                  onClick={() => onRestoreRecord(staff.id, getDisplayName(staff))}
+                  onClick={() => onRestoreRecord(staff.id, getMemberDisplayName(staff))}
                   disabled={processingId === staff.id}
                 >
                   복원
@@ -370,7 +364,7 @@ export function StaffTableRow({
                   size="sm" 
                   variant="outline" 
                   className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 shadow-sm transition-colors text-[10px]"
-                  onClick={() => onDeleteRecord(staff.id, getDisplayName(staff))}
+                  onClick={() => onDeleteRecord(staff.id, getMemberDisplayName(staff))}
                   disabled={processingId === staff.id}
                 >
                   영구 삭제

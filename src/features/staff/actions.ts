@@ -42,11 +42,11 @@ export async function getStaffList(storeId: string) {
     return {
       ...member,
       base_wage,
-      // store_members에 입력된 정보(점주가 수정한 정보)를 우선 사용, 없으면 profile 정보 사용
+      // profiles의 실제 정보를 우선 사용, 없으면 store_members 수기 정보 사용
       profile: {
-        full_name: member.name || profile?.full_name || '',
-        email: member.email || profile?.email || '',
-        phone: member.phone || profile?.phone || '',
+        full_name: profile?.full_name || member.name || '',
+        email: profile?.email || member.email || '',
+        phone: profile?.phone || member.phone || '',
         avatar_url: profile?.avatar_url || null
       },
       role_info: Array.isArray(member.role_info) ? member.role_info[0] : member.role_info

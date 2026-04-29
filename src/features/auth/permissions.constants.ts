@@ -1,6 +1,7 @@
 export const STATIC_PERMISSIONS = [
   // 📌 메인
   { code: 'view_dashboard', name: '대시보드 조회', description: '매장 현황 및 요약 정보 조회', category: '메인' },
+  { code: 'view_ai_reports', name: 'AI 리포트 조회', description: 'AI 기반 매장 운영 분석 리포트 조회 및 질의', category: '메인' },
 
   { code: 'view_announcements', name: '공지사항 조회', description: '매장 공지사항 조회', category: '메인' },
   { code: 'manage_announcements', name: '공지사항 관리', description: '매장 공지사항 작성 및 관리', category: '메인' },
@@ -49,7 +50,7 @@ export type Permission = {
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, PermissionCode[]> = {
   점주: [
     'manage_store', 'manage_roles',
-    'view_dashboard', 
+    'view_dashboard', 'view_ai_reports',
     'view_staff', 'manage_staff',
     'view_salary', 'manage_salary',
     'view_schedule', 'manage_schedule',
@@ -61,7 +62,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, PermissionCode[]> = {
     'view_announcements', 'manage_announcements'
   ],
   매니저: [
-    'view_dashboard', 
+    'view_dashboard', 'view_ai_reports',
     'view_staff', 
     'view_schedule', 'manage_schedule',
     'view_attendance', 'manage_attendance', 

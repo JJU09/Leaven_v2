@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { cn } from '@/lib/utils'
+import { cn, getMemberDisplayName } from '@/lib/utils'
 
 interface RoleInfo {
   id: string
@@ -153,7 +153,7 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
   // 정렬 및 필터 함수
   const filteredStaffList = useMemo(() => {
     return staffList.filter(staff => {
-      const name = (staff.name || staff.profile?.full_name || '').toLowerCase()
+      const name = getMemberDisplayName(staff).toLowerCase()
       const phone = (staff.phone || staff.profile?.phone || '').replace(/-/g, '')
       const email = (staff.email || staff.profile?.email || '').toLowerCase()
       
@@ -185,8 +185,8 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
     if (priorityA !== priorityB) return priorityB - priorityA
     
     // 3. Name (Ascending)
-    const nameA = a.name || a.profile?.full_name || ''
-    const nameB = b.name || b.profile?.full_name || ''
+    const nameA = getMemberDisplayName(a)
+    const nameB = getMemberDisplayName(b)
     return nameA.localeCompare(nameB)
   }
 
@@ -287,7 +287,7 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
             ...s, 
             status: 'inactive', 
             resigned_at: new Date().toISOString(),
-            name: s.name || s.profile?.full_name || '이름 없음',
+            name: getMemberDisplayName(s),
             email: s.email || s.profile?.email || '',
             phone: s.phone || s.profile?.phone || '',
             details: { ...s.details, last_role_name: lastRoleName }
@@ -516,7 +516,7 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
                   ...s, 
                   status: 'inactive', 
                   resigned_at: new Date().toISOString(),
-                  name: s.name || s.profile?.full_name || '이름 없음',
+                  name: getMemberDisplayName(s),
                   email: s.email || s.profile?.email || '',
                   phone: s.phone || s.profile?.phone || '',
                   details: { ...s.details, last_role_name: lastRoleName }

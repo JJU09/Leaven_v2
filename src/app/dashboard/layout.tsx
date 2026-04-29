@@ -20,6 +20,18 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  // 프로필 필수 입력 확인
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, phone')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !profile.full_name || !profile.phone) {
+    // dashboard 레이아웃에서 프로필이 미완성인 경우 /account로 리다이렉트
+    redirect('/account?next=/dashboard')
+  }
+
   // 사용자의 모든 매장 멤버 정보 조회 (매장 리스트용) - getUserStores 재사용
   const members = await getUserStores()
 
@@ -134,6 +146,7 @@ export default async function DashboardLayout({
     manage_tasks: await hasPermission(user.id, currentStoreId, 'manage_tasks'),
     view_salary: await hasPermission(user.id, currentStoreId, 'view_salary'),
     view_dashboard: await hasPermission(user.id, currentStoreId, 'view_dashboard'),
+    view_ai_reports: await hasPermission(user.id, currentStoreId, 'view_ai_reports'),
   }
 
   return (

@@ -29,7 +29,8 @@ import {
   ClipboardList,
   Building2,
   Handshake,
-  Sliders
+  Sliders,
+  Sparkles
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { LogoutButton } from '@/features/auth/components/logout-button'
@@ -72,6 +73,12 @@ export function Sidebar({
           title: '대시보드',
           href: '/dashboard',
           icon: LayoutDashboard,
+          isUpcoming: false
+        }] : []),
+        ...(permissions.view_ai_reports ? [{
+          title: 'AI 리포트',
+          href: '/dashboard/ai-report',
+          icon: Sparkles,
           isUpcoming: false
         }] : []),
         {

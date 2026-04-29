@@ -6,6 +6,48 @@ import { getCurrentISOString } from '@/shared/lib/date-utils'
 import { requirePermission } from '@/features/auth/permissions'
 import { isWithinRadius } from '@/shared/lib/geo-utils'
 
+async function calculateIsLate(
+  supabase: any,
+  clockInTime: string | null,
+  storeId: string,
+  memberId: string,
+  targetDate: string,
+  scheduleId?: string | null
+): Promise<boolean> {
+  if (!clockInTime) return false
+
+  let start_time: string | null = null
+
+  if (scheduleId) {
+    const { data } = await supabase.from('schedules').select('start_time').eq('id', scheduleId).single()
+    start_time = data?.start_time
+  }
+
+  if (!start_time) {
+    const { data } = await supabase
+      .from('schedules')
+      .select('start_time')
+      .eq('store_id', storeId)
+      .eq('member_id', memberId)
+      .eq('plan_date', targetDate)
+      .order('start_time', { ascending: true })
+      .limit(1)
+    if (data && data.length > 0) {
+      start_time = data[0].start_time
+    }
+  }
+
+  if (!start_time) return false
+
+  // UTC 시간인 clockInTime을 KST로 변환
+  const date = new Date(clockInTime)
+  date.setHours(date.getHours() + 9)
+  const clockInKST = date.toISOString().substring(11, 16) // "HH:mm"
+
+  // 문자열 비교 (예: "09:15" > "09:00")
+  return clockInKST > start_time.substring(0, 5)
+}
+
 export interface AttendanceRecord {
   id: string
   store_id: string
@@ -122,6 +164,8 @@ export async function clockIn(
     return { error: '이미 해당 날짜에 출근 기록이 존재합니다.' }
   }
 
+  const isLate = await calculateIsLate(supabase, now, storeId, memberId, targetDate, scheduleId)
+
   const { data, error } = await supabase
     .from('store_attendance')
     .insert({
@@ -130,7 +174,8 @@ export async function clockIn(
       target_date: targetDate,
       schedule_id: scheduleId || null,
       clock_in_time: now,
-      status: 'working'
+      status: 'working',
+      is_late: isLate
     })
     .select()
     .single()
@@ -339,6 +384,8 @@ export async function updateAttendanceDirectly(
 
   const now = getCurrentISOString()
 
+  const isLate = await calculateIsLate(supabase, clockInTime, storeId, memberId, targetDate)
+
   if (attendanceId) {
     const { error } = await supabase
       .from('store_attendance')
@@ -346,6 +393,7 @@ export async function updateAttendanceDirectly(
         clock_in_time: clockInTime,
         clock_out_time: clockOutTime,
         status: clockOutTime ? 'completed' : 'working',
+        is_late: isLate,
         updated_at: now
       })
       .eq('id', attendanceId)
@@ -360,7 +408,8 @@ export async function updateAttendanceDirectly(
         target_date: targetDate,
         clock_in_time: clockInTime,
         clock_out_time: clockOutTime,
-        status: clockOutTime ? 'completed' : 'working'
+        status: clockOutTime ? 'completed' : 'working',
+        is_late: isLate
       })
       
     if (error) return { error: '새 출퇴근 기록 생성 중 오류가 발생했습니다: ' + error.message }
@@ -439,13 +488,24 @@ export async function resolveAttendanceRequest(requestId: string, storeId: strin
 
   // 2. If approved, update or insert attendance record
   if (isApproved) {
+    // calculate isLate based on the requested_clock_in
+    // If request.requested_clock_in is null but attendance already has clock_in_time, 
+    // it's a bit complex. Let's just calculate based on requested_clock_in if provided.
+    let isLate: boolean | undefined = undefined;
+    if (request.requested_clock_in) {
+      isLate = await calculateIsLate(supabase, request.requested_clock_in, request.store_id, request.member_id, request.target_date);
+    }
+
     if (request.attendance_id) {
       // Update existing
       const updateData: any = {
         status: 'completed',
         updated_at: now
       }
-      if (request.requested_clock_in) updateData.clock_in_time = request.requested_clock_in
+      if (request.requested_clock_in) {
+        updateData.clock_in_time = request.requested_clock_in
+        updateData.is_late = isLate
+      }
       if (request.requested_clock_out) updateData.clock_out_time = request.requested_clock_out
 
       const { error: attError } = await supabase
@@ -466,7 +526,8 @@ export async function resolveAttendanceRequest(requestId: string, storeId: strin
           target_date: request.target_date,
           clock_in_time: request.requested_clock_in,
           clock_out_time: request.requested_clock_out,
-          status: 'completed'
+          status: 'completed',
+          is_late: isLate || false
         })
         .select()
         .single()

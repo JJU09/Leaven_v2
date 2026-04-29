@@ -56,33 +56,6 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // 2.2 프로필(이름, 전화번호) 필수 입력 체크
-    // /account 경로가 아닐 때만 체크하여 무한 루프 방지
-    if (!request.nextUrl.pathname.startsWith('/account')) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, phone')
-        .eq('id', user.id)
-        .single()
-
-      if (!profile || !profile.full_name || !profile.phone) {
-        // 이미 next 파라미터가 있다면 그걸 유지하고, 없다면 현재 접근하려던 경로를 next로 전달
-        // 단, 현재 경로가 /login, /signup, / 인 경우는 제외
-        const currentPath = request.nextUrl.pathname
-        const currentSearch = request.nextUrl.search
-        let nextParam = url.searchParams.get('next')
-
-        if (!nextParam && !['/login', '/signup', '/', '/account'].includes(currentPath)) {
-          nextParam = `${currentPath}${currentSearch}`
-        }
-
-        url.pathname = '/account'
-        if (nextParam) {
-          url.searchParams.set('next', nextParam)
-        }
-        return NextResponse.redirect(url)
-      }
-    }
   }
 
   return response

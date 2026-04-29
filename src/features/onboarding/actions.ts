@@ -293,8 +293,8 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
     .single()
 
   const updates: { full_name?: string; phone?: string, id?: string } = {}
-  if (!profile?.full_name) updates.full_name = name
-  if (!profile?.phone) updates.phone = phone
+  if (profile?.full_name !== name) updates.full_name = name
+  if (profile?.phone !== phone) updates.phone = phone
 
   if (Object.keys(updates).length > 0) {
     await supabase
