@@ -7,7 +7,6 @@ import { deleteVendor } from '@/features/vendor/actions';
 import { toast } from 'sonner';
 import { VendorSummaryCards } from './VendorSummaryCards';
 import { VendorTable } from './VendorTable';
-import { VendorFormDialog } from './VendorFormDialog';
 import { TransactionFormDialog } from './TransactionFormDialog';
 import {
   AlertDialog,
@@ -41,9 +40,6 @@ export function VendorsPageClient({
   const router = useRouter();
   
   // Dialog States
-  const [isVendorFormOpen, setIsVendorFormOpen] = useState(false);
-  const [vendorToEdit, setVendorToEdit] = useState<Vendor | null>(null);
-  
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
   const [transactionVendorId, setTransactionVendorId] = useState<string | null>(null);
 
@@ -54,13 +50,11 @@ export function VendorsPageClient({
   };
 
   const handleAddClick = () => {
-    setVendorToEdit(null);
-    setIsVendorFormOpen(true);
+    router.push('/dashboard/vendors/new');
   };
 
   const handleEditClick = (vendor: Vendor) => {
-    setVendorToEdit(vendor);
-    setIsVendorFormOpen(true);
+    router.push(`/dashboard/vendors/${vendor.id}/edit`);
   };
 
   const handleDeleteConfirm = async () => {
@@ -93,14 +87,6 @@ export function VendorsPageClient({
         onAddClick={handleAddClick}
         onEditClick={handleEditClick}
         onDeleteClick={(v) => setVendorToDelete(v)}
-      />
-
-      <VendorFormDialog 
-        storeId={storeId}
-        vendor={vendorToEdit}
-        isOpen={isVendorFormOpen}
-        onClose={() => setIsVendorFormOpen(false)}
-        onSuccess={handleRefresh}
       />
 
       <TransactionFormDialog 

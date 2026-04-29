@@ -57,26 +57,25 @@ export async function fetchDailyContext(supabase: SupabaseClient, storeId: strin
   // 3. 오늘 업무 현황
   const { data: rawTasks } = await supabase
     .from('tasks')
-    .select(`
-      *, 
-      assignees:task_assignments(
-        member:store_members!inner(name, profile:profiles(full_name))
-      )
-    `)
+    .select('*')
     .eq('store_id', storeId)
     .eq('due_date', targetDate)
     .is('deleted_at', null)
 
+  const { data: storeMembers } = await supabase
+    .from('store_members')
+    .select('id, name, profile:profiles(full_name)')
+    .eq('store_id', storeId)
+
+  const memberMap = new Map(storeMembers?.map(m => [m.id, getMemberDisplayName(m)]) || [])
+
   const tasks = rawTasks?.map(t => {
-    const assignees = t.assignees as any[];
-    const staffNames = assignees?.map(assignee => {
-      const memberData = Array.isArray(assignee.member) ? assignee.member[0] : assignee.member;
-      return memberData ? getMemberDisplayName(memberData) : '성명 미상';
-    });
+    const assignees = t.assignee_ids as string[] || [];
+    const staffNames = assignees.map(id => memberMap.get(id) || '성명 미상');
 
     return {
       title: t.title,
-      status: t.status,
+      is_done: t.is_done,
       due_time: t.due_time,
       assignees: staffNames
     }
@@ -110,8 +109,8 @@ export async function fetchDailyContext(supabase: SupabaseClient, storeId: strin
     },
     tasks: {
       total: tasks?.length || 0,
-      done: tasks?.filter(t => t.status === 'done').length || 0,
-      overdue: tasks?.filter(t => t.status !== 'done' && t.due_time && new Date(`${targetDate}T${t.due_time}`) < new Date()).length || 0,
+      done: tasks?.filter(t => t.is_done).length || 0,
+      overdue: tasks?.filter(t => !t.is_done && t.due_time && new Date(`${targetDate}T${t.due_time}`) < new Date()).length || 0,
       records: tasks || []
     },
     assets: {

@@ -37,7 +37,7 @@ export function PreviewCard({ form, storeId }: PreviewCardProps) {
   const repeat = form.watch('repeat');
   const checklist = form.watch('checklist') || [];
 
-  const selectedStaff = staffList.filter(staff => assigneeIds.includes(Number(staff.id)));
+  const selectedStaff = staffList.filter(staff => assigneeIds.includes(String(staff.id)));
 
   const priorityColor = {
     low: 'bg-[#EAF3DE]',

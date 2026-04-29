@@ -16,7 +16,6 @@ import { ContractTab } from './tabs/ContractTab';
 import { TransactionTab } from './tabs/TransactionTab';
 import { RelationsTab } from './tabs/RelationsTab';
 
-import { VendorFormDialog } from './VendorFormDialog';
 import { TransactionFormDialog } from './TransactionFormDialog';
 import {
   AlertDialog,
@@ -38,7 +37,6 @@ export function VendorDetailView({ vendorDetail: initialVendorDetail }: VendorDe
   const [vendorDetail, setVendorDetail] = useState<VendorDetail>(initialVendorDetail);
   
   // Dialog States
-  const [isVendorFormOpen, setIsVendorFormOpen] = useState(false);
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -84,7 +82,7 @@ export function VendorDetailView({ vendorDetail: initialVendorDetail }: VendorDe
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" onClick={() => setIsVendorFormOpen(true)}>
+          <Button variant="outline" onClick={() => router.push(`/dashboard/vendors/${vendorDetail.id}/edit`)}>
             <Edit className="h-4 w-4 mr-2" />
             수정
           </Button>
@@ -124,14 +122,6 @@ export function VendorDetailView({ vendorDetail: initialVendorDetail }: VendorDe
           </TabsContent>
         </Tabs>
       </div>
-
-      <VendorFormDialog 
-        storeId={vendorDetail.store_id}
-        vendor={vendorDetail as unknown as Vendor} // Hacky cast, assuming it works as before
-        isOpen={isVendorFormOpen}
-        onClose={() => setIsVendorFormOpen(false)}
-        onSuccess={handleRefresh}
-      />
 
       <TransactionFormDialog 
         storeId={vendorDetail.store_id}

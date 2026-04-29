@@ -24,9 +24,9 @@ export function DashboardTaskCard({ storeId, currentStaffId, canManageTasks }: D
   const { data: overdueTasks = [] } = useOverdueTasks(storeId);
   const { toggleTaskStatus } = useTaskMutations(storeId);
 
-  const myIncompleteToday = todayTasks.filter(t => !t.is_done && t.assignee_id === currentStaffId).length;
-  const myIncompleteOngoing = ongoingTasks.filter(t => !t.is_done && t.assignee_id === currentStaffId).length;
-  const myIncompleteOverdue = overdueTasks.filter(t => !t.is_done && t.assignee_id === currentStaffId).length;
+  const myIncompleteToday = todayTasks.filter(t => !t.is_done && t.assignee_ids?.includes(currentStaffId)).length;
+  const myIncompleteOngoing = ongoingTasks.filter(t => !t.is_done && t.assignee_ids?.includes(currentStaffId)).length;
+  const myIncompleteOverdue = overdueTasks.filter(t => !t.is_done && t.assignee_ids?.includes(currentStaffId)).length;
   const myIncompleteTotal = myIncompleteToday + myIncompleteOngoing + myIncompleteOverdue;
 
   const totalIncompleteToday = todayTasks.filter(t => !t.is_done).length;
@@ -67,7 +67,7 @@ export function DashboardTaskCard({ storeId, currentStaffId, canManageTasks }: D
         ) : urgentTasks.length > 0 ? (
           urgentTasks.map((task) => {
             const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0,0,0,0));
-            const canToggle = canManageTasks || task.assignee_id === currentStaffId;
+            const canToggle = canManageTasks || task.assignee_ids?.includes(currentStaffId);
 
             return (
               <div key={task.id} className="flex items-start gap-2 bg-muted/50 p-2 rounded-md">
