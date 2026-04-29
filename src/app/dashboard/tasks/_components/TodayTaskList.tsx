@@ -13,22 +13,14 @@ interface TodayTaskListProps {
 }
 
 export function TodayTaskList({ tasks, storeId, currentStaffId, canManageTasks, onTaskClick }: TodayTaskListProps) {
-  // Group tasks by assignee and separate overdue tasks
-  const { overdueTasks, groupedTasks } = useMemo(() => {
-    const today = startOfDay(new Date());
-    const overdue: Task[] = [];
+  // Group tasks by assignee
+  const groupedTasks = useMemo(() => {
     const grouped = new Map<string, {
       staff: { id: string; name: string } | null;
       tasks: Task[];
     }>();
 
     tasks.forEach(task => {
-      // Overdue logic: not done, and due_date < today
-      if (!task.is_done && task.due_date && isBefore(new Date(task.due_date), today)) {
-        overdue.push(task);
-        return; // Alternatively, we can show overdue tasks BOTH in overdue section AND staff section. We'll separate them here as requested.
-      }
-
       const assigneeId = task.assignee_id || 'unassigned';
       if (!grouped.has(assigneeId)) {
         grouped.set(assigneeId, {
@@ -39,42 +31,19 @@ export function TodayTaskList({ tasks, storeId, currentStaffId, canManageTasks, 
       grouped.get(assigneeId)!.tasks.push(task);
     });
 
-    return { overdueTasks: overdue, groupedTasks: Array.from(grouped.values()) };
+    return Array.from(grouped.values());
   }, [tasks]);
 
   if (tasks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-        <p>오늘 할 일이 없습니다.</p>
+        <p>선택된 날짜의 할 일이 없습니다.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      {overdueTasks.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-sm font-bold text-red-500">기한 초과</h3>
-            <span className="text-xs font-medium bg-red-100 text-red-600 px-2 py-0.5 rounded-full dark:bg-red-900/30">
-              {overdueTasks.length}건
-            </span>
-          </div>
-          <div className="grid gap-3">
-            {overdueTasks.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                storeId={storeId}
-                currentStaffId={currentStaffId}
-                canManageTasks={canManageTasks}
-                onClick={() => onTaskClick(task)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
       {groupedTasks.map(({ staff, tasks: staffTasks }) => {
         const completedCount = staffTasks.filter(t => t.is_done).length;
         

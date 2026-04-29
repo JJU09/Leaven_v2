@@ -141,7 +141,7 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
   }
 
   revalidatePath('/dashboard')
-  revalidatePath('/dashboard/my-tasks')
+  revalidatePath('/dashboard/tasks')
   return { success: true }
 }
 
@@ -199,7 +199,7 @@ export async function updateAnnouncement(id: string, storeId: string, formData: 
   }
 
   revalidatePath('/dashboard')
-  revalidatePath('/dashboard/my-tasks')
+  revalidatePath('/dashboard/tasks')
   return { success: true }
 }
 
@@ -228,7 +228,7 @@ export async function deleteAnnouncement(id: string, storeId: string) {
   }
 
   revalidatePath('/dashboard')
-  revalidatePath('/dashboard/my-tasks')
+  revalidatePath('/dashboard/tasks')
   return { success: true }
 }
 

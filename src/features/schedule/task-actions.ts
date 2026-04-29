@@ -448,7 +448,7 @@ export async function deleteTask(id: string) {
   }
 
   revalidatePath('/dashboard')
-  revalidatePath('/dashboard/my-tasks')
+  revalidatePath('/dashboard/tasks')
   revalidatePath('/dashboard/schedule')
   return { success: true }
 }
@@ -694,7 +694,7 @@ export async function updateTaskStatus(
   }
 
   revalidatePath('/dashboard/tasks')
-  revalidatePath('/dashboard/my-tasks')
+  revalidatePath('/dashboard/tasks')
   return { success: true }
 }
 
@@ -784,7 +784,7 @@ export async function createPersonalDashboardTask(input: {
      return { error: '업무 생성 실패' }
   }
 
-  revalidatePath('/dashboard/my-tasks')
+  revalidatePath('/dashboard/tasks')
   return { success: true, data: task }
 }
 

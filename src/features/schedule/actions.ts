@@ -447,7 +447,7 @@ export async function updateSchedule(storeId: string, scheduleId: string, formDa
   // 2. 멤버 동기화 로직은 단일 member_id 업데이트로 대체되었으므로 삭제
 
   revalidatePath('/dashboard/schedule')
-  revalidatePath('/dashboard/my-tasks')
+  revalidatePath('/dashboard/tasks')
   return { success: true }
 }
 

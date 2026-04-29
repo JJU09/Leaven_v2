@@ -9,7 +9,7 @@ import { TaskFormDialog } from './_components/TaskFormDialog';
 import { TaskAnnouncementBanner } from './_components/TaskAnnouncementBanner';
 import { useRouter } from 'next/navigation';
 import { useDashboard } from '../_hooks/useDashboard';
-import { useTodayTasks } from './_hooks/useTasks';
+import { useTodayTasks, useOverdueTasks } from './_hooks/useTasks';
 import { Task } from './_types/task.types';
 
 import { useEffect } from 'react';

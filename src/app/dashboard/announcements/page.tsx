@@ -71,7 +71,7 @@ export default async function AnnouncementsPage() {
   ])
 
   if (!canView) {
-    redirect('/dashboard/my-tasks')
+    redirect('/dashboard/tasks')
   }
 
   return (

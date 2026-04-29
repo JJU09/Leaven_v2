@@ -27,7 +27,7 @@ export function AlertList({ alerts, hasMore }: AlertListProps) {
             <Bell className="h-5 w-5" />
             알림 및 할일
           </CardTitle>
-          <Link href="/dashboard/my-tasks" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
+          <Link href="/dashboard/tasks" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
             전체 보기 &rarr;
           </Link>
         </div>

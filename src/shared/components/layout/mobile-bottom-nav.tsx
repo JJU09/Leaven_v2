@@ -58,12 +58,7 @@ export function MobileBottomNav({ role, permissions = {} }: MobileBottomNavProps
         href: '/dashboard/payroll',
         icon: Calculator,
       }
-    ] : []),
-    {
-      title: '마이페이지',
-      href: '/dashboard/mypage',
-      icon: User,
-    }
+    ] : [])
   ]
 
   return (

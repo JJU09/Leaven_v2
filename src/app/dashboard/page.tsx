@@ -50,13 +50,6 @@ export default async function DashboardPage() {
      redirect('/onboarding')
   }
 
-  // 대시보드 조회 권한 확인
-  const canViewDashboard = await hasPermission(user.id, store.id, 'view_dashboard')
-
-  if (!canViewDashboard) {
-    redirect('/dashboard/my-tasks')
-  }
-
   // 유저 프로필 가져오기 (이름용)
   const { data: profile } = await supabase
     .from('profiles')
