@@ -21,14 +21,25 @@ export function TodayTaskList({ tasks, storeId, currentStaffId, canManageTasks, 
     }>();
 
     tasks.forEach(task => {
-      const assigneeId = task.assignee_id || 'unassigned';
-      if (!grouped.has(assigneeId)) {
-        grouped.set(assigneeId, {
-          staff: task.assignee || null,
-          tasks: [],
-        });
-      }
-      grouped.get(assigneeId)!.tasks.push(task);
+      // 다중 담당자인 경우, 각각의 담당자에 대해 업무를 복제하여 그룹핑
+      // 담당자가 없는 경우 'unassigned'로 처리
+      const assignees = task.assignees && task.assignees.length > 0 
+        ? task.assignees 
+        : [{ id: 'unassigned', name: '미배정' }];
+
+      assignees.forEach(assignee => {
+        if (!grouped.has(assignee.id)) {
+          grouped.set(assignee.id, {
+            staff: assignee.id === 'unassigned' ? null : assignee,
+            tasks: [],
+          });
+        }
+        // 중복 추가 방지 (혹시 같은 담당자가 두 번 들어간 경우 대비)
+        const staffGroup = grouped.get(assignee.id)!;
+        if (!staffGroup.tasks.find(t => t.id === task.id)) {
+          staffGroup.tasks.push(task);
+        }
+      });
     });
 
     return Array.from(grouped.values());

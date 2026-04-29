@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { RoleTaskForm, RoleTaskFormData } from './role-task-form'
-import { createTask } from '../../task-actions'
+import { createTask } from '@/features/tasks/actions'
 import { toast } from 'sonner'
 import { getTodayDateString, toUTCISOString } from '@/shared/lib/date-utils'
 
@@ -48,7 +48,6 @@ export function CreateRoleTaskDialog({ storeId, initialRoleIds, trigger, hideRol
         start_time: start_time,
         assigned_role_ids: data.assigned_role_ids,
         checklist: data.checklist,
-        is_template: true,
         is_routine: true
       })
 

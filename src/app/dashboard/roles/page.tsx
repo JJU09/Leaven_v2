@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getStoreRoles, getStorePermissions } from '@/features/store/roles'
-import { getTaskTemplates } from '@/features/schedule/task-actions'
+import { getTaskTemplates } from '@/features/tasks/actions'
 import { cookies } from 'next/headers'
 import { Card, CardContent } from '@/components/ui/card'
 import { Lock } from 'lucide-react'

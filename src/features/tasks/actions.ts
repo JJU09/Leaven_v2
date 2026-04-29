@@ -5,6 +5,97 @@ import { revalidatePath } from 'next/cache'
 import { addMinutesToTime, getCurrentISOString, toUTCISOString, getNextDateString } from '@/shared/lib/date-utils'
 import { requirePermission, hasPermission, getStoreMemberRole } from '@/features/auth/permissions'
 
+export async function updateTaskData(taskId: string, storeId: string, taskData: any) {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('인증되지 않은 사용자입니다.')
+  }
+
+  const { error } = await supabase.from('tasks').update({
+    title: taskData.title,
+    description: taskData.description || '',
+    priority: taskData.priority === 'medium' ? 'normal' : taskData.priority,
+    assignee_ids: taskData.assigneeIds || [],
+    is_all_day: taskData.isAllDay || false,
+    start_time: taskData.startAt ? new Date(taskData.startAt).toISOString() : null,
+    end_time: taskData.endAt ? new Date(taskData.endAt).toISOString() : null,
+    due_date: taskData.endAt ? new Date(taskData.endAt).toISOString().split('T')[0] : null,
+    checklist: taskData.checklist || [],
+    attachments: taskData.attachmentIds || taskData.attachments || [],
+    notification_settings: taskData.notifications || { beforeDeadline: true, notifyAssignees: true, notifyManagerOnComplete: false },
+    updated_at: new Date().toISOString()
+  }).eq('id', taskId).eq('store_id', storeId)
+
+  if (error) {
+    console.error('Error updating task:', error)
+    throw new Error('업무 수정에 실패했습니다.')
+  }
+
+  revalidatePath(`/dashboard/tasks`)
+  revalidatePath(`/dashboard/tasks/${taskId}`)
+  return { success: true }
+}
+
+export async function createNewTask(storeId: string, taskData: any) {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('인증되지 않은 사용자입니다.')
+  }
+
+  // Get user's member ID
+  const { data: currentMember } = await supabase
+    .from('store_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('store_id', storeId)
+    .single()
+
+  if (!currentMember) {
+    throw new Error('매장 멤버 정보를 찾을 수 없습니다.')
+  }
+
+  // Handle file uploads if there are real files
+  // For now, this expects attachmentIds to be an array of UUIDs (from storage) or temporary IDs.
+  // We'll just pass them through to the JSONB column.
+
+  const { data, error } = await supabase.from('tasks').insert({
+    store_id: storeId,
+    title: taskData.title,
+    description: taskData.description || '',
+    priority: taskData.priority === 'medium' ? 'normal' : taskData.priority, // Map medium to normal for legacy compatibility
+    assigner_id: currentMember.id,
+    assignee_ids: taskData.assigneeIds || [],
+    is_all_day: taskData.isAllDay || false,
+    start_time: taskData.startAt ? new Date(taskData.startAt).toISOString() : null,
+    end_time: taskData.endAt ? new Date(taskData.endAt).toISOString() : null,
+    due_date: taskData.endAt ? new Date(taskData.endAt).toISOString().split('T')[0] : null, // legacy due_date based on end date
+    checklist: taskData.checklist || [],
+    attachments: taskData.attachmentIds || taskData.attachments || [],
+    repeat_settings: taskData.repeat?.type ? taskData.repeat : null,
+    notification_settings: taskData.notifications || { beforeDeadline: true, notifyAssignees: true, notifyManagerOnComplete: false },
+    status: 'pending',
+    task_type: 'scheduled',
+    is_done: false,
+    is_routine: false,
+  }).select().single()
+
+  if (error) {
+    console.error('Error creating task:', error)
+    throw new Error('업무 생성에 실패했습니다.')
+  }
+
+  // Note: For repeat tasks, we only created the first instance.
+  // A background cron job or edge function should periodically check repeat_settings
+  // and spawn future tasks.
+
+  revalidatePath(`/dashboard/tasks`)
+  return data
+}
+
 export interface ChecklistItem {
   id: string
   text: string
@@ -21,11 +112,8 @@ export interface Task {
   task_type: 'scheduled' | 'always'
   start_time: string | null // timestamptz (ISO string)
   assigned_role_ids: string[] | null
-  assigned_role_id?: string | null // Deprecated
   checklist: ChecklistItem[] | null
   status: 'pending' | 'in_progress' | 'on_hold' | 'completed' | 'verified'
-  is_template?: boolean
-  recurrence_rule?: any
   is_routine?: boolean
   
   // New fields merged from task_assignments
@@ -69,11 +157,8 @@ export interface CreateTaskInput {
   task_type: 'scheduled' | 'always'
   start_time?: string | null // ISO String (UTC)
   assigned_role_ids?: string[] | null
-  assigned_role_id?: string | null // Deprecated
   checklist?: ChecklistItem[]
   repeat_config?: RepeatConfig
-  is_template?: boolean
-  recurrence_rule?: any
   is_routine?: boolean
 }
 
@@ -84,7 +169,6 @@ export interface UpdateTaskInput {
   task_type?: 'scheduled' | 'always'
   start_time?: string | null
   assigned_role_ids?: string[] | null
-  assigned_role_id?: string | null // Deprecated
   checklist?: ChecklistItem[]
   status?: 'pending' | 'in_progress' | 'on_hold' | 'completed' | 'verified'
 }
@@ -118,7 +202,7 @@ export async function getTasks(storeId: string) {
     .from('tasks')
     .select('*')
     .eq('store_id', storeId)
-    .eq('is_template', false)
+    .eq('is_routine', false)
     
   if (!canManage && member?.role_id) {
     // 본인 역할 할당 업무 또는 공통 업무(비어있거나 null)
@@ -221,9 +305,9 @@ export async function createTask(input: CreateTaskInput) {
   if (!user) throw new Error('User not found')
   
   const hasTaskPerm = await hasPermission(user.id, input.store_id, 'manage_tasks')
-  const hasRolePerm = input.is_template ? await hasPermission(user.id, input.store_id, 'manage_roles') : false
-  if (!hasTaskPerm && !hasRolePerm) {
-    throw new Error('Permission denied: manage_tasks or manage_roles (for templates) required')
+  // We dropped is_template, use manage_tasks globally here
+  if (!hasTaskPerm) {
+    throw new Error('Permission denied: manage_tasks required')
   }
   
   const tasksToCreate: any[] = []
@@ -287,7 +371,6 @@ export async function createTask(input: CreateTaskInput) {
         // assigned_role_id: null, // DB Default or handle via migration
         checklist: input.checklist || [],
         status: 'pending',
-        is_template: false,
         is_routine: input.is_routine || false
       })
       }
@@ -327,7 +410,7 @@ export async function createTask(input: CreateTaskInput) {
     }
 
   } else {
-    // 단일 생성 (또는 템플릿 생성)
+    // 단일 생성 (또는 루틴 생성)
     tasksToCreate.push({
       store_id: input.store_id,
       title: input.title,
@@ -335,11 +418,8 @@ export async function createTask(input: CreateTaskInput) {
       task_type: input.task_type,
       start_time: input.start_time,
       assigned_role_ids: input.assigned_role_ids || [],
-      // assigned_role_id: null,
       checklist: input.checklist || [],
       status: 'pending',
-      is_template: input.is_template || false,
-      recurrence_rule: input.recurrence_rule || null,
       is_routine: input.is_routine || false
     })
   }
@@ -368,14 +448,14 @@ export async function updateTask(input: UpdateTaskInput & { recurrence_rule?: an
   const { id, ...updateData } = input
 
   // Get store_id for permission check
-  const { data: task } = await supabase.from('tasks').select('store_id, is_template').eq('id', id).single()
+  const { data: task } = await supabase.from('tasks').select('store_id, is_routine').eq('id', id).single()
   if (!task) return { error: 'Task not found' }
 
   if (!user) throw new Error('User not found')
   
   const hasTaskPerm = await hasPermission(user.id, task.store_id, 'manage_tasks')
-  const hasRolePerm = task.is_template ? await hasPermission(user.id, task.store_id, 'manage_roles') : false
-  if (!hasTaskPerm && !hasRolePerm) {
+  // We dropped is_template, use manage_tasks globally here
+  if (!hasTaskPerm) {
     return { error: 'Permission denied' }
   }
 
@@ -408,42 +488,25 @@ export async function deleteTask(id: string) {
   // Get task info for permission check
   const { data: task } = await supabase
     .from('tasks')
-    .select('store_id, is_template, assigned_role_ids')
+    .select('store_id, is_routine, assigned_role_ids')
     .eq('id', id)
     .single()
     
   if (!task) return { error: 'Task not found' }
 
-  // Check if it's a personal task
-  const { data: existingTask } = await supabase
-    .from('tasks')
-    .select('user_id')
-    .eq('id', id)
-    .single()
-
-  const isPersonalTask = !task.is_template && (!task.assigned_role_ids || task.assigned_role_ids.length === 0)
-
-  if (isPersonalTask) {
-    if (existingTask?.user_id !== user.id) {
-      // If not the owner, check for management permission
-      await requirePermission(user.id, task.store_id, 'manage_tasks')
-    }
-  } else {
-    // For role tasks or templates, always require management permission
-    const hasTaskPerm = await hasPermission(user.id, task.store_id, 'manage_tasks')
-    const hasRolePerm = task.is_template ? await hasPermission(user.id, task.store_id, 'manage_roles') : false
-    if (!hasTaskPerm && !hasRolePerm) {
-      return { error: 'Permission denied' }
-    }
+  // We enforce manage_tasks permission for any task deletion just to be safe
+  const hasTaskPerm = await hasPermission(user.id, task.store_id, 'manage_tasks')
+  if (!hasTaskPerm) {
+    return { error: '권한이 없습니다. (manage_tasks 필요)' }
   }
 
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', id)
+  // Soft delete using RPC to bypass RLS SELECT visibility issue
+  const { data: rpcData, error } = await supabase.rpc('soft_delete_task', {
+    task_id: id
+  })
 
-  if (error) {
-    console.error('Error deleting task:', error)
+  if (error || (rpcData && !rpcData.success)) {
+    console.error('Error deleting task:', error || rpcData?.error)
     return { error: '업무 삭제 중 오류가 발생했습니다.' }
   }
 
@@ -464,7 +527,7 @@ export async function getTaskAssignments(storeId: string, date: string) {
     `)
     .eq('store_id', storeId)
     .eq('assigned_date', date)
-    .eq('is_template', false)
+    .eq('is_routine', false)
 
   if (error) {
     console.error('Error fetching tasks (formerly task assignments):', error)
@@ -523,8 +586,7 @@ export async function assignTask(input: AssignTaskInput) {
       start_time: startUTC,
       status: 'pending',
       schedule_id: input.schedule_id || null,
-      is_template: false,
-      is_routine: true
+      is_routine: false // Instance from routine, so it is an actual scheduled task
     }])
     .select()
     .single()
@@ -646,7 +708,7 @@ export async function getTaskAssignmentsBySchedule(storeId: string, scheduleId: 
     `)
     .eq('store_id', storeId)
     .eq('schedule_id', scheduleId)
-    .eq('is_template', false)
+    .eq('is_routine', false)
 
   if (error) {
     console.error('Error fetching task assignments by schedule:', error)
@@ -770,7 +832,7 @@ export async function createPersonalDashboardTask(input: {
       start_time: taskStartTime,
       assigned_role_ids: [],
       checklist: input.checklist || [],
-      is_template: false,
+      is_routine: false,
       status: 'pending',
       user_id: user.id,
       schedule_id: scheduleId,
@@ -798,7 +860,7 @@ export async function getCalendarEvents(storeId: string, start: string, end: str
         .from('tasks')
         .select('*')
         .eq('store_id', storeId)
-        .eq('is_template', false)
+        .eq('is_routine', false)
         .gte('start_time', start) 
         .lte('start_time', end)
 
@@ -865,7 +927,7 @@ export async function getDashboardTasks(storeId: string, date: string) {
         .eq('store_id', storeId)
         .eq('user_id', user.id)
         .eq('assigned_date', date)
-        .eq('is_template', false)
+        .eq('is_routine', false)
 
     // 만약 스케줄도 없고, 개인 업무도 없다면, 그리고 점주가 아니라면 빈 객체 반환
     // 점주(Owner)는 스케줄이 없더라도 대시보드 가이드(플레이북)를 열람할 수 있도록 계속 진행합니다.
@@ -1050,7 +1112,6 @@ export async function createDirectScheduleTask(input: {
     start_time: input.start_time,
     checklist: input.checklist,
     status: 'pending',
-    is_template: false,
     is_routine: false,
     user_id: memberData?.user_id || null,
     schedule_id: input.schedule_id,

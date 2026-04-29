@@ -20,13 +20,17 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
     .from('tasks')
     .select(`
       *,
-      assignee:store_members!tasks_assignee_id_fkey(id, name, user_id, profiles(full_name)),
       assigner:store_members!tasks_assigner_id_fkey(id, name, profiles(full_name))
     `)
     .eq('id', taskId)
-    .single();
+    .maybeSingle();
 
   if (error || !task) {
+    // If error is PGRST116 or task is null, it means the task was deleted or user has no access.
+    // We redirect quietly instead of logging an error.
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching task detail:', error);
+    }
     redirect('/dashboard/tasks');
   }
 

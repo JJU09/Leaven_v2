@@ -15,7 +15,8 @@ interface TaskCardProps {
 export function TaskCard({ task, storeId, currentStaffId, canManageTasks, onClick }: TaskCardProps) {
   const { toggleTaskStatus } = useTaskMutations(storeId);
 
-  const canToggle = canManageTasks || task.assignee_id === currentStaffId;
+  const isAssignedToCurrent = task.assignees?.some(a => a.id === currentStaffId) ?? false;
+  const canToggle = canManageTasks || isAssignedToCurrent;
 
   const priorityColors: Record<TaskPriority, string> = {
     high: 'bg-red-500',
@@ -54,8 +55,12 @@ export function TaskCard({ task, storeId, currentStaffId, canManageTasks, onClic
           </div>
           
           <div className="flex items-center text-xs text-muted-foreground gap-1.5 truncate">
-            {task.assignee ? (
-              <span className="truncate max-w-25">{task.assignee.name}</span>
+            {task.assignees && task.assignees.length > 0 ? (
+              <span className="truncate max-w-25">
+                {task.assignees.length === 1 
+                  ? task.assignees[0].name 
+                  : `${task.assignees[0].name} 외 ${task.assignees.length - 1}명`}
+              </span>
             ) : (
               <span className="italic text-muted-foreground/70">미배정</span>
             )}

@@ -66,32 +66,39 @@ export function useTasksByDate(storeId: string, dateStr: string) {
       
       const supabase = createClient();
       
-      const { data, error } = await supabase
-        .from('tasks')
-        .select(`
-          *,
-          assignee:store_members!assignee_id(
-            id,
-            name,
-            profile:profiles(full_name)
-          ),
-          assigner:store_members!assigner_id(
-            id,
-            name,
-            profile:profiles(full_name)
-          )
-        `)
-        .eq('store_id', storeId)
-        .eq('due_date', dateStr)
-        .is('deleted_at', null)
-        .order('is_done', { ascending: true })
-        .order('priority', { ascending: true });
+      const [tasksResult, membersResult] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select(`
+            *,
+            assigner:store_members!assigner_id(
+              id,
+              name,
+              profile:profiles(full_name)
+            )
+          `)
+          .eq('store_id', storeId)
+          .eq('due_date', dateStr)
+          .is('deleted_at', null)
+          .order('is_done', { ascending: true })
+          .order('priority', { ascending: true }),
+        supabase
+          .from('store_members')
+          .select('id, name, profile:profiles(full_name)')
+          .eq('store_id', storeId)
+      ]);
 
-      if (error) throw error;
+      if (tasksResult.error) throw tasksResult.error;
       
-      return (data as any[]).map(task => ({
+      const members = membersResult.data || [];
+      const memberMap = new Map(members.map(m => [m.id, getMemberDisplayName(m)]));
+      
+      return (tasksResult.data as any[]).map(task => ({
         ...task,
-        assignee: task.assignee ? { id: task.assignee.id, name: getMemberDisplayName(task.assignee) } : null,
+        assignees: (task.assignee_ids || []).map((id: string) => ({
+          id,
+          name: memberMap.get(id) || '알수없음'
+        })),
         assigner: task.assigner ? { id: task.assigner.id, name: getMemberDisplayName(task.assigner) } : null,
       })) as Task[];
     },
@@ -108,33 +115,39 @@ export function useTodayTasks(storeId: string) {
       const supabase = createClient();
       const today = formatInTimeZone(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
       
-      const { data, error } = await supabase
-        .from('tasks')
-        .select(`
-          *,
-          assignee:store_members!assignee_id(
-            id,
-            name,
-            profile:profiles(full_name)
-          ),
-          assigner:store_members!assigner_id(
-            id,
-            name,
-            profile:profiles(full_name)
-          )
-        `)
-        .eq('store_id', storeId)
-        .eq('due_date', today)
-        .is('deleted_at', null)
-        .order('is_done', { ascending: true })
-        .order('priority', { ascending: true }); // Need a custom order for priority if it's text, but we'll accept db default order or sort in client
+      const [tasksResult, membersResult] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select(`
+            *,
+            assigner:store_members!assigner_id(
+              id,
+              name,
+              profile:profiles(full_name)
+            )
+          `)
+          .eq('store_id', storeId)
+          .eq('due_date', today)
+          .is('deleted_at', null)
+          .order('is_done', { ascending: true })
+          .order('priority', { ascending: true }),
+        supabase
+          .from('store_members')
+          .select('id, name, profile:profiles(full_name)')
+          .eq('store_id', storeId)
+      ]);
 
-      if (error) throw error;
+      if (tasksResult.error) throw tasksResult.error;
       
-      // Transform profile data to match Staff type
-      return (data as any[]).map(task => ({
+      const members = membersResult.data || [];
+      const memberMap = new Map(members.map(m => [m.id, getMemberDisplayName(m)]));
+      
+      return (tasksResult.data as any[]).map(task => ({
         ...task,
-        assignee: task.assignee ? { id: task.assignee.id, name: getMemberDisplayName(task.assignee) } : null,
+        assignees: (task.assignee_ids || []).map((id: string) => ({
+          id,
+          name: memberMap.get(id) || '알수없음'
+        })),
         assigner: task.assigner ? { id: task.assigner.id, name: getMemberDisplayName(task.assigner) } : null,
       })) as Task[];
     },
@@ -151,31 +164,38 @@ export function useOngoingTasks(storeId: string) {
       const supabase = createClient();
       const today = formatInTimeZone(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
       
-      const { data, error } = await supabase
-        .from('tasks')
-        .select(`
-          *,
-          assignee:store_members!assignee_id(
-            id,
-            name,
-            profile:profiles(full_name)
-          ),
-          assigner:store_members!assigner_id(
-            id,
-            name,
-            profile:profiles(full_name)
-          )
-        `)
-        .eq('store_id', storeId)
-        .gt('due_date', today)
-        .is('deleted_at', null)
-        .order('due_date', { ascending: true });
+      const [tasksResult, membersResult] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select(`
+            *,
+            assigner:store_members!assigner_id(
+              id,
+              name,
+              profile:profiles(full_name)
+            )
+          `)
+          .eq('store_id', storeId)
+          .gt('due_date', today)
+          .is('deleted_at', null)
+          .order('due_date', { ascending: true }),
+        supabase
+          .from('store_members')
+          .select('id, name, profile:profiles(full_name)')
+          .eq('store_id', storeId)
+      ]);
 
-      if (error) throw error;
+      if (tasksResult.error) throw tasksResult.error;
       
-      return (data as any[]).map(task => ({
+      const members = membersResult.data || [];
+      const memberMap = new Map(members.map(m => [m.id, getMemberDisplayName(m)]));
+      
+      return (tasksResult.data as any[]).map(task => ({
         ...task,
-        assignee: task.assignee ? { id: task.assignee.id, name: getMemberDisplayName(task.assignee) } : null,
+        assignees: (task.assignee_ids || []).map((id: string) => ({
+          id,
+          name: memberMap.get(id) || '알수없음'
+        })),
         assigner: task.assigner ? { id: task.assigner.id, name: getMemberDisplayName(task.assigner) } : null,
       })) as Task[];
     },
@@ -192,32 +212,39 @@ export function useOverdueTasks(storeId: string) {
       const supabase = createClient();
       const today = formatInTimeZone(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
       
-      const { data, error } = await supabase
-        .from('tasks')
-        .select(`
-          *,
-          assignee:store_members!assignee_id(
-            id,
-            name,
-            profile:profiles(full_name)
-          ),
-          assigner:store_members!assigner_id(
-            id,
-            name,
-            profile:profiles(full_name)
-          )
-        `)
-        .eq('store_id', storeId)
-        .lt('due_date', today)
-        .eq('is_done', false)
-        .is('deleted_at', null)
-        .order('due_date', { ascending: true });
+      const [tasksResult, membersResult] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select(`
+            *,
+            assigner:store_members!assigner_id(
+              id,
+              name,
+              profile:profiles(full_name)
+            )
+          `)
+          .eq('store_id', storeId)
+          .lt('due_date', today)
+          .eq('is_done', false)
+          .is('deleted_at', null)
+          .order('due_date', { ascending: true }),
+        supabase
+          .from('store_members')
+          .select('id, name, profile:profiles(full_name)')
+          .eq('store_id', storeId)
+      ]);
 
-      if (error) throw error;
+      if (tasksResult.error) throw tasksResult.error;
       
-      return (data as any[]).map(task => ({
+      const members = membersResult.data || [];
+      const memberMap = new Map(members.map(m => [m.id, getMemberDisplayName(m)]));
+      
+      return (tasksResult.data as any[]).map(task => ({
         ...task,
-        assignee: task.assignee ? { id: task.assignee.id, name: getMemberDisplayName(task.assignee) } : null,
+        assignees: (task.assignee_ids || []).map((id: string) => ({
+          id,
+          name: memberMap.get(id) || '알수없음'
+        })),
         assigner: task.assigner ? { id: task.assigner.id, name: getMemberDisplayName(task.assigner) } : null,
       })) as Task[];
     },

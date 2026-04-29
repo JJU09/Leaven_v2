@@ -126,7 +126,7 @@ export function TaskCalendarLayout({
         </Card>
         <Card className="bg-[#3B6D11]/5 border-[#3B6D11]/20">
           <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-            <span className="text-xs text-[#3B6D11]/80 mb-1">완벽한 날</span>
+            <span className="text-xs text-[#3B6D11]/80 mb-1">완료일</span>
             <span className="text-xl font-bold text-[#3B6D11]">{stats.daysCompleted}일</span>
           </CardContent>
         </Card>

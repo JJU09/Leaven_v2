@@ -16,27 +16,14 @@ export function useTaskMutations(storeId: string) {
       const { assignee_ids, due_date, ...rest } = data;
       const formattedDate = format(due_date, 'yyyy-MM-dd');
 
-      // Create multiple tasks if multiple assignees are selected
-      if (assignee_ids && assignee_ids.length > 0) {
-        const tasksToInsert = assignee_ids.map(assignee_id => ({
-          ...rest,
-          store_id: storeId,
-          due_date: formattedDate,
-          assignee_id,
-        }));
-
-        const { error } = await supabase.from('tasks').insert(tasksToInsert);
-        if (error) throw error;
-      } else {
-        // Create unassigned task
-        const { error } = await supabase.from('tasks').insert({
-          ...rest,
-          store_id: storeId,
-          due_date: formattedDate,
-          assignee_id: null,
-        });
-        if (error) throw error;
-      }
+      // assignee_ids 배열 자체를 그대로 DB의 배열 컬럼에 넣거나 빈 배열로 넣습니다.
+      const { error } = await supabase.from('tasks').insert({
+        ...rest,
+        store_id: storeId,
+        due_date: formattedDate,
+        assignee_ids: assignee_ids && assignee_ids.length > 0 ? assignee_ids : [],
+      });
+      if (error) throw error;
     },
     onSuccess: invalidateTasks,
   });
@@ -47,12 +34,10 @@ export function useTaskMutations(storeId: string) {
       if (data.due_date) {
         updateData.due_date = format(data.due_date, 'yyyy-MM-dd');
       }
-      // If updating from a form, we usually only edit a single assignee, or we don't allow changing assignee array for existing tasks easily.
-      // Assuming form sends single assignee or we handle it gracefully.
-      if (data.assignee_ids && data.assignee_ids.length > 0) {
-        updateData.assignee_id = data.assignee_ids[0];
+      // assignees_ids 배열 그대로 업데이트
+      if (data.assignee_ids) {
+        updateData.assignee_ids = data.assignee_ids;
       }
-      delete updateData.assignee_ids;
 
       const { error } = await supabase
         .from('tasks')

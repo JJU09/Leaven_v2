@@ -14,7 +14,7 @@ export interface Task {
   priority: TaskPriority;
   start_time: string | null; // ISO string
   due_date: string | null; // YYYY-MM-DD
-  assignee_id: string | null;
+  assignee_ids: string[] | null;
   assigner_id: string | null;
   is_done: boolean;
   done_at: string | null;
@@ -23,7 +23,7 @@ export interface Task {
   deleted_at: string | null;
   
   // Joined fields
-  assignee?: Staff | null;
+  assignees?: Staff[];
   assigner?: Staff | null;
 }
 

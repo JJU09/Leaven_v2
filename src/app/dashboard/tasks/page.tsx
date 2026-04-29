@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { TaskTabs } from './_components/TaskTabs';
-import { TaskFormDialog } from './_components/TaskFormDialog';
 import { TaskAnnouncementBanner } from './_components/TaskAnnouncementBanner';
 import { useRouter } from 'next/navigation';
 import { useDashboard } from '../_hooks/useDashboard';
@@ -78,9 +77,6 @@ export default function TasksPage() {
     loadUserContext();
   }, []);
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-
   // Use a query hook here just to get the incomplete tasks count, or re-use useTodayTasks
   const { data: todayTasks = [] } = useTodayTasks(storeId || '');
   const incompleteCount = todayTasks.filter(t => !t.is_done).length;
@@ -122,10 +118,7 @@ export default function TasksPage() {
         </div>
         
         {canManageTasks && (
-          <Button onClick={() => {
-            setTaskToEdit(null);
-            setIsFormOpen(true);
-          }}>
+          <Button onClick={() => router.push('/dashboard/tasks/new')}>
             <Plus className="mr-2 h-4 w-4" />
             업무 추가
           </Button>
@@ -140,20 +133,6 @@ export default function TasksPage() {
         canManageTasks={canManageTasks}
         onTaskClick={handleTaskClick}
       />
-
-      {isFormOpen && (
-        <TaskFormDialog
-          open={isFormOpen}
-          onOpenChange={(open) => {
-            setIsFormOpen(open);
-            if (!open) setTaskToEdit(null);
-          }}
-          storeId={storeId}
-          assignerId={currentMember.id}
-          staffList={staffList}
-          taskToEdit={taskToEdit}
-        />
-      )}
 
     </div>
   );
