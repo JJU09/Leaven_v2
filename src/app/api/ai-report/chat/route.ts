@@ -359,7 +359,7 @@ ${JSON.stringify(summaryContext, null, 2)}`
     }
 
     // 7. Tool 호출 있는 경우
-    const toolCall = firstChoice.message.tool_calls[0] as OpenAI.Chat.Completions.ChatCompletionMessageToolCall
+    const toolCall = firstChoice.message.tool_calls[0] as any
     const { startDate, endDate, dataTypes } = JSON.parse(toolCall.function.arguments)
 
     const stream = new ReadableStream({
