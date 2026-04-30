@@ -8,11 +8,21 @@ import { Badge } from '@/components/ui/badge';
 import { updateAssetStatus } from '../actions';
 import { AssetDetail, AssetStatus } from '../types';
 import { AssetStatusBadge } from './asset-status-badge';
-import { AssetFormDialog } from './asset-form-dialog';
 import { AssetVendorDialog } from './asset-vendor-dialog';
+import Link from 'next/link';
 import { differenceInDays } from 'date-fns';
-import { Printer, Edit, ExternalLink, Calendar, Wrench, Shield, Box, User, ArrowRight, Plus, X } from 'lucide-react';
-import { unlinkAssetVendor } from '../actions';
+import { Printer, Edit, ExternalLink, Calendar, Wrench, Shield, Box, User, ArrowRight, Plus, X, Trash2 } from 'lucide-react';
+import { unlinkAssetVendor, deleteAsset } from '../actions';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface AssetDetailViewProps {
   asset: AssetDetail;
@@ -24,8 +34,22 @@ export function AssetDetailView({ asset: initialAsset, userId, storeId }: AssetD
   const router = useRouter();
   const [asset, setAsset] = useState<AssetDetail>(initialAsset);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [isVendorDialogOpen, setIsVendorDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAsset = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteAsset(asset.id, storeId);
+      router.push('/dashboard/assets');
+      // 성공 시에는 화면 전환 전까지 로딩 상태(및 다이얼로그)를 유지하여 중복 액션을 방지합니다.
+    } catch (error: any) {
+      alert(error.message || '자산 삭제에 실패했습니다.');
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
 
   const handleUnlinkVendor = async () => {
     if (!confirm('정말 이 자산과 거래처의 연결을 해제하시겠습니까?')) return;
@@ -66,9 +90,21 @@ export function AssetDetailView({ asset: initialAsset, userId, storeId }: AssetD
         <div className="flex items-center justify-between">
           <AssetStatusBadge status={asset.status} />
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm" onClick={() => setIsFormOpen(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              편집
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/dashboard/assets/${asset.id}/edit`}>
+                <Edit className="h-4 w-4 mr-2" />
+                편집
+              </Link>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {isDeleting ? '삭제 중...' : '삭제'}
             </Button>
           </div>
         </div>
@@ -366,22 +402,30 @@ export function AssetDetailView({ asset: initialAsset, userId, storeId }: AssetD
         }}
       />
 
-      <AssetFormDialog
-        storeId={storeId}
-        userId={userId}
-        asset={asset}
-        open={isFormOpen}
-        onOpenChange={(open) => {
-          setIsFormOpen(open);
-          if (!open) {
-            router.refresh();
-          }
-        }}
-        onSuccess={() => {
-          setIsFormOpen(false);
-          router.refresh();
-        }}
-      />
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>자산 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 '{asset.name}' 자산을 삭제하시겠습니까?<br/>
+              이 작업은 취소할 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteAsset();
+              }} 
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              disabled={isDeleting}
+            >
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -56,7 +56,7 @@ export async function getVendorDetail(vendorId: string) {
     `)
     .eq('id', vendorId)
     .is('deleted_at', null)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching vendor detail:', error);

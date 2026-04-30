@@ -394,8 +394,11 @@ export function UnifiedCalendar({
       });
       
       if (foundAny) {
-        minHour = 0; // 항상 00:00부터 시작
-        maxHour = Math.max(24, latest); // 기본 24시, 새벽 마감이면 그 이상
+        minHour = Math.max(0, earliest - 1);
+        maxHour = latest + 1;
+      } else {
+        minHour = 8; // 기본값
+        maxHour = 24;
       }
     }
     
@@ -479,7 +482,7 @@ export function UnifiedCalendar({
                 })
                 setIsCreateModalOpen(true)
               }}
-              onScheduleUpdateDrag={(scheduleId, date, startStr, endStr) => {
+              onScheduleUpdateDrag={async (scheduleId, date, startStr, endStr, targetStaffId) => {
                 if (!canManage || isMobile) return;
                 const sch = localSchedulesRef.current.find(s => s.id === scheduleId)
                 if (!sch) return;
@@ -487,24 +490,26 @@ export function UnifiedCalendar({
                 const dateStr = format(date, 'yyyy-MM-dd')
                 const newStartLocal = `${dateStr}T${startStr}:00`
                 const newEndLocal = `${dateStr}T${endStr}:00`
+                
+                const originalStaffId = sch.schedule_members?.[0]?.member_id;
+                const finalStaffId = targetStaffId || originalStaffId;
+                
+                // 시간이 같고, 직원도 동일하면 스킵
+                if (sch.start_time === newStartLocal && sch.end_time === newEndLocal && originalStaffId === finalStaffId) return;
 
-                // 기존과 동일하면 스킵
-                if (sch.start_time === newStartLocal && sch.end_time === newEndLocal) return;
-
-                // 겹침 체크
+                // 겹침 체크 (변경될 직원을 대상으로)
                 const startUtcDate = new Date(newStartLocal)
                 const endUtcDate = new Date(newEndLocal)
-                const staffId = sch.schedule_members?.[0]?.member_id;
                 
                 const isOverlap = localSchedulesRef.current.some(s => {
                   if (s.id === sch.id) return false;
-                  const hasMember = s.schedule_members?.some((sm: any) => sm.member_id === staffId);
+                  const hasMember = s.schedule_members?.some((sm: any) => sm.member_id === finalStaffId);
                   if (!hasMember) return false;
                   if (!isSameDay(new Date(s.start_time), startUtcDate)) return false;
                   return startUtcDate < new Date(s.end_time) && endUtcDate > new Date(s.start_time);
                 });
 
-                if (staffId && isOverlap) {
+                if (finalStaffId && isOverlap) {
                   toast.error('해당 시간대에 이미 스케줄이 존재합니다.')
                   return
                 }
@@ -512,6 +517,81 @@ export function UnifiedCalendar({
                 const deltaMinutes = getDiffInMinutes(sch.start_time, newStartLocal)
                 const hasTimeSpecificTasks = sch.tasks?.some((ta: any) => ta.start_time)
                 
+                // 직원이 변경된 경우 (Y축 이동 포함)
+                if (originalStaffId !== finalStaffId) {
+                  const loadingToast = toast.loading('스케줄을 이동 중입니다...')
+                  const targetStaff = staffList.find(st => st.id === finalStaffId)
+
+                  try {
+                    const formData = new FormData()
+                    formData.append('userIds', JSON.stringify([finalStaffId]))
+                    formData.append('date', dateStr)
+                    formData.append('startTime', startStr)
+                    formData.append('endTime', endStr)
+                    formData.append('schedule_type', sch.schedule_type || 'regular')
+
+                    // 기존 상태 백업
+                    const previousSchedules = [...localSchedulesRef.current]
+
+                    // 로컬 낙관적 업데이트
+                    setLocalSchedules(prev => prev.map(s => {
+                      if (s.id === sch.id) {
+                        let updatedTasks = s.tasks;
+                        if (updatedTasks && updatedTasks.length > 0) {
+                           updatedTasks = updatedTasks.map((t: any) => {
+                              const updatedTask = { 
+                                 ...t, 
+                                 user_id: targetStaff?.user_id || t.user_id 
+                              }
+                              if (!t.start_time || deltaMinutes === 0) return updatedTask
+                              
+                              const tStart = new Date(t.start_time)
+                              tStart.setMinutes(tStart.getMinutes() + deltaMinutes)
+                              const tzOffset = tStart.getTimezoneOffset() * 60000;
+                              const localISOStart = new Date(tStart.getTime() - tzOffset).toISOString().slice(0, 19);
+                              const updates: any = { start_time: localISOStart }
+                              
+                              if (t.end_time) {
+                                const tEnd = new Date(t.end_time)
+                                tEnd.setMinutes(tEnd.getMinutes() + deltaMinutes)
+                                const localISOEnd = new Date(tEnd.getTime() - tzOffset).toISOString().slice(0, 19);
+                                updates.end_time = localISOEnd
+                              }
+                              
+                              return { ...updatedTask, ...updates }
+                           })
+                        }
+
+                        return {
+                          ...s,
+                          start_time: newStartLocal,
+                          end_time: newEndLocal,
+                          schedule_members: [{
+                            member_id: finalStaffId,
+                            member: staffList.find(st => st.id === finalStaffId)
+                          }],
+                          tasks: updatedTasks
+                        }
+                      }
+                      return s
+                    }))
+
+                    const updateResult = await updateSchedule(storeId, sch.id, formData)
+                    if (updateResult.error) {
+                      setLocalSchedules(previousSchedules)
+                      toast.error(updateResult.error, { id: loadingToast })
+                      return
+                    }
+
+                    toast.success('스케줄이 이동되었습니다.', { id: loadingToast })
+                  } catch (error) {
+                    setLocalSchedules(localSchedulesRef.current)
+                    toast.error('스케줄 이동에 실패했습니다.', { id: loadingToast })
+                  }
+                  return; // 직원 변경 로직을 탔으므로 종료
+                }
+
+                // 직원은 그대로이고 시간만 변경된 경우 기존 로직 유지
                 if (hasTimeSpecificTasks) {
                   setConfirmMoveModal({
                     isOpen: true,

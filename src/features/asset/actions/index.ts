@@ -256,18 +256,25 @@ export async function updateAsset(assetId: string, updates: Partial<StoreAsset>)
   return { success: true };
 }
 
-export async function deleteAsset(assetId: string) {
+export async function deleteAsset(assetId: string, storeId: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('로그인이 필요합니다.');
 
-  // 소프트 삭제
-  const { error } = await supabase
-    .from('store_assets')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', assetId);
+  const hasPerm = await hasPermission(user.id, storeId, 'manage_asset');
+  if (!hasPerm) {
+    throw new Error('자산을 삭제할 권한이 없습니다.');
+  }
+
+  // RPC를 통한 안전한 소프트 삭제
+  const { error } = await supabase.rpc('soft_delete_asset', {
+    p_asset_id: assetId,
+    p_store_id: storeId
+  });
 
   if (error) {
     console.error('deleteAsset error:', error);
-    throw new Error('자산 삭제에 실패했습니다.');
+    throw new Error(error.message || '자산 삭제에 실패했습니다.');
   }
 
   return { success: true };

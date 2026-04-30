@@ -2,6 +2,7 @@
 
 import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { format, isSameDay } from 'date-fns'
+import Link from 'next/link'
 
 interface DailyTimelineViewProps {
   currentDate: Date
@@ -14,7 +15,7 @@ interface DailyTimelineViewProps {
   onCellClick: (staff: any, date: Date, hour: number) => void
   onScheduleClick: (sch: any, staff: any) => void
   onScheduleCreateDrag?: (staffId: string, date: Date, startTimeStr: string, endTimeStr: string) => void
-  onScheduleUpdateDrag?: (scheduleId: string, date: Date, startTimeStr: string, endTimeStr: string) => void
+  onScheduleUpdateDrag?: (scheduleId: string, date: Date, startTimeStr: string, endTimeStr: string, targetStaffId?: string) => void
   hours: number[]
 }
 
@@ -24,6 +25,8 @@ type InteractionState = {
   scheduleId?: string
   startPx: number
   currentPx: number
+  startClientY?: number
+  currentClientY?: number
   trackWidth: number
   originalStartMins?: number
   originalEndMins?: number
@@ -138,11 +141,11 @@ export function DailyTimelineView({
       const rect = trackElement.getBoundingClientRect()
       const x = e.clientX - rect.left
       
-      if (Math.abs(x - interactionState.startPx) > 5) {
+      if (Math.abs(x - interactionState.startPx) > 5 || (interactionState.startClientY && Math.abs(e.clientY - interactionState.startClientY) > 5)) {
         draggedRef.current = true
       }
 
-      setInteractionState(prev => prev ? { ...prev, currentPx: x } : null)
+      setInteractionState(prev => prev ? { ...prev, currentPx: x, currentClientY: e.clientY } : null)
     }
 
     const handleMouseUp = () => {
@@ -165,20 +168,36 @@ export function DailyTimelineView({
       } else if (type === 'move' && originalStartMins !== undefined && originalEndMins !== undefined) {
         const dxPx = currentPx - startPx
         const dxMins = Math.round((dxPx / trackWidth) * (maxHour - minHour) * 60 / 30) * 30
-        if (dxMins !== 0) {
-          let newStartMins = originalStartMins + dxMins
-          let newEndMins = originalEndMins + dxMins
-          if (newStartMins < minHour * 60) {
-            const diff = minHour * 60 - newStartMins
-            newStartMins += diff
-            newEndMins += diff
-          }
-          if (newEndMins > maxMins) {
-            const diff = newEndMins - maxMins
-            newStartMins -= diff
-            newEndMins -= diff
-          }
-          onScheduleUpdateDrag?.(scheduleId!, currentDate, minsToTimeStr(newStartMins), minsToTimeStr(newEndMins))
+        
+        let targetStaffId = staffId;
+        if (interactionState.currentClientY) {
+           for (const staff of displayStaff) {
+              const trackEl = document.getElementById(`track-${staff.id}`)
+              if (trackEl) {
+                 const rect = trackEl.getBoundingClientRect()
+                 if (interactionState.currentClientY >= rect.top && interactionState.currentClientY <= rect.bottom) {
+                    targetStaffId = staff.id;
+                    break;
+                 }
+              }
+           }
+        }
+        
+        let newStartMins = originalStartMins + dxMins
+        let newEndMins = originalEndMins + dxMins
+        if (newStartMins < minHour * 60) {
+          const diff = minHour * 60 - newStartMins
+          newStartMins += diff
+          newEndMins += diff
+        }
+        if (newEndMins > maxMins) {
+          const diff = newEndMins - maxMins
+          newStartMins -= diff
+          newEndMins -= diff
+        }
+        
+        if (dxMins !== 0 || targetStaffId !== staffId) {
+          onScheduleUpdateDrag?.(scheduleId!, currentDate, minsToTimeStr(newStartMins), minsToTimeStr(newEndMins), targetStaffId)
         }
       } else if (type === 'resizeLeft' && originalStartMins !== undefined && originalEndMins !== undefined) {
         const currentMins = pxToMins(currentPx, trackWidth)
@@ -211,6 +230,14 @@ export function DailyTimelineView({
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg border border-black/10 overflow-hidden shadow-sm">
+      <div className="flex items-center justify-end px-4 py-2 text-xs text-gray-500 bg-gray-50/50 border-b border-black/10 shrink-0">
+        <span>ⓘ 타임라인은 매장 운영 시간 기준으로 표시됩니다.</span>
+        {canManage && (
+          <Link href="/dashboard/settings" className="ml-1.5 text-blue-500 hover:text-blue-700 hover:underline">
+            (설정 변경)
+          </Link>
+        )}
+      </div>
       <div className="flex-1 overflow-x-hidden overflow-y-auto relative" ref={containerRef}>
         <div className="flex flex-col min-w-[800px] h-full">
           {/* Header Row (Hours) */}
@@ -369,6 +396,7 @@ export function DailyTimelineView({
                       
                       let renderLeft = pos.left
                       let renderWidth = pos.width
+                      let translateY = 0
                       
                       if (isInteractingThis) {
                         const trackW = interactionState!.trackWidth
@@ -377,6 +405,9 @@ export function DailyTimelineView({
                         if (isMove) {
                            const originalLeft = ((pos.startMins - hours[0]*60) / ((hours[hours.length-1] - hours[0])*60)) * 100
                            renderLeft = `${originalLeft + dxPercent}%`
+                           if (interactionState?.currentClientY && interactionState?.startClientY) {
+                             translateY = interactionState.currentClientY - interactionState.startClientY
+                           }
                         } else if (isResizeLeft) {
                            const originalLeft = ((pos.startMins - hours[0]*60) / ((hours[hours.length-1] - hours[0])*60)) * 100
                            const originalWidth = ((pos.endMins - pos.startMins) / ((hours[hours.length-1] - hours[0])*60)) * 100
@@ -402,7 +433,8 @@ export function DailyTimelineView({
                             backgroundColor: hexToRgba(sRoleColor, 0.15),
                             borderColor: hexToRgba(sRoleColor, 0.3),
                             color: sRoleColor,
-                            transition: isInteractingThis ? 'none' : 'left 0.2s, width 0.2s, background-color 0.2s'
+                            transition: isInteractingThis ? 'none' : 'left 0.2s, width 0.2s, transform 0.2s, background-color 0.2s',
+                            transform: translateY ? `translateY(${translateY}px)` : 'none'
                           }}
                           onMouseDown={(e) => {
                             if (!canManage) return
@@ -416,6 +448,8 @@ export function DailyTimelineView({
                               scheduleId: sch.id,
                               startPx: e.clientX - rect.left,
                               currentPx: e.clientX - rect.left,
+                              startClientY: e.clientY,
+                              currentClientY: e.clientY,
                               trackWidth: rect.width,
                               originalStartMins: pos.startMins,
                               originalEndMins: pos.endMins

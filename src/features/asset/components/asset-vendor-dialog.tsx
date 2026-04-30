@@ -254,7 +254,7 @@ export function AssetVendorDialog({ storeId, assetId, open, onOpenChange, onSucc
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>이메일</FormLabel>
+                      <FormLabel>이메일 *</FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="example@email.com" {...field} />
                       </FormControl>

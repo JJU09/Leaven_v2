@@ -125,7 +125,7 @@ export function VendorForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">이메일</Label>
+                <Label htmlFor="email">이메일 <span className="text-red-500">*</span></Label>
                 <Input id="email" type="email" {...register('email')} placeholder="example@email.com" />
                 {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
               </div>

@@ -10,9 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { differenceInDays } from 'date-fns';
 import { Search, Plus } from 'lucide-react';
-import { AssetFormDialog } from './asset-form-dialog';
-import { AssetDetail } from '../types';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface AssetListProps {
   storeId: string;
@@ -27,9 +26,6 @@ export function AssetList({ storeId, userId, locations }: AssetListProps) {
   const [category, setCategory] = useState<string>('all');
   const [status, setStatus] = useState<string>('all');
   const [location, setLocation] = useState<string>('all');
-  
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<AssetDetail | null>(null);
 
   const [data, setData] = useState<{ data: AssetWithVendor[], count: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,12 +115,11 @@ export function AssetList({ storeId, userId, locations }: AssetListProps) {
           </Select>
         </div>
 
-        <Button onClick={() => {
-          setEditingAsset(null);
-          setIsFormOpen(true);
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          자산 등록
+        <Button asChild>
+          <Link href="/dashboard/assets/new">
+            <Plus className="h-4 w-4 mr-2" />
+            자산 등록
+          </Link>
         </Button>
       </div>
 
@@ -200,17 +195,6 @@ export function AssetList({ storeId, userId, locations }: AssetListProps) {
           다음
         </Button>
       </div>
-
-      <AssetFormDialog
-        storeId={storeId}
-        userId={userId}
-        asset={editingAsset}
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSuccess={() => {
-          fetchAssets();
-        }}
-      />
     </div>
   );
 }

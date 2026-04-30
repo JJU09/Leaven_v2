@@ -247,8 +247,7 @@ export function StoreSettingsForm({ initialData }: StoreSettingsFormProps) {
             <div className="w-full md:w-1/3 shrink-0">
               <h2 className="text-lg font-bold tracking-tight">매장 기본 정보</h2>
               <p className="text-sm text-muted-foreground mt-2">
-                매장의 대표 이미지와 기본 정보를 설정합니다. <br/>
-                직인(도장)은 근로계약서 등에 자동으로 사용됩니다.
+                매장의 대표 이미지와 기본 정보를 설정합니다.
               </p>
             </div>
             
@@ -262,7 +261,7 @@ export function StoreSettingsForm({ initialData }: StoreSettingsFormProps) {
                 />
               </div>
 
-              <Separator />
+              {/* <Separator />
 
               <div className="space-y-4">
                 <Label className="text-base font-semibold">사업장 직인(도장)</Label>
@@ -272,7 +271,7 @@ export function StoreSettingsForm({ initialData }: StoreSettingsFormProps) {
                   onImageChange={(url) => setFormData(prev => ({ ...prev, stamp_image_url: url }))} 
                   storeName={`${formData.name} 직인`} 
                 />
-              </div>
+              </div> */}
 
               <Separator />
 
