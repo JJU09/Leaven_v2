@@ -129,9 +129,9 @@ export function EditStaffDialog({
         const initialDate = staff.hired_at || staff.joined_at
         
         const newFormData: StaffFormData = {
-          name: staff.name || staff.profile?.full_name || '',
-          email: staff.email || staff.profile?.email || '',
-          phone: staff.phone || staff.profile?.phone || '',
+          name: staff.profile?.full_name || staff.name || '',
+          email: staff.profile?.email || staff.email || '',
+          phone: staff.profile?.phone || staff.phone || '',
           memo: staff.memo || '',
           roleId: staff.role_id || '',
           employmentType: staff.employment_type || 'parttime',
@@ -391,8 +391,8 @@ export function EditStaffDialog({
   const isResigned = !!staff?.resigned_at
   const isLinked = !!staff?.user_id
   const canEdit = canManage && !isResigned
-  const displayName = formData.name || staff?.profile?.full_name || (isCreateMode ? '신규 등록' : '이름 없음')
-  const displayEmail = formData.email || staff?.profile?.email || ''
+  const displayName = staff?.profile?.full_name || formData.name || (isCreateMode ? '신규 등록' : '성명 미상')
+  const displayEmail = staff?.profile?.email || formData.email || ''
   const avatarUrl = staff?.profile?.avatar_url
 
   // Contract Readiness Calculation

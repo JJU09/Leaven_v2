@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     // 1. 이번 달 출퇴근 요약 (+ 스케줄 비교 지각 확인)
     const { data: rawAttendance } = await supabase
       .from('store_attendance')
-      .select('target_date, status, clock_in_time, clock_out_time, is_late, schedule:schedules(start_time), member:store_members!inner(name, profile:profiles(full_name))')
+      .select('target_date, status, clock_in_time, clock_out_time, is_late, schedule:schedules(start_time), member:store_members!store_attendance_member_id_fkey!inner(id, user_id, name, profile:profiles(full_name))')
       .eq('store_id', storeId)
       .gte('target_date', startDateStr)
       .lte('target_date', endDateStr)
@@ -54,11 +54,15 @@ export async function POST(req: Request) {
 
     const attendance = rawAttendance?.map(a => {
       const memberData = Array.isArray(a.member) ? a.member[0] : a.member;
+      const formattedMemberData = memberData ? {
+        ...memberData,
+        profile: Array.isArray(memberData.profile) ? memberData.profile[0] : memberData.profile
+      } : null;
       
       return { 
         status: a.status, 
         is_late: a.is_late || false,
-        staff_name: memberData ? (memberData as any).name || (memberData as any).profile?.full_name || '성명 미상' : '성명 미상',
+        staff_name: formattedMemberData ? getMemberDisplayName(formattedMemberData) : '성명 미상',
         clock_in_time_kst: formatToKSTFull(a.clock_in_time)
       }
     }) || [];

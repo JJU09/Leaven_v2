@@ -17,7 +17,7 @@ export async function fetchDailyContext(supabase: SupabaseClient, storeId: strin
     .from('store_attendance')
     .select(`
       *, 
-      member:store_members!inner(name, profile:profiles(full_name)),
+      member:store_members!store_attendance_member_id_fkey!inner(id, user_id, name, profile:profiles(full_name)),
       schedule:schedules(start_time, end_time)
     `)
     .eq('store_id', storeId)
@@ -64,10 +64,14 @@ export async function fetchDailyContext(supabase: SupabaseClient, storeId: strin
 
   const { data: storeMembers } = await supabase
     .from('store_members')
-    .select('id, name, profile:profiles(full_name)')
+    .select('id, user_id, name, profile:profiles(full_name)')
     .eq('store_id', storeId)
 
-  const memberMap = new Map(storeMembers?.map(m => [m.id, getMemberDisplayName(m)]) || [])
+  const memberMap = new Map(storeMembers?.map(m => {
+    const profileData = Array.isArray(m.profile) ? m.profile[0] : m.profile;
+    const memberData = { ...m, profile: profileData };
+    return [m.id, getMemberDisplayName(memberData)];
+  }) || [])
 
   const tasks = rawTasks?.map(t => {
     const assignees = t.assignee_ids as string[] || [];

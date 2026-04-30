@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     // 이번 주 출퇴근 전체 (+ 지각 여부 파악을 위해 스케줄/출근시간 포함)
     const { data: rawAttendance } = await supabase
       .from('store_attendance')
-      .select('target_date, status, member_id, clock_in_time, clock_out_time, is_late, schedule:schedules(start_time), member:store_members!inner(name, profile:profiles(full_name))')
+      .select('target_date, status, member_id, clock_in_time, clock_out_time, is_late, schedule:schedules(start_time), member:store_members!store_attendance_member_id_fkey!inner(id, user_id, name, profile:profiles(full_name))')
       .eq('store_id', storeId)
       .gte('target_date', weekStart.toISOString().split('T')[0])
       .lte('target_date', weekEnd.toISOString().split('T')[0])
@@ -80,11 +80,15 @@ export async function POST(req: Request) {
       const scheduleStartTime = Array.isArray(sched) ? sched[0]?.start_time : sched?.start_time;
       
       const memberData = Array.isArray(a.member) ? a.member[0] : a.member;
+      const formattedMemberData = memberData ? {
+        ...memberData,
+        profile: Array.isArray(memberData.profile) ? memberData.profile[0] : memberData.profile
+      } : null;
 
       return {
         target_date: a.target_date,
         status: a.status,
-        staff_name: memberData ? (memberData as any).name || (memberData as any).profile?.full_name || '성명 미상' : '성명 미상',
+        staff_name: formattedMemberData ? getMemberDisplayName(formattedMemberData) : '성명 미상',
         scheduled_start_time: scheduleStartTime,
         clock_in_time_kst: formatToKSTFull(a.clock_in_time),
         clock_out_time_kst: formatToKSTFull(a.clock_out_time),
