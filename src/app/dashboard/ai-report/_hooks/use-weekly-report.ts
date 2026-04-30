@@ -16,6 +16,10 @@ export interface WeeklyReportData {
       insights: { type: 'warning' | 'good' | 'bad' | 'info'; text: string }[]
       hotDays: string[]
     }
+    tasks?: {
+      summary: string
+      insights: { type: 'warning' | 'good' | 'bad' | 'info'; text: string }[]
+    }
     assetsAndVendors: {
       insights: { type: 'warning' | 'good' | 'bad' | 'info'; text: string }[]
     }

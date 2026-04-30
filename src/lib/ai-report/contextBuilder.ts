@@ -77,9 +77,12 @@ export async function fetchDailyContext(supabase: SupabaseClient, storeId: strin
     const assignees = t.assignee_ids as string[] || [];
     const staffNames = assignees.map(id => memberMap.get(id) || '성명 미상');
 
+    const isTaskCompleted = t.status === 'completed' || t.status === 'verified' || t.is_done;
+
     return {
       title: t.title,
-      is_done: t.is_done,
+      is_done: isTaskCompleted,
+      status: t.status,
       due_time: t.due_time,
       assignees: staffNames
     }

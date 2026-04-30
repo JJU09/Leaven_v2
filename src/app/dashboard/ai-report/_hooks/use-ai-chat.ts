@@ -7,6 +7,12 @@ export interface ChatMessage {
   timestamp: Date
 }
 
+const getKSTDateString = () => {
+  const d = new Date()
+  d.setHours(d.getHours() + 9)
+  return d.toISOString().split('T')[0]
+}
+
 export function useAiChat(storeId: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -59,7 +65,7 @@ export function useAiChat(storeId: string) {
       const response = await fetch('/api/ai-report/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId, messages: chatHistory }),
+        body: JSON.stringify({ storeId, messages: chatHistory, clientDate: getKSTDateString() }),
       })
 
       if (!response.ok) {
@@ -71,19 +77,40 @@ export function useAiChat(storeId: string) {
       const reader = response.body.getReader()
       const decoder = new TextDecoder('utf-8')
       let done = false
+      let buffer = ''
 
       while (!done) {
         const { value, done: doneReading } = await reader.read()
         done = doneReading
-        const chunkValue = decoder.decode(value, { stream: true })
+        
+        if (value) {
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
 
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantMessageId 
-              ? { ...msg, content: msg.content + chunkValue }
-              : msg
-          )
-        )
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const raw = line.slice(6).trim()
+              if (raw === '[DONE]') continue
+
+              setMessages(prev => 
+                prev.map(msg => {
+                  if (msg.id !== assistantMessageId) return msg
+
+                  if (raw.startsWith('[TOOL:')) {
+                    const label = raw.slice(6, -1)
+                    return { ...msg, content: `🔍 ${label}...` }
+                  } else {
+                    return { 
+                      ...msg, 
+                      content: msg.content.startsWith('🔍') ? raw : msg.content + raw 
+                    }
+                  }
+                })
+              )
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Chat error:', error)

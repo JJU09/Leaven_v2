@@ -28,7 +28,7 @@ export function AiChat({ storeId }: { storeId: string }) {
       <div className="bg-muted/30 border-b px-4 py-2.5 flex items-center gap-3 overflow-x-auto hide-scrollbar">
         <span className="text-xs font-medium text-muted-foreground shrink-0 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" />
-          참조 데이터 (이번 달 기준):
+          참조 데이터 (날짜별 동적 조회):
         </span>
         <div className="flex gap-2 shrink-0">
           {['출퇴근 현황', '자산 상태', '미결제 거래처', '업무 완료율'].map((tag, i) => (

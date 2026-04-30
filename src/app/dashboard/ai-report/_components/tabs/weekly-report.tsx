@@ -12,6 +12,7 @@ import { ReportCard } from '../shared/report-card'
 import { InsightItem } from '../shared/insight-item'
 import { RecommendationList } from '../shared/recommendation-list'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CheckCircle2 } from 'lucide-react'
 
 export function WeeklyReport({ storeId }: { storeId: string }) {
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 })) // 이번 주 월요일
@@ -129,8 +130,8 @@ export function WeeklyReport({ storeId }: { storeId: string }) {
             </div>
           </ReportCard>
 
-          <ReportCard 
-            title="인력 트렌드" 
+          <ReportCard
+            title="인력 트렌드"
             icon={<Users className="w-5 h-5" />}
           >
             <div className="space-y-3">
@@ -145,6 +146,20 @@ export function WeeklyReport({ storeId }: { storeId: string }) {
               )}
             </div>
           </ReportCard>
+
+          {report.content.tasks && (
+            <ReportCard
+              title="주간 업무 현황"
+              icon={<CheckCircle2 className="w-5 h-5" />}
+              summary={report.content.tasks.summary}
+            >
+              <div className="space-y-3">
+                {report.content.tasks.insights.map((insight: any, idx: number) => (
+                  <InsightItem key={idx} type={insight.type} text={insight.text} />
+                ))}
+              </div>
+            </ReportCard>
+          )}
 
           {report.content.assetsAndVendors && report.content.assetsAndVendors.insights.length > 0 && (
             <ReportCard 
