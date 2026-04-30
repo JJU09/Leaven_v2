@@ -63,28 +63,19 @@ export default async function AttendancePage() {
   const today = getTodayDateString()
 
   return (
-    <div className="h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] flex flex-col space-y-2 md:space-y-4 overflow-x-hidden">
-      {/* Header Area */}
-      <div className="pt-8 pb-4 px-4 border-b flex flex-col justify-center items-center bg-white md:bg-transparent md:items-start md:flex-row md:justify-between -mx-4 -mt-4 mb-0 md:m-0 md:p-0 md:border-none md:mb-6">
-        <div className="text-center md:text-left w-full">
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight">출퇴근 관리</h1>
-          <p className="text-sm text-muted-foreground hidden md:block mt-1">
-            실시간 직원 근무 현황과 출퇴근 기록을 확인합니다.
-          </p>
-        </div>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">출퇴근 관리</h2>
       </div>
 
-      {/* Main Layout Component */}
-      <div className="flex-1 min-h-0">
-        <AttendanceClientPage 
-          storeId={member.store_id} 
-          roles={roles || []} 
-          staffList={staffList} 
-          canManageAttendance={canManageAttendance}
-          currentUserId={user.id}
-          initialDate={today}
-        />
-      </div>
+      <AttendanceClientPage 
+        storeId={member.store_id} 
+        roles={roles || []} 
+        staffList={staffList} 
+        canManageAttendance={canManageAttendance}
+        currentUserId={user.id}
+        initialDate={today}
+      />
     </div>
   )
 }
