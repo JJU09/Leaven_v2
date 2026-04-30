@@ -38,6 +38,7 @@ interface VendorTableProps {
   onAddClick: () => void;
   onEditClick: (vendor: Vendor) => void;
   onDeleteClick: (vendor: Vendor) => void;
+  canManage: boolean;
 }
 
 export function VendorTable({ 
@@ -46,7 +47,8 @@ export function VendorTable({
   onVendorClick,
   onAddClick,
   onEditClick,
-  onDeleteClick
+  onDeleteClick,
+  canManage
 }: VendorTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -118,25 +120,29 @@ export function VendorTable({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={onAddClick}>
-          <Plus className="mr-2 h-4 w-4" /> 거래처 등록
-        </Button>
+        {canManage && (
+          <Button onClick={onAddClick}>
+            <Plus className="mr-2 h-4 w-4" /> 거래처 등록
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50px]">
-                <Checkbox />
-              </TableHead>
+              {canManage && (
+                <TableHead className="w-[50px]">
+                  <Checkbox />
+                </TableHead>
+              )}
               <TableHead>거래처명</TableHead>
               <TableHead>카테고리</TableHead>
               <TableHead>계약 유형</TableHead>
               <TableHead>담당자</TableHead>
               <TableHead>연락처</TableHead>
               <TableHead>계약 만료일</TableHead>
-              <TableHead className="text-right">액션</TableHead>
+              {canManage && <TableHead className="text-right">액션</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -150,39 +156,43 @@ export function VendorTable({
               vendors.map((vendor) => (
                 <TableRow 
                   key={vendor.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => onVendorClick(vendor)}
+                  className={canManage ? "cursor-pointer hover:bg-muted/50" : ""}
+                  onClick={() => canManage && onVendorClick(vendor)}
                 >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox />
-                  </TableCell>
+                  {canManage && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox />
+                    </TableCell>
+                  )}
                   <TableCell className="font-medium">{vendor.name}</TableCell>
                   <TableCell>{vendor.category || '-'}</TableCell>
                   <TableCell>{getContractTypeBadge(vendor.contract_type)}</TableCell>
                   <TableCell>{vendor.manager_name || '-'}</TableCell>
                   <TableCell>{formatPhoneNumber(vendor.contact_number) || '-'}</TableCell>
                   <TableCell>{renderEndDate(vendor)}</TableCell>
-                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEditClick(vendor)}>
-                          편집
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-red-600"
-                          onClick={() => onDeleteClick(vendor)}
-                        >
-                          삭제
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {canManage && (
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onEditClick(vendor)}>
+                            편집
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-red-600"
+                            onClick={() => onDeleteClick(vendor)}
+                          >
+                            삭제
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

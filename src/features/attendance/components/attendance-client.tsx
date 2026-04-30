@@ -226,7 +226,7 @@ export function AttendanceClientPage({
                   schedule={sch}
                   isSelected={isSelected}
                   isToday={isToday}
-                  onClick={() => setSelectedStaffId(isSelected ? null : staff.id)}
+                  onClick={() => canManageAttendance && setSelectedStaffId(isSelected ? null : staff.id)}
                 />
                 {isSelected && (
                   <StaffDetailPanel 

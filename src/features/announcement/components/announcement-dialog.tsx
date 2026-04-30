@@ -33,13 +33,14 @@ interface AnnouncementDialogProps {
     target_member_ids?: string[] | null
   } | null
   storeMembers?: { id: string; name: string }[]
+  canManage?: boolean
 }
 
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 
 import { useEffect } from 'react'
 
-export function AnnouncementDialog({ open, onOpenChange, storeId, initialData, storeMembers = [] }: AnnouncementDialogProps) {
+export function AnnouncementDialog({ open, onOpenChange, storeId, initialData, storeMembers = [], canManage = true }: AnnouncementDialogProps) {
   const [loading, setLoading] = useState(false)
   const [type, setType] = useState<'notice' | 'handover'>('notice')
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
@@ -51,7 +52,7 @@ export function AnnouncementDialog({ open, onOpenChange, storeId, initialData, s
       if (initialData?.announcement_type) {
         setType(initialData.announcement_type)
       } else {
-        setType('notice')
+        setType(canManage ? 'notice' : 'handover')
       }
       
       if (initialData?.target_member_ids) {
@@ -134,16 +135,25 @@ export function AnnouncementDialog({ open, onOpenChange, storeId, initialData, s
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto p-6 md:p-10 md:px-16 flex flex-col gap-6">
             <div className="flex items-center space-x-6 px-2">
-              <RadioGroup defaultValue="notice" name="announcement_type" value={type} onValueChange={(val: any) => setType(val)} className="flex items-center space-x-4">
+              {canManage ? (
+                <RadioGroup defaultValue="notice" name="announcement_type" value={type} onValueChange={(val: any) => setType(val)} className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="notice" id="type-notice" />
+                    <Label htmlFor="type-notice" className="text-base cursor-pointer">일반 공지</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="handover" id="type-handover" />
+                    <Label htmlFor="type-handover" className="text-base cursor-pointer">인수인계</Label>
+                  </div>
+                </RadioGroup>
+              ) : (
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="notice" id="type-notice" />
-                  <Label htmlFor="type-notice" className="text-base cursor-pointer">일반 공지</Label>
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-none">
+                    인수인계
+                  </Badge>
+                  <input type="hidden" name="announcement_type" value="handover" />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="handover" id="type-handover" />
-                  <Label htmlFor="type-handover" className="text-base cursor-pointer">인수인계</Label>
-                </div>
-              </RadioGroup>
+              )}
             </div>
 
             {type === 'handover' && (

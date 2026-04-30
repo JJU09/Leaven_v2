@@ -22,9 +22,9 @@ export function TaskTabs({ storeId, currentStaffId, canManageTasks, onTaskClick 
   const isTodaySelected = isSameDay(selectedDate, new Date());
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
   
-  const { data: todayTasks = [], isLoading: isLoadingToday } = useTodayTasks(storeId);
-  const { data: ongoingTasks = [], isLoading: isLoadingOngoing } = useOngoingTasks(storeId);
-  const { data: selectedDateTasks = [], isLoading: isLoadingSelectedDate } = useTasksByDate(storeId, selectedDateStr);
+  const { data: todayTasks = [], isLoading: isLoadingToday } = useTodayTasks(storeId, currentStaffId, canManageTasks);
+  const { data: ongoingTasks = [], isLoading: isLoadingOngoing } = useOngoingTasks(storeId, currentStaffId, canManageTasks);
+  const { data: selectedDateTasks = [], isLoading: isLoadingSelectedDate } = useTasksByDate(storeId, selectedDateStr, currentStaffId, canManageTasks);
 
   const displayTasks = isTodaySelected ? todayTasks : selectedDateTasks;
   const isLoadingDisplay = isTodaySelected ? isLoadingToday : isLoadingSelectedDate;
@@ -38,6 +38,8 @@ export function TaskTabs({ storeId, currentStaffId, canManageTasks, onTaskClick 
       storeId={storeId} 
       selectedDate={selectedDate} 
       onDateSelect={setSelectedDate}
+      currentStaffId={currentStaffId}
+      canManageTasks={canManageTasks}
     >
       <div className="flex flex-col gap-4">
         {/* Date Header for List Panel */}

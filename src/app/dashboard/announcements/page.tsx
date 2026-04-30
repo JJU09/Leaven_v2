@@ -18,7 +18,7 @@ export default async function AnnouncementsPage() {
 
   const { data: members, error } = await supabase
     .from('store_members')
-    .select('role_id, status, store:stores(*)')
+    .select('id, role_id, status, store:stores(*)')
     .eq('user_id', user.id)
 
   if (error || !members || members.length === 0) {
@@ -71,7 +71,7 @@ export default async function AnnouncementsPage() {
   ])
 
   if (!canView) {
-    redirect('/dashboard/tasks')
+    redirect('/dashboard')
   }
 
   return (
@@ -90,7 +90,9 @@ export default async function AnnouncementsPage() {
           storeId={store.id}
           announcements={announcements || []}
           canManage={canManage}
+          canView={canView}
           storeMembers={formattedMembers}
+          currentMemberId={activeMember.id}
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PayrollDetailPageClient } from "./_components/PayrollDetailPageClient";
+import { hasPermission } from "@/features/auth/permissions";
 
 export default async function PayrollDetailPage({
   params,
@@ -49,6 +50,14 @@ export default async function PayrollDetailPage({
         <p className="text-muted-foreground text-lg">급여 내역을 찾을 수 없습니다.</p>
       </div>
     );
+  }
+
+  // 관리 권한이 있는지 체크 (자신의 급여라도 상세 페이지가 아닌 기본 목록에서만 볼 수 있도록 함)
+  // (만약 본인 급여는 상세 조회를 허용하려면 record.store_members.user_id === user.id 체크 추가)
+  const canManageSalary = await hasPermission(user.id, record.store_id, 'manage_salary');
+  
+  if (!canManageSalary) {
+    redirect("/dashboard/payroll");
   }
 
   return <PayrollDetailPageClient initialRecord={record as any} />;

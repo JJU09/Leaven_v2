@@ -15,14 +15,6 @@ import { redirect } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { LogoutButton } from '@/features/auth/components/logout-button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { EnterStoreButton } from './_components/enter-store-button'
 
 export default async function HomePage(props: { searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }) {
@@ -49,7 +41,7 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
     .eq('id', user.id)
     .single()
 
-  const userName = user.user_metadata?.full_name
+  const userName = profile?.full_name || user.user_metadata?.full_name || '사용자'
   const userPhone = profile?.phone || ''
   const userEmail = profile?.email || user.email || ''
   const userAvatar = profile?.avatar_url || ''
@@ -73,41 +65,30 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
             <Package2 className="h-6 w-6 text-primary" />
             <span>Leaven</span>
           </div>
-          <div className="flex items-center gap-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-border shadow-sm">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={userAvatar} alt={userName} />
-                    <AvatarFallback className="bg-primary/5 text-primary font-medium">{userName.substring(0, 2)}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-bold leading-none">{userName}</p>
-                    <p className="text-xs leading-none text-muted-foreground mt-1">
-                      {userEmail}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/account?next=/home" className="cursor-pointer flex w-full items-center">
-                    <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>내 계정 설정</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <LogoutButton 
-                    className="flex w-full items-center justify-start text-red-600 hover:text-red-700 hover:bg-red-50 h-auto font-normal" 
-                    asDropdownItem
-                  />
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Button variant="ghost" size="icon" asChild title="계정 설정">
+              <Link href="/account?next=/home">
+                <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
+              </Link>
+            </Button>
+            <div title="로그아웃">
+              <LogoutButton 
+                variant="ghost" 
+                size="icon" 
+                showText={false}
+                className="text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors w-9 h-9"
+              />
+            </div>
+            <div className="h-4 w-px bg-border mx-1" />
+            <div className="flex items-center gap-2 ml-1" title={userEmail}>
+              <Avatar className="h-8 w-8 border border-border shadow-sm">
+                <AvatarImage src={userAvatar} alt={userName} />
+                <AvatarFallback className="bg-primary/5 text-primary font-medium text-xs">
+                  {userName.substring(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium hidden sm:block">{userName}</span>
+            </div>
           </div>
         </div>
       </header>

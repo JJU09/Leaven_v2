@@ -18,10 +18,11 @@ interface DashboardClientProps {
   storeId: string
   storeName: string
   userName: string
+  canManage?: boolean
 }
 
-export default function DashboardClient({ storeId, storeName, userName }: DashboardClientProps) {
-  const { data, isLoading } = useDashboard(storeId)
+export default function DashboardClient({ storeId, storeName, userName, canManage = false }: DashboardClientProps) {
+  const { data, isLoading } = useDashboard(storeId, canManage)
   const [currentMember, setCurrentMember] = useState<any>(null);
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export default function DashboardClient({ storeId, storeName, userName }: Dashbo
     loadMember();
   }, [storeId]);
 
-  if (isLoading || !data) {
+  if (isLoading || !data || !currentMember) {
     return (
       <div className="p-6 h-full flex items-center justify-center">
         <div className="text-slate-400">대시보드 데이터를 불러오는 중입니다...</div>
@@ -66,47 +67,53 @@ export default function DashboardClient({ storeId, storeName, userName }: Dashbo
       <DashboardGreeting storeName={storeName} userName={userName} />
       
       {/* 4 Metrics + 1 Clock In/Out */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className={canManage ? "grid grid-cols-2 md:grid-cols-5 gap-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
         {/* 출퇴근 카드 */}
-        <div className="col-span-2 md:col-span-1">
+        <div className="col-span-1">
           <ClockInOutCard storeId={storeId} memberId={currentMember?.id} />
         </div>
         
-        <MetricCard 
-          title="오늘 출근 현황" 
-          value={metrics.attendance.value} 
-          total={metrics.attendance.total}
-          subText={metrics.attendance.value < metrics.attendance.total ? '미출근 인원이 있습니다' : '전원 출근'}
-          subType={metrics.attendance.value < metrics.attendance.total ? 'warn' : 'ok'}
-          icon={Users}
-        />
-        <MetricCard 
-          title="승인 대기 연차" 
-          value={metrics.leavesPending?.value || 0}
-          subText="승인 대기 중인 연차"
-          subType={(metrics.leavesPending?.value || 0) > 0 ? 'warn' : 'ok'}
-          icon={Palmtree}
-        />
-        <MetricCard 
-          title="점검/만료 자산" 
-          value={metrics.assetsWarning.value}
-          subText="30일 이내 임박"
-          subType={metrics.assetsWarning.value > 0 ? 'danger' : 'ok'}
-          icon={Monitor}
-        />
-        <MetricCard 
-          title="만료 거래처" 
-          value={metrics.vendorsWarning.value}
-          subText="30일 이내 계약 만료"
-          subType={metrics.vendorsWarning.value > 0 ? 'danger' : 'ok'}
-          icon={Building2}
-        />
+        <div className="col-span-1">
+          <MetricCard 
+            title="오늘 출근 현황" 
+            value={metrics.attendance.value} 
+            total={metrics.attendance.total}
+            subText={metrics.attendance.value < metrics.attendance.total ? '미출근 인원이 있습니다' : '전원 출근'}
+            subType={metrics.attendance.value < metrics.attendance.total ? 'warn' : 'ok'}
+            icon={Users}
+          />
+        </div>
+        {canManage && (
+          <>
+            <MetricCard 
+              title="승인 대기 연차" 
+              value={metrics.leavesPending?.value || 0}
+              subText="승인 대기 중인 연차"
+              subType={(metrics.leavesPending?.value || 0) > 0 ? 'warn' : 'ok'}
+              icon={Palmtree}
+            />
+            <MetricCard 
+              title="점검/만료 자산" 
+              value={metrics.assetsWarning.value}
+              subText="30일 이내 임박"
+              subType={metrics.assetsWarning.value > 0 ? 'danger' : 'ok'}
+              icon={Monitor}
+            />
+            <MetricCard 
+              title="만료 거래처" 
+              value={metrics.vendorsWarning.value}
+              subText="30일 이내 계약 만료"
+              subType={metrics.vendorsWarning.value > 0 ? 'danger' : 'ok'}
+              icon={Building2}
+            />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 내 업무 */}
         <div className="h-100">
-          <DashboardTaskCard storeId={storeId} currentStaffId={currentMember?.id || ''} canManageTasks={currentMember?.role_info?.hierarchy_level <= 2} />
+          <DashboardTaskCard storeId={storeId} currentStaffId={currentMember?.id || ''} canManageTasks={canManage} />
         </div>
 
         {/* 알림·할일 */}
@@ -127,17 +134,19 @@ export default function DashboardClient({ storeId, storeName, userName }: Dashbo
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
-        {/* 자산 현황 요약 */}
-        <div className="h-87.5">
-          <AssetSummaryCard assets={assetsSummary} />
+      {canManage && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
+          {/* 자산 현황 요약 */}
+          <div className="h-87.5">
+            <AssetSummaryCard assets={assetsSummary} />
+          </div>
+          
+          {/* 거래처 현황 요약 */}
+          <div className="h-87.5">
+            <VendorSummaryCard vendors={vendorsSummary} transactions={vendorTransactions} />
+          </div>
         </div>
-        
-        {/* 거래처 현황 요약 */}
-        <div className="h-87.5">
-          <VendorSummaryCard vendors={vendorsSummary} transactions={vendorTransactions} />
-        </div>
-      </div>
+      )}
 
     </div>
   )

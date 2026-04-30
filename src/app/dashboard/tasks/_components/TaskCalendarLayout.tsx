@@ -14,6 +14,8 @@ interface TaskCalendarLayoutProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   children: React.ReactNode;
+  currentStaffId?: string;
+  canManageTasks?: boolean;
 }
 
 export function TaskCalendarLayout({
@@ -21,13 +23,17 @@ export function TaskCalendarLayout({
   selectedDate,
   onDateSelect,
   children,
+  currentStaffId,
+  canManageTasks,
 }: TaskCalendarLayoutProps) {
   const [currentMonth, setCurrentMonth] = useState(selectedDate);
   
   const { data: monthlySummary = {} } = useMonthlyTaskSummary(
     storeId,
     currentMonth.getFullYear(),
-    currentMonth.getMonth() + 1
+    currentMonth.getMonth() + 1,
+    currentStaffId,
+    canManageTasks
   );
 
   const modifiers = useMemo(() => {
@@ -136,24 +142,6 @@ export function TaskCalendarLayout({
 
   return (
     <div className="flex flex-col md:flex-row gap-6 w-full">
-      {/* Mobile Calendar Toggle */}
-      <div className="md:hidden flex items-center justify-between mb-2">
-        <div className="text-lg font-semibold">
-          {format(selectedDate, 'M월 d일', { locale: ko })} 업무
-        </div>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Menu className="h-4 w-4" />
-              달력 보기
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[320px] sm:w-[350px] pt-12">
-            <CalendarPanel />
-          </SheetContent>
-        </Sheet>
-      </div>
-
       {/* Desktop Calendar Panel */}
       <div className="hidden md:block w-[300px] shrink-0">
         <CalendarPanel />

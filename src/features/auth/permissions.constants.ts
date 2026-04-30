@@ -1,10 +1,12 @@
 export const STATIC_PERMISSIONS = [
   // 📌 메인
-  { code: 'view_dashboard', name: '대시보드 조회', description: '매장 현황 및 요약 정보 조회', category: '메인' },
+  { code: 'view_dashboard', name: '대시보드 조회', description: '매장 현황 및 단순 정보 조회', category: '메인' },
+  { code: 'manage_dashboard', name: '대시보드 관리', description: '매장 현황 및 세부 정보 조회', category: '메인' },
+
   { code: 'view_ai_reports', name: 'AI 리포트 조회', description: 'AI 기반 매장 운영 분석 리포트 조회 및 질의', category: '메인' },
 
-  { code: 'view_announcements', name: '공지사항 조회', description: '매장 공지사항 조회', category: '메인' },
-  { code: 'manage_announcements', name: '공지사항 관리', description: '매장 공지사항 작성 및 관리', category: '메인' },
+  { code: 'view_announcements', name: '인계 및 공지 조회', description: '인계 및 공지 조회(인수인계 작성 가능)', category: '메인' },
+  { code: 'manage_announcements', name: '인계 및 공지 관리', description: '인계 및 공지 및 관리(공지사항 작성 가능)', category: '메인' },
 
   // 👥 HR 관리
   { code: 'view_staff', name: '직원 관리 조회', description: '직원 목록 및 기본 정보 조회', category: 'HR 관리' },
@@ -16,8 +18,8 @@ export const STATIC_PERMISSIONS = [
   { code: 'view_leave', name: '휴가 및 연차 조회', description: '직원들의 휴가 사용 내역 및 잔여 연차 조회', category: 'HR 관리' },
   { code: 'manage_leave', name: '휴가 및 연차 관리', description: '휴가 신청 승인/반려 및 연차 일수 관리', category: 'HR 관리' },
 
-  { code: 'view_salary', name: '급여 정산 조회 (준비 중)', description: '본인 및 직원의 시급/월급 등 급여 정보 조회', category: 'HR 관리' },
-  { code: 'manage_salary', name: '급여 정산 관리 (준비 중)', description: '급여 계산, 명세서 발급 및 정산 내역 관리', category: 'HR 관리' },
+  { code: 'view_salary', name: '급여 정산 조회', description: '본인 및 직원의 시급/월급 등 급여 정보 조회', category: 'HR 관리' },
+  { code: 'manage_salary', name: '급여 정산 관리', description: '급여 계산, 명세서 발급 및 정산 내역 관리', category: 'HR 관리' },
 
   // ⏰ 업무 및 일정 관리
   { code: 'view_schedule', name: '스케줄 관리 조회', description: '전체 직원의 근무 일정 조회', category: '업무 및 일정 관리' },
@@ -49,37 +51,43 @@ export type Permission = {
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, PermissionCode[]> = {
   점주: [
-    'manage_store', 'manage_roles',
-    'view_dashboard', 'view_ai_reports',
+    'view_dashboard', 'manage_dashboard',
+    'view_ai_reports',
+    'view_announcements','manage_announcements',
     'view_staff', 'manage_staff',
+    'view_attendance','manage_attendance',
+    'view_leave', 'manage_leave',
     'view_salary', 'manage_salary',
     'view_schedule', 'manage_schedule',
-    'view_attendance', 'manage_attendance',
-    'view_leave', 'manage_leave',
     'view_tasks', 'manage_tasks',
     'view_asset', 'manage_asset',
     'view_vendor', 'manage_vendor',
-    'view_announcements', 'manage_announcements'
+    'manage_store',
+    'manage_roles',
   ],
   매니저: [
-    'view_dashboard', 'view_ai_reports',
-    'view_staff', 
+    'view_dashboard', 'manage_dashboard',
+    'view_ai_reports',
+    'view_announcements','manage_announcements',
+    'view_staff', 'manage_staff',
+    'view_attendance','manage_attendance',
+    'view_leave', 'manage_leave',
+    'view_salary', 'manage_salary',
     'view_schedule', 'manage_schedule',
-    'view_attendance', 'manage_attendance', 
-    'view_leave', 'manage_leave', 
     'view_tasks', 'manage_tasks',
-    'view_asset', 'manage_asset', 
+    'view_asset', 'manage_asset',
     'view_vendor', 'manage_vendor',
-    'view_announcements', 'manage_announcements'
   ],
   직원: [
+    'view_dashboard',
+    'view_announcements',
     'view_staff', 
-    'view_schedule', 
-    'view_attendance', 
+    'view_attendance',
     'view_leave', 
-    'view_tasks', 
-    'view_asset', 
-    'view_vendor', 
-    'view_announcements'
+    'view_salary',
+    'view_schedule',
+    'view_tasks',
+    'view_asset',
+    'view_vendor',
   ]
 }

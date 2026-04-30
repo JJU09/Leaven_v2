@@ -5,9 +5,10 @@ import { DollarSign, FileCheck, FileMinus, FileText } from "lucide-react";
 
 interface PayrollSummaryCardsProps {
   records: PayrollRecordWithStaff[];
+  hasManageSalaryPerm: boolean;
 }
 
-export function PayrollSummaryCards({ records }: PayrollSummaryCardsProps) {
+export function PayrollSummaryCards({ records, hasManageSalaryPerm }: PayrollSummaryCardsProps) {
   const summary = records.reduce(
     (acc, record) => {
       acc.total_gross_pay += record.gross_pay || 0;
@@ -33,7 +34,9 @@ export function PayrollSummaryCards({ records }: PayrollSummaryCardsProps) {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">이번 달 총 급여</CardTitle>
+          <CardTitle className="text-sm font-medium">
+            {hasManageSalaryPerm ? "이번 달 총 급여" : "이번 달 나의 세전 급여"}
+          </CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -43,7 +46,9 @@ export function PayrollSummaryCards({ records }: PayrollSummaryCardsProps) {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">공제 합계</CardTitle>
+          <CardTitle className="text-sm font-medium">
+            {hasManageSalaryPerm ? "공제 합계" : "나의 공제 합계"}
+          </CardTitle>
           <FileMinus className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -55,7 +60,9 @@ export function PayrollSummaryCards({ records }: PayrollSummaryCardsProps) {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">실수령 합계</CardTitle>
+          <CardTitle className="text-sm font-medium">
+            {hasManageSalaryPerm ? "실수령 합계" : "나의 실수령액"}
+          </CardTitle>
           <FileText className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -67,7 +74,9 @@ export function PayrollSummaryCards({ records }: PayrollSummaryCardsProps) {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">정산 현황</CardTitle>
+          <CardTitle className="text-sm font-medium">
+            {hasManageSalaryPerm ? "정산 현황" : "나의 정산 현황"}
+          </CardTitle>
           <FileCheck className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>

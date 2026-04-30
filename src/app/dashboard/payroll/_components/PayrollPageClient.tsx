@@ -33,6 +33,7 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
     : (payrollData?.records || []);
     
   const period = !Array.isArray(payrollData) ? payrollData?.period : null;
+  const hasManageSalaryPerm = !Array.isArray(payrollData) ? payrollData?.hasManageSalaryPerm : false;
   
   const confirmMutation = useConfirmPayroll(storeId, year, month);
   const markPaidMutation = useMarkPayrollPaid(storeId, year, month);
@@ -146,12 +147,15 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
           </div>
         ) : (
           <>
-            <PayrollSummaryCards records={filteredRecords} />
+            <PayrollSummaryCards 
+              records={filteredRecords} 
+              hasManageSalaryPerm={hasManageSalaryPerm} 
+            />
 
             <div className="flex-1 min-h-0 overflow-auto">
               <PayrollTable
                 records={filteredRecords}
-                onRowClick={(record) => router.push(`/dashboard/payroll/${record.id}`)}
+                onRowClick={hasManageSalaryPerm ? (record) => router.push(`/dashboard/payroll/${record.id}`) : undefined}
                 onMarkPaid={handleMarkPaid}
                 onConfirm={handleConfirmSingle}
                 onPrint={(id) => handlePrint([id])}

@@ -300,7 +300,7 @@ export async function cancelLeaveRequest(requestId: string, storeId: string) {
   // 1. 요청 정보 가져오기 및 본인 확인
   const { data: request, error: requestError } = await supabase
     .from('leave_requests')
-    .select('*, member:store_members!inner(user_id)')
+    .select('*, member:store_members!leave_requests_member_id_fkey!inner(user_id)')
     .eq('id', requestId)
     .eq('store_id', storeId)
     .single()
@@ -321,11 +321,11 @@ export async function cancelLeaveRequest(requestId: string, storeId: string) {
     return { error: '대기 중인 요청만 취소할 수 있습니다.' }
   }
 
-  // 2. 상태 업데이트 (cancelled로 변경)
+  // 2. 상태 업데이트 (canceled로 변경)
   const { error: updateError } = await adminClient
     .from('leave_requests')
     .update({ 
-      status: 'cancelled', 
+      status: 'canceled', 
       updated_at: new Date().toISOString()
     })
     .eq('id', requestId)

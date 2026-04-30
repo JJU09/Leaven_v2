@@ -84,8 +84,13 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
   }
 
   const canManage = await hasPermission(user.id, storeId, 'manage_announcements')
+  const canView = await hasPermission(user.id, storeId, 'view_announcements')
+  const announcement_type = (formData.get('announcement_type') as string) || 'notice'
+
   if (!canManage) {
-    return { error: '권한이 없습니다.' }
+    if (!(canView && announcement_type === 'handover')) {
+      return { error: '권한이 없습니다.' }
+    }
   }
 
   // 사용자의 해당 매장 멤버 ID 조회
@@ -102,7 +107,6 @@ export async function createAnnouncement(storeId: string, formData: FormData) {
 
   const title = formData.get('title') as string
   const content = formData.get('content') as string
-  const announcement_type = (formData.get('announcement_type') as string) || 'notice'
   const target_member_ids_str = formData.get('target_member_ids') as string
 
   let target_member_ids = null
@@ -154,13 +158,36 @@ export async function updateAnnouncement(id: string, storeId: string, formData: 
   }
 
   const canManage = await hasPermission(user.id, storeId, 'manage_announcements')
+  const canView = await hasPermission(user.id, storeId, 'view_announcements')
+  const announcement_type = (formData.get('announcement_type') as string) || 'notice'
+
+  // Get user's member ID for this store to check authorship
+  const { data: memberData } = await supabase
+    .from('store_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('store_id', storeId)
+    .single()
+
   if (!canManage) {
-    return { error: '권한이 없습니다.' }
+    if (!(canView && announcement_type === 'handover')) {
+      return { error: '권한이 없습니다.' }
+    }
+    
+    // Check if the current user is the author of the announcement being updated
+    const { data: existingAnnouncement } = await supabase
+      .from('store_announcements')
+      .select('author_id')
+      .eq('id', id)
+      .single()
+      
+    if (!existingAnnouncement || existingAnnouncement.author_id !== memberData?.id) {
+      return { error: '본인이 작성한 인수인계만 수정할 수 있습니다.' }
+    }
   }
 
   const title = formData.get('title') as string
   const content = formData.get('content') as string
-  const announcement_type = (formData.get('announcement_type') as string) || 'notice'
   const target_member_ids_str = formData.get('target_member_ids') as string
 
   let target_member_ids = null
@@ -212,8 +239,30 @@ export async function deleteAnnouncement(id: string, storeId: string) {
   }
 
   const canManage = await hasPermission(user.id, storeId, 'manage_announcements')
+  const canView = await hasPermission(user.id, storeId, 'view_announcements')
+
+  // Get user's member ID for this store to check authorship
+  const { data: memberData } = await supabase
+    .from('store_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('store_id', storeId)
+    .single()
+
   if (!canManage) {
-    return { error: '권한이 없습니다.' }
+    // Check if the current user is the author and if it's a handover
+    const { data: existingAnnouncement } = await supabase
+      .from('store_announcements')
+      .select('author_id, announcement_type')
+      .eq('id', id)
+      .single()
+      
+    if (!existingAnnouncement || 
+        existingAnnouncement.announcement_type !== 'handover' || 
+        !canView || 
+        existingAnnouncement.author_id !== memberData?.id) {
+      return { error: '권한이 없거나 본인이 작성한 글이 아닙니다.' }
+    }
   }
 
   const { error } = await supabase

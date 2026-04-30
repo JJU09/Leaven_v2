@@ -29,13 +29,15 @@ interface VendorsPageClientProps {
     unpaidCount: number;
     expiringCount: number;
   };
+  canManage: boolean;
 }
 
 export function VendorsPageClient({
   storeId,
   initialVendors,
   totalCount,
-  summary
+  summary,
+  canManage
 }: VendorsPageClientProps) {
   const router = useRouter();
   
@@ -83,10 +85,11 @@ export function VendorsPageClient({
       <VendorTable 
         vendors={initialVendors} 
         totalCount={totalCount}
-        onVendorClick={(v) => router.push(`/dashboard/vendors/${v.id}`)}
+        onVendorClick={(v) => canManage && router.push(`/dashboard/vendors/${v.id}`)}
         onAddClick={handleAddClick}
         onEditClick={handleEditClick}
         onDeleteClick={(v) => setVendorToDelete(v)}
+        canManage={canManage}
       />
 
       <TransactionFormDialog 

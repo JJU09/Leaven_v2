@@ -12,11 +12,11 @@ import {
 import { AlertItem, sortAlerts } from '../_utils/alertBuilder'
 import { getMemberDisplayName } from '@/lib/utils'
 
-export function useDashboard(storeId: string) {
+export function useDashboard(storeId: string, canManage: boolean = false) {
   const supabase = createClient()
   
   return useQuery({
-    queryKey: ['dashboard', storeId, 'summary'],
+    queryKey: ['dashboard', storeId, 'summary', canManage],
     queryFn: async () => {
       const todayDateStr = format(getToday(), 'yyyy-MM-dd')
       const todayPlus30Str = format(addDays(getToday(), 30), 'yyyy-MM-dd')
@@ -34,6 +34,27 @@ export function useDashboard(storeId: string) {
 
       // Get last 7 days for handovers
       const sevenDaysAgoStr = format(addDays(getToday(), -7), 'yyyy-MM-dd')
+
+      // 쿼리 객체 생성
+      let monthLeavesQuery = supabase.from('leave_requests')
+        .select('*, member:store_members!leave_requests_member_id_fkey(name, profiles(full_name), role:store_roles(name))')
+        .eq('store_id', storeId)
+        .eq('status', 'pending')
+        .gte('start_date', todayDateStr)
+        .lte('start_date', todayPlus30Str)
+        .order('start_date', { ascending: true })
+
+      let staffLeavesQuery = supabase.from('leave_balances')
+        .select('*, member:store_members!inner(id, status, name, profiles(full_name))')
+        .eq('store_id', storeId)
+        .eq('year', new Date().getFullYear())
+        .eq('member.status', 'active')
+
+      // 권한이 없으면 자신의 연차 데이터만 가져옴
+      if (!canManage && currentMember) {
+        monthLeavesQuery = monthLeavesQuery.eq('member_id', currentMember.id)
+        staffLeavesQuery = staffLeavesQuery.eq('member_id', currentMember.id)
+      }
 
       // Fetch all required data in parallel
       const [
@@ -54,8 +75,8 @@ export function useDashboard(storeId: string) {
         supabase.from('vendors').select('id, name, contract_end_date, is_auto_renewal, contract_type').eq('store_id', storeId).is('deleted_at', null),
         supabase.from('leave_requests').select('id, status').eq('store_id', storeId).eq('status', 'pending'),
         supabase.from('store_attendance').select('target_date').eq('store_id', storeId).gte('target_date', mondayStr).lte('target_date', fridayStr).not('clock_in_time', 'is', null),
-        supabase.from('leave_requests').select('*, member:store_members!leave_requests_member_id_fkey(name, profiles(full_name), role:store_roles(name))').eq('store_id', storeId).eq('status', 'pending').gte('start_date', startOfMonthStr).lte('start_date', endOfMonthStr).order('start_date', { ascending: true }),
-        supabase.from('leave_balances').select('*, member:store_members!inner(id, status, name, profiles(full_name))').eq('store_id', storeId).eq('year', new Date().getFullYear()).eq('member.status', 'active'),
+        monthLeavesQuery,
+        staffLeavesQuery,
         supabase.from('vendor_transactions').select('id, vendor_id, amount, payment_status, transaction_date, vendors(name)').eq('store_id', storeId).in('payment_status', ['unpaid', 'partial']).is('deleted_at', null).order('transaction_date', { ascending: true }).limit(3),
         supabase.from('schedules').select('id, member_id, start_time').eq('store_id', storeId).eq('plan_date', todayDateStr),
         supabase.from('store_announcements').select('id, title, ai_summary, target_member_ids, created_at, author:store_members!store_announcements_author_id_fkey(user:profiles!store_members_user_id_fkey(full_name))').eq('store_id', storeId).eq('announcement_type', 'handover').gte('created_at', sevenDaysAgoStr).order('created_at', { ascending: false }),
@@ -90,60 +111,62 @@ export function useDashboard(storeId: string) {
       // 2. 알림·할일 목록 구성
       const rawAlerts: AlertItem[] = []
       
-      // 자산 경고
-      assets?.forEach(a => {
-        const insp = a.next_inspection_date ? getDday(a.next_inspection_date) : null
-        const warr = a.warranty_expiry_date ? getDday(a.warranty_expiry_date) : null
-        
-        let minDday = 9999
-        if (insp !== null && insp >= 0 && insp <= 30) minDday = Math.min(minDday, insp)
-        if (warr !== null && warr >= 0 && warr <= 30) minDday = Math.min(minDday, warr)
+      if (canManage) {
+        // 자산 경고
+        assets?.forEach(a => {
+          const insp = a.next_inspection_date ? getDday(a.next_inspection_date) : null
+          const warr = a.warranty_expiry_date ? getDday(a.warranty_expiry_date) : null
+          
+          let minDday = 9999
+          if (insp !== null && insp >= 0 && insp <= 30) minDday = Math.min(minDday, insp)
+          if (warr !== null && warr >= 0 && warr <= 30) minDday = Math.min(minDday, warr)
 
-        if (minDday <= 30) {
-          rawAlerts.push({
-            id: `asset-${a.id}`,
-            type: 'asset_warning',
-            severity: minDday <= 14 ? 'red' : 'amber',
-            dDay: minDday,
-            title: `자산 점검 임박: ${a.name}`,
-            subText: `점검/보증 기한이 ${minDday}일 남았습니다.`,
-            actionLabel: '자산 확인',
-            actionHref: `/dashboard/assets?highlight=${a.id}`
-          })
-        }
-      })
-
-      // 거래처 경고
-      vendors?.forEach(v => {
-        if (v.is_auto_renewal || !v.contract_end_date) return
-        const dday = getDday(v.contract_end_date)
-        
-        if (dday !== null && dday >= 0 && dday <= 30) {
-          rawAlerts.push({
-            id: `vendor-${v.id}`,
-            type: 'vendor_contract',
-            severity: dday <= 14 ? 'red' : 'amber',
-            dDay: dday,
-            title: `계약 만료 임박: ${v.name}`,
-            subText: `계약이 ${dday}일 후 만료됩니다.`,
-            actionLabel: '거래처 확인',
-            actionHref: `/dashboard/vendors?highlight=${v.id}`
-          })
-        }
-      })
-
-      // 연차 대기
-      pendingLeaves?.forEach(l => {
-        rawAlerts.push({
-          id: `leave-${l.id}`,
-          type: 'leave_pending',
-          severity: 'amber',
-          title: '연차 승인 대기',
-          subText: '새로운 연차 신청이 있습니다.',
-          actionLabel: '승인/반려',
-          actionHref: `/dashboard/leave?id=${l.id}`
+          if (minDday <= 30) {
+            rawAlerts.push({
+              id: `asset-${a.id}`,
+              type: 'asset_warning',
+              severity: minDday <= 14 ? 'red' : 'amber',
+              dDay: minDday,
+              title: `자산 점검 임박: ${a.name}`,
+              subText: `점검/보증 기한이 ${minDday}일 남았습니다.`,
+              actionLabel: '자산 확인',
+              actionHref: `/dashboard/assets?highlight=${a.id}`
+            })
+          }
         })
-      })
+
+        // 거래처 경고
+        vendors?.forEach(v => {
+          if (v.is_auto_renewal || !v.contract_end_date) return
+          const dday = getDday(v.contract_end_date)
+          
+          if (dday !== null && dday >= 0 && dday <= 30) {
+            rawAlerts.push({
+              id: `vendor-${v.id}`,
+              type: 'vendor_contract',
+              severity: dday <= 14 ? 'red' : 'amber',
+              dDay: dday,
+              title: `계약 만료 임박: ${v.name}`,
+              subText: `계약이 ${dday}일 후 만료됩니다.`,
+              actionLabel: '거래처 확인',
+              actionHref: `/dashboard/vendors?highlight=${v.id}`
+            })
+          }
+        })
+
+        // 연차 대기
+        pendingLeaves?.forEach(l => {
+          rawAlerts.push({
+            id: `leave-${l.id}`,
+            type: 'leave_pending',
+            severity: 'amber',
+            title: '연차 승인 대기',
+            subText: '새로운 연차 신청이 있습니다.',
+            actionLabel: '승인/반려',
+            actionHref: `/dashboard/leave?id=${l.id}`
+          })
+        })
+      }
 
       // 인수인계 알림 (본인이 수신자이고 아직 안 읽은 최근 7일 데이터)
       if (currentMember) {

@@ -19,9 +19,9 @@ interface DashboardTaskCardProps {
 }
 
 export function DashboardTaskCard({ storeId, currentStaffId, canManageTasks }: DashboardTaskCardProps) {
-  const { data: todayTasks = [], isLoading: isLoadingToday } = useTodayTasks(storeId);
-  const { data: ongoingTasks = [] } = useOngoingTasks(storeId);
-  const { data: overdueTasks = [] } = useOverdueTasks(storeId);
+  const { data: todayTasks = [], isLoading: isLoadingToday } = useTodayTasks(storeId, currentStaffId, canManageTasks);
+  const { data: ongoingTasks = [] } = useOngoingTasks(storeId, currentStaffId, canManageTasks);
+  const { data: overdueTasks = [] } = useOverdueTasks(storeId, currentStaffId, canManageTasks);
   const { toggleTaskStatus } = useTaskMutations(storeId);
 
   const myIncompleteToday = todayTasks.filter(t => !t.is_done && t.assignee_ids?.includes(currentStaffId)).length;
@@ -35,10 +35,16 @@ export function DashboardTaskCard({ storeId, currentStaffId, canManageTasks }: D
   const totalIncomplete = totalIncompleteToday + totalIncompleteOngoing + totalIncompleteOverdue;
 
   // 마감 임박 태스크 (오늘 마감 + 기한 초과)
-  const urgentTasks = [
+  let urgentTasks = [
     ...overdueTasks.filter(t => !t.is_done),
     ...todayTasks.filter(t => !t.is_done),
-  ].slice(0, 3); // 최대 3건
+  ];
+  
+  if (!canManageTasks) {
+    urgentTasks = urgentTasks.filter(t => t.assignee_ids?.includes(currentStaffId));
+  }
+  
+  urgentTasks = urgentTasks.slice(0, 3); // 최대 3건
 
   return (
     <Card className="flex flex-col h-full">

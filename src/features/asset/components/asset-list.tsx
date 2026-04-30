@@ -17,9 +17,10 @@ interface AssetListProps {
   storeId: string;
   userId: string;
   locations: string[];
+  canManage: boolean;
 }
 
-export function AssetList({ storeId, userId, locations }: AssetListProps) {
+export function AssetList({ storeId, userId, locations, canManage }: AssetListProps) {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -115,12 +116,14 @@ export function AssetList({ storeId, userId, locations }: AssetListProps) {
           </Select>
         </div>
 
-        <Button asChild>
-          <Link href="/dashboard/assets/new">
-            <Plus className="h-4 w-4 mr-2" />
-            자산 등록
-          </Link>
-        </Button>
+        {canManage && (
+          <Button asChild>
+            <Link href="/dashboard/assets/new">
+              <Plus className="h-4 w-4 mr-2" />
+              자산 등록
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* 테이블 */}
@@ -153,8 +156,8 @@ export function AssetList({ storeId, userId, locations }: AssetListProps) {
               data?.data.map((asset: AssetWithVendor) => (
                 <TableRow 
                   key={asset.id} 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(`/dashboard/assets/${asset.id}`)}
+                  className={canManage ? "cursor-pointer hover:bg-muted/50" : ""}
+                  onClick={() => canManage && router.push(`/dashboard/assets/${asset.id}`)}
                 >
                   <TableCell className="font-mono text-xs text-center">{asset.id.slice(0, 8)}</TableCell>
                   <TableCell className="font-medium text-center">{asset.name}</TableCell>

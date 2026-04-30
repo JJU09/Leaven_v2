@@ -24,7 +24,7 @@ import {
 
 interface PayrollTableProps {
   records: PayrollRecordWithStaff[];
-  onRowClick: (record: PayrollRecordWithStaff) => void;
+  onRowClick?: (record: PayrollRecordWithStaff) => void;
   onMarkPaid: (id: string) => void;
   onConfirm: (id: string) => void;
   onPrint: (id: string) => void;
@@ -94,8 +94,8 @@ export function PayrollTable({
               return (
                 <TableRow
                   key={record.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => onRowClick(record)}
+                  className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
+                  onClick={() => onRowClick && onRowClick(record)}
                 >
                   <TableCell>
                     <div className="flex items-center justify-center gap-3">

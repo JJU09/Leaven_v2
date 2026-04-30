@@ -11,9 +11,9 @@ export type DaySummary = {
   hasOverdue: boolean;
 };
 
-export function useMonthlyTaskSummary(storeId: string, year: number, month: number) {
+export function useMonthlyTaskSummary(storeId: string, year: number, month: number, currentStaffId?: string, canManageTasks?: boolean) {
   return useQuery({
-    queryKey: ['tasks', storeId, 'monthly-summary', year, month],
+    queryKey: ['tasks', storeId, 'monthly-summary', year, month, currentStaffId, canManageTasks],
     queryFn: async () => {
       if (!storeId) return {};
       
@@ -22,13 +22,19 @@ export function useMonthlyTaskSummary(storeId: string, year: number, month: numb
       const lastDay = new Date(year, month, 0).getDate();
       const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
       
-      const { data, error } = await supabase
+      let tasksQuery = supabase
         .from('tasks')
         .select('id, due_date, is_done')
         .eq('store_id', storeId)
         .gte('due_date', startDate)
         .lte('due_date', endDate)
         .is('deleted_at', null);
+
+      if (canManageTasks === false && currentStaffId) {
+        tasksQuery = tasksQuery.contains('assignee_ids', [currentStaffId]);
+      }
+
+      const { data, error } = await tasksQuery;
 
       if (error) throw error;
 
@@ -58,30 +64,36 @@ export function useMonthlyTaskSummary(storeId: string, year: number, month: numb
   });
 }
 
-export function useTasksByDate(storeId: string, dateStr: string) {
+export function useTasksByDate(storeId: string, dateStr: string, currentStaffId?: string, canManageTasks?: boolean) {
   return useQuery({
-    queryKey: ['tasks', storeId, 'by-date', dateStr],
+    queryKey: ['tasks', storeId, 'by-date', dateStr, currentStaffId, canManageTasks],
     queryFn: async () => {
       if (!storeId || !dateStr) return [];
       
       const supabase = createClient();
       
+      let tasksQuery = supabase
+        .from('tasks')
+        .select(`
+          *,
+          assigner:store_members!assigner_id(
+            id,
+            name,
+            profile:profiles(full_name)
+          )
+        `)
+        .eq('store_id', storeId)
+        .eq('due_date', dateStr)
+        .is('deleted_at', null)
+        .order('is_done', { ascending: true })
+        .order('priority', { ascending: true });
+
+      if (canManageTasks === false && currentStaffId) {
+        tasksQuery = tasksQuery.contains('assignee_ids', [currentStaffId]);
+      }
+
       const [tasksResult, membersResult] = await Promise.all([
-        supabase
-          .from('tasks')
-          .select(`
-            *,
-            assigner:store_members!assigner_id(
-              id,
-              name,
-              profile:profiles(full_name)
-            )
-          `)
-          .eq('store_id', storeId)
-          .eq('due_date', dateStr)
-          .is('deleted_at', null)
-          .order('is_done', { ascending: true })
-          .order('priority', { ascending: true }),
+        tasksQuery,
         supabase
           .from('store_members')
           .select('id, name, profile:profiles(full_name)')
@@ -106,31 +118,37 @@ export function useTasksByDate(storeId: string, dateStr: string) {
   });
 }
 
-export function useTodayTasks(storeId: string) {
+export function useTodayTasks(storeId: string, currentStaffId?: string, canManageTasks?: boolean) {
   return useQuery({
-    queryKey: ['tasks', storeId, 'today'],
+    queryKey: ['tasks', storeId, 'today', currentStaffId, canManageTasks],
     queryFn: async () => {
       if (!storeId) return [];
       
       const supabase = createClient();
       const today = formatInTimeZone(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
       
+      let tasksQuery = supabase
+        .from('tasks')
+        .select(`
+          *,
+          assigner:store_members!assigner_id(
+            id,
+            name,
+            profile:profiles(full_name)
+          )
+        `)
+        .eq('store_id', storeId)
+        .eq('due_date', today)
+        .is('deleted_at', null)
+        .order('is_done', { ascending: true })
+        .order('priority', { ascending: true });
+
+      if (canManageTasks === false && currentStaffId) {
+        tasksQuery = tasksQuery.contains('assignee_ids', [currentStaffId]);
+      }
+
       const [tasksResult, membersResult] = await Promise.all([
-        supabase
-          .from('tasks')
-          .select(`
-            *,
-            assigner:store_members!assigner_id(
-              id,
-              name,
-              profile:profiles(full_name)
-            )
-          `)
-          .eq('store_id', storeId)
-          .eq('due_date', today)
-          .is('deleted_at', null)
-          .order('is_done', { ascending: true })
-          .order('priority', { ascending: true }),
+        tasksQuery,
         supabase
           .from('store_members')
           .select('id, name, profile:profiles(full_name)')
@@ -155,30 +173,36 @@ export function useTodayTasks(storeId: string) {
   });
 }
 
-export function useOngoingTasks(storeId: string) {
+export function useOngoingTasks(storeId: string, currentStaffId?: string, canManageTasks?: boolean) {
   return useQuery({
-    queryKey: ['tasks', storeId, 'ongoing'],
+    queryKey: ['tasks', storeId, 'ongoing', currentStaffId, canManageTasks],
     queryFn: async () => {
       if (!storeId) return [];
       
       const supabase = createClient();
       const today = formatInTimeZone(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
       
+      let tasksQuery = supabase
+        .from('tasks')
+        .select(`
+          *,
+          assigner:store_members!assigner_id(
+            id,
+            name,
+            profile:profiles(full_name)
+          )
+        `)
+        .eq('store_id', storeId)
+        .gt('due_date', today)
+        .is('deleted_at', null)
+        .order('due_date', { ascending: true });
+
+      if (canManageTasks === false && currentStaffId) {
+        tasksQuery = tasksQuery.contains('assignee_ids', [currentStaffId]);
+      }
+
       const [tasksResult, membersResult] = await Promise.all([
-        supabase
-          .from('tasks')
-          .select(`
-            *,
-            assigner:store_members!assigner_id(
-              id,
-              name,
-              profile:profiles(full_name)
-            )
-          `)
-          .eq('store_id', storeId)
-          .gt('due_date', today)
-          .is('deleted_at', null)
-          .order('due_date', { ascending: true }),
+        tasksQuery,
         supabase
           .from('store_members')
           .select('id, name, profile:profiles(full_name)')
@@ -203,31 +227,37 @@ export function useOngoingTasks(storeId: string) {
   });
 }
 
-export function useOverdueTasks(storeId: string) {
+export function useOverdueTasks(storeId: string, currentStaffId?: string, canManageTasks?: boolean) {
   return useQuery({
-    queryKey: ['tasks', storeId, 'overdue'],
+    queryKey: ['tasks', storeId, 'overdue', currentStaffId, canManageTasks],
     queryFn: async () => {
       if (!storeId) return [];
       
       const supabase = createClient();
       const today = formatInTimeZone(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
       
+      let tasksQuery = supabase
+        .from('tasks')
+        .select(`
+          *,
+          assigner:store_members!assigner_id(
+            id,
+            name,
+            profile:profiles(full_name)
+          )
+        `)
+        .eq('store_id', storeId)
+        .lt('due_date', today)
+        .eq('is_done', false)
+        .is('deleted_at', null)
+        .order('due_date', { ascending: true });
+
+      if (canManageTasks === false && currentStaffId) {
+        tasksQuery = tasksQuery.contains('assignee_ids', [currentStaffId]);
+      }
+
       const [tasksResult, membersResult] = await Promise.all([
-        supabase
-          .from('tasks')
-          .select(`
-            *,
-            assigner:store_members!assigner_id(
-              id,
-              name,
-              profile:profiles(full_name)
-            )
-          `)
-          .eq('store_id', storeId)
-          .lt('due_date', today)
-          .eq('is_done', false)
-          .is('deleted_at', null)
-          .order('due_date', { ascending: true }),
+        tasksQuery,
         supabase
           .from('store_members')
           .select('id, name, profile:profiles(full_name)')

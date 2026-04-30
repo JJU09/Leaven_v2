@@ -4,14 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { 
-  CalendarDays, 
   CalendarRange,
-  User, 
-  CheckSquare,
   ClipboardList,
   Umbrella,
   LayoutDashboard,
-  Calculator
+  Megaphone
 } from 'lucide-react'
 
 interface MobileBottomNavProps {
@@ -25,40 +22,31 @@ export function MobileBottomNav({ role, permissions = {} }: MobileBottomNavProps
   const canManage = role === 'owner' || role === 'manager'
 
   const navItems = [
-    {
-      title: '출·퇴근',
-      href: '/dashboard/attendance',
-      icon: CalendarDays,
-    },
-    {
-      title: '스케줄',
-      href: '/dashboard/schedule',
-      icon: CalendarRange,
-    },
-    ...(permissions.view_dashboard ? [
-      {
-        title: '대시보드',
-        href: '/dashboard',
-        icon: LayoutDashboard,
-      }
-    ] : []),
-    {
-      title: '업무',
-      href: '/dashboard/tasks',
-      icon: ClipboardList,
-    },
+    ...(permissions.view_announcements ? [{
+      title: '공지',
+      href: '/dashboard/announcements',
+      icon: Megaphone,
+    }] : []),
     {
       title: '휴가',
       href: '/dashboard/leave',
       icon: Umbrella,
     },
-    ...(permissions.view_salary ? [
-      {
-        title: '급여 정산',
-        href: '/dashboard/payroll',
-        icon: Calculator,
-      }
-    ] : [])
+    ...(permissions.view_dashboard ? [{
+      title: '대시보드',
+      href: '/dashboard',
+      icon: LayoutDashboard,
+    }] : []),
+    {
+      title: '스케줄',
+      href: '/dashboard/schedule',
+      icon: CalendarRange,
+    },
+    {
+      title: '업무',
+      href: '/dashboard/tasks',
+      icon: ClipboardList,
+    }
   ]
 
   return (

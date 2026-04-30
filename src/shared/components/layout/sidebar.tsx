@@ -75,12 +75,12 @@ export function Sidebar({
           icon: Sparkles,
           isUpcoming: false
         }] : []),
-        {
+        ...(permissions.view_announcements ? [{
           title: '인계 및 공지',
           href: '/dashboard/announcements',
           icon: Megaphone,
           isUpcoming: false
-        }
+        }] : [])
       ]
     },
     {
@@ -132,18 +132,18 @@ export function Sidebar({
     {
       title: '자산 및 거래처 관리',
       items: [
-        {
+        ...(permissions.view_asset ? [{
           title: '비품/자산 관리',
           href: '/dashboard/assets',
           icon: Package2,
           isUpcoming: false
-        },
-        {
+        }] : []),
+        ...(permissions.view_vendor ? [{
           title: '거래처 관리',
           href: '/dashboard/vendors',
           icon: Building2,
           isUpcoming: false
-        }
+        }] : [])
       ]
     },
     ...(permissions.manage_store || permissions.manage_roles || role === 'owner' ? [{

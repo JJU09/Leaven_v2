@@ -6,6 +6,7 @@ import { AssetList } from '@/features/asset/components/asset-list';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { hasPermission } from '@/features/auth/permissions';
 
 export default async function AssetsPage() {
   const supabase = await createClient();
@@ -30,6 +31,12 @@ export default async function AssetsPage() {
   if (!member) redirect('/onboarding');
 
   const storeId = member.store_id;
+
+  const canView = await hasPermission(user.id, storeId, 'view_asset');
+  if (!canView) {
+    redirect('/dashboard');
+  }
+  const canManage = await hasPermission(user.id, storeId, 'manage_asset');
 
   const [summary, locations] = await Promise.all([
     getAssetSummary(storeId),
@@ -82,7 +89,7 @@ export default async function AssetsPage() {
       </div>
 
       <div className="mt-4">
-        <AssetList storeId={storeId} userId={user.id} locations={locations} />
+        <AssetList storeId={storeId} userId={user.id} locations={locations} canManage={canManage} />
       </div>
     </div>
   );

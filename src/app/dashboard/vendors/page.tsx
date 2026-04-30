@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getVendors, getVendorSummary } from '@/features/vendor/actions';
 import { VendorsPageClient } from './_components/VendorsPageClient';
+import { hasPermission } from '@/features/auth/permissions';
 
 export default async function VendorsPage(props: {
   searchParams: Promise<{ page?: string; search?: string; category?: string; type?: string }>
@@ -29,6 +30,12 @@ export default async function VendorsPage(props: {
     return <div className="p-8 text-center">소속된 매장이 없습니다.</div>;
   }
 
+  const canView = await hasPermission(user.id, storeId, 'view_vendor');
+  if (!canView) {
+    redirect('/dashboard');
+  }
+  const canManage = await hasPermission(user.id, storeId, 'manage_vendor');
+
   const page = parseInt(searchParams.page || '1');
   const search = searchParams.search || '';
   const category = searchParams.category || 'all';
@@ -51,6 +58,7 @@ export default async function VendorsPage(props: {
         initialVendors={vendors || []} 
         totalCount={count || 0}
         summary={summary}
+        canManage={canManage}
       />
     </div>
   );

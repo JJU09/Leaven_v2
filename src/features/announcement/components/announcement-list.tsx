@@ -45,10 +45,12 @@ interface AnnouncementListProps {
   storeId: string
   announcements: Announcement[]
   canManage: boolean
+  canView?: boolean
   storeMembers?: { id: string; name: string }[]
+  currentMemberId?: string
 }
 
-export function AnnouncementList({ storeId, announcements, canManage, storeMembers }: AnnouncementListProps) {
+export function AnnouncementList({ storeId, announcements, canManage, canView = false, storeMembers, currentMemberId }: AnnouncementListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingData, setEditingData] = useState<Announcement | null>(null)
   
@@ -148,7 +150,7 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
                 className="pl-8 h-9 w-full sm:w-50 border-slate-200"
               />
           </div>
-          {canManage && (
+          {(canManage || canView) && (
             <Button size="sm" onClick={handleCreate} className="h-9 whitespace-nowrap">
               <Plus className="h-4 w-4 mr-1" /> 작성
             </Button>
@@ -224,7 +226,7 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
                 </div>
 
                 {/* Actions */}
-                {canManage && (
+                {(canManage || (canView && announcement.announcement_type === 'handover' && announcement.author?.id === currentMemberId)) && (
                   <div className="absolute right-4 top-4 md:static md:w-20 md:shrink-0 md:flex md:justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="flex items-center gap-1 bg-white md:bg-transparent rounded-md shadow-sm md:shadow-none border md:border-none p-1 md:p-0">
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-200" onClick={(e) => handleEdit(e, announcement)}>
@@ -248,6 +250,7 @@ export function AnnouncementList({ storeId, announcements, canManage, storeMembe
         storeId={storeId} 
         initialData={editingData} 
         storeMembers={storeMembers}
+        canManage={canManage}
       />
 
       <Dialog open={!!viewingData} onOpenChange={(open) => !open && setViewingData(null)}>

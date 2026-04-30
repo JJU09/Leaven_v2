@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { getToday } from '../_utils/dateHelpers'
 import { format } from 'date-fns'
+import { getMemberDisplayName } from '@/lib/utils'
 
 export type AttendanceStatus = '근무 중' | '결근 / 미출근' | '연차' | '퇴근 완료' | '출근 전'
 
@@ -73,8 +74,7 @@ export function useAttendanceToday(storeId: string) {
       const result: TodayAttendanceItem[] = []
       
       for (const [memberId, member] of memberMap.entries()) {
-        const profileFullName = Array.isArray(member.profile) ? member.profile[0]?.full_name : (member.profile as any)?.full_name
-        const staffName = member.name || profileFullName || '이름 없음'
+        const staffName = getMemberDisplayName(member)
         const roleName = member.role_info ? (Array.isArray(member.role_info) ? member.role_info[0]?.name : (member.role_info as any).name) : '직원'
         const roleColor = member.role_info ? (Array.isArray(member.role_info) ? member.role_info[0]?.color : (member.role_info as any).color) : undefined
 

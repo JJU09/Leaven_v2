@@ -59,11 +59,14 @@ export default async function DashboardPage() {
 
   const userName = profile?.full_name || '관리자'
 
+  const canManage = await hasPermission(user.id, store.id, 'manage_dashboard')
+
   return (
     <DashboardClient 
       storeId={store.id} 
       storeName={store.name} 
-      userName={userName} 
+      userName={userName}
+      canManage={canManage}
     />
   )
 }
