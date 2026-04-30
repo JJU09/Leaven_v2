@@ -9,8 +9,10 @@ import { updateAssetStatus } from '../actions';
 import { AssetDetail, AssetStatus } from '../types';
 import { AssetStatusBadge } from './asset-status-badge';
 import { AssetFormDialog } from './asset-form-dialog';
+import { AssetVendorDialog } from './asset-vendor-dialog';
 import { differenceInDays } from 'date-fns';
-import { Printer, Edit, ExternalLink, Calendar, Wrench, Shield, Box, User, ArrowRight, Plus } from 'lucide-react';
+import { Printer, Edit, ExternalLink, Calendar, Wrench, Shield, Box, User, ArrowRight, Plus, X } from 'lucide-react';
+import { unlinkAssetVendor } from '../actions';
 
 interface AssetDetailViewProps {
   asset: AssetDetail;
@@ -23,6 +25,19 @@ export function AssetDetailView({ asset: initialAsset, userId, storeId }: AssetD
   const [asset, setAsset] = useState<AssetDetail>(initialAsset);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isVendorDialogOpen, setIsVendorDialogOpen] = useState(false);
+
+  const handleUnlinkVendor = async () => {
+    if (!confirm('정말 이 자산과 거래처의 연결을 해제하시겠습니까?')) return;
+    
+    try {
+      await unlinkAssetVendor(storeId, asset.id);
+      setAsset(prev => ({ ...prev, vendors: null, vendor_id: null }));
+      router.refresh();
+    } catch (error: any) {
+      alert(error.message || '거래처 연결 해제에 실패했습니다.');
+    }
+  };
 
   const handleStatusUpdate = async (newStatus: AssetStatus) => {
     if (asset.status === newStatus || isUpdatingStatus) return;
@@ -304,6 +319,16 @@ export function AssetDetailView({ asset: initialAsset, userId, storeId }: AssetD
                       </div>
                     </div>
                   </div>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsVendorDialogOpen(true)}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      변경하기
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleUnlinkVendor}>
+                      <X className="w-4 h-4 mr-2" />
+                      연결 해제
+                    </Button>
+                  </div>
                 </div>
                 <div className="pt-4 border-t flex justify-end">
                   <Button variant="default" asChild>
@@ -318,12 +343,28 @@ export function AssetDetailView({ asset: initialAsset, userId, storeId }: AssetD
                 <Box className="w-12 h-12 mx-auto mb-4 opacity-20" />
                 <p className="text-lg mb-2">연결된 거래처가 없습니다.</p>
                 <p className="text-sm opacity-70 mb-6">이 자산을 구매하거나 A/S를 담당하는 거래처를 연결해두면 관리가 편해집니다.</p>
-                <Button variant="outline" onClick={() => setIsFormOpen(true)}>거래처 연결/수정하기</Button>
+                <Button variant="outline" onClick={() => setIsVendorDialogOpen(true)}>거래처 연결/수정하기</Button>
               </div>
             )}
           </TabsContent>
         </div>
       </Tabs>
+
+      <AssetVendorDialog
+        storeId={storeId}
+        assetId={asset.id}
+        open={isVendorDialogOpen}
+        onOpenChange={(open) => {
+          setIsVendorDialogOpen(open);
+          if (!open) {
+            router.refresh();
+          }
+        }}
+        onSuccess={(vendor) => {
+          setAsset(prev => ({ ...prev, vendors: vendor, vendor_id: vendor.id }));
+          router.refresh();
+        }}
+      />
 
       <AssetFormDialog
         storeId={storeId}

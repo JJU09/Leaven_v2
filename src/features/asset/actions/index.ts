@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { hasPermission } from '@/features/auth/permissions';
 import { 
   AssetDetail, 
   AssetStatus, 
@@ -267,6 +268,103 @@ export async function deleteAsset(assetId: string) {
   if (error) {
     console.error('deleteAsset error:', error);
     throw new Error('자산 삭제에 실패했습니다.');
+  }
+
+  return { success: true };
+}
+
+export async function getVendorsByStore(storeId: string, search?: string, limit: number = 5) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('로그인이 필요합니다.');
+
+  let query = supabase
+    .from('vendors')
+    .select('id, name, category, manager_name, contact_number, email')
+    .eq('store_id', storeId)
+    .is('deleted_at', null);
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,contact_number.ilike.%${search}%`);
+  }
+
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('getVendorsByStore error:', error);
+    throw new Error('거래처 목록을 불러오는데 실패했습니다.');
+  }
+
+  return data;
+}
+
+export async function createVendor(storeId: string, vendorData: any) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('로그인이 필요합니다.');
+
+  const hasPerm = await hasPermission(user.id, storeId, 'manage_vendor');
+  if (!hasPerm) {
+    throw new Error('거래처를 생성할 권한이 없습니다.');
+  }
+
+  const { data, error } = await supabase
+    .from('vendors')
+    .insert([{ ...vendorData, store_id: storeId }])
+    .select('id, name, category, manager_name, contact_number, email')
+    .single();
+
+  if (error) {
+    console.error('createVendor error:', error);
+    throw new Error('새 거래처 등록에 실패했습니다.');
+  }
+
+  return data;
+}
+
+export async function updateAssetVendor(storeId: string, assetId: string, vendorId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('로그인이 필요합니다.');
+
+  const hasPerm = await hasPermission(user.id, storeId, 'manage_asset');
+  if (!hasPerm) {
+    throw new Error('자산 정보를 수정할 권한이 없습니다.');
+  }
+
+  const { error } = await supabase
+    .from('store_assets')
+    .update({ vendor_id: vendorId, updated_at: new Date().toISOString() })
+    .eq('id', assetId);
+
+  if (error) {
+    console.error('updateAssetVendor error:', error);
+    throw new Error('자산의 거래처 연결에 실패했습니다.');
+  }
+
+  return { success: true };
+}
+
+export async function unlinkAssetVendor(storeId: string, assetId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('로그인이 필요합니다.');
+
+  const hasPerm = await hasPermission(user.id, storeId, 'manage_asset');
+  if (!hasPerm) {
+    throw new Error('자산 정보를 수정할 권한이 없습니다.');
+  }
+
+  const { error } = await supabase
+    .from('store_assets')
+    .update({ vendor_id: null, updated_at: new Date().toISOString() })
+    .eq('id', assetId);
+
+  if (error) {
+    console.error('unlinkAssetVendor error:', error);
+    throw new Error('자산 거래처 연결 해제에 실패했습니다.');
   }
 
   return { success: true };

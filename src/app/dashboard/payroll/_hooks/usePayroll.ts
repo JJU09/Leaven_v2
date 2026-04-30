@@ -173,7 +173,8 @@ export function usePayroll(storeId: string | undefined, year: number, month: num
             if (
               record.work_days !== stats.workDays ||
               record.work_hours !== totalHours ||
-              record.base_pay !== basePay
+              record.base_pay !== basePay ||
+              record.wage_type !== m.wage_type
             ) {
               await supabase
                 .from("payroll_records")
@@ -183,6 +184,7 @@ export function usePayroll(storeId: string | undefined, year: number, month: num
                   base_pay: basePay,
                   gross_pay: basePay, // 추가 수당 고려 필요시 보완
                   net_pay: basePay - (record.total_deduction || 0),
+                  wage_type: m.wage_type,
                 })
                 .eq("id", record.id);
               
