@@ -28,8 +28,8 @@ export function MetricCard({
   }
 
   return (
-    <Card>
-      <CardContent className="p-6">
+    <Card className="h-full">
+      <CardContent className="p-6 h-full flex flex-col justify-center">
         <div className="flex items-center justify-between space-y-0 pb-2">
           <p className="text-sm font-medium text-slate-500">{title}</p>
           <Icon className={`h-4 w-4 ${iconClassName || 'text-slate-400'}`} />

@@ -121,7 +121,7 @@ export function ClockInOutCard({ storeId, memberId }: ClockInOutCardProps) {
 
   if (!memberId || isLoading) {
     return (
-      <Card className="bg-primary/5 border-primary/20">
+      <Card className="bg-primary/5 border-primary/20 h-full">
         <CardContent className="p-6 flex items-center justify-center h-full">
           <div className="animate-pulse flex items-center gap-2 text-primary/60">
             <Clock className="w-5 h-5" />
@@ -136,7 +136,7 @@ export function ClockInOutCard({ storeId, memberId }: ClockInOutCardProps) {
   const isClockedOut = !!attendance?.clock_out_time
 
   return (
-    <Card className="bg-primary/5 border-primary/20">
+    <Card className="bg-primary/5 border-primary/20 h-full">
       <CardContent className="p-4 md:p-6 flex flex-col justify-center h-full space-y-3">
         <div className="flex items-center justify-between space-y-0">
           <p className="text-sm font-medium text-primary">내 출퇴근</p>
