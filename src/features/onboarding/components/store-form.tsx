@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createStore } from '../actions'
+import { formatBusinessNumber } from '@/lib/formatters'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -17,6 +18,23 @@ import { Textarea } from '@/components/ui/textarea'
 export function StoreForm() {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [businessNumber, setBusinessNumber] = useState('')
+
+  const handleBusinessNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    // 숫자만 추출해서 최대 10자리까지만 허용 (포매팅 전 단계)
+    const digits = value.replace(/[^0-9]/g, '').slice(0, 10)
+    
+    // 포매팅 적용
+    let formatted = digits
+    if (digits.length > 5) {
+      formatted = digits.replace(/(\d{3})(\d{2})(\d+)/, '$1-$2-$3')
+    } else if (digits.length > 3) {
+      formatted = digits.replace(/(\d{3})(\d+)/, '$1-$2')
+    }
+    
+    setBusinessNumber(formatted)
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -60,6 +78,9 @@ export function StoreForm() {
               id="business_number"
               name="business_number"
               placeholder="000-00-00000"
+              value={businessNumber}
+              onChange={handleBusinessNumberChange}
+              maxLength={12} // 000-00-00000 형식은 총 12자
             />
           </div>
           <div className="space-y-2">
