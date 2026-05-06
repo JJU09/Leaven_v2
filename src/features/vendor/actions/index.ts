@@ -56,6 +56,7 @@ export async function getVendorDetail(vendorId: string) {
     `)
     .eq('id', vendorId)
     .is('deleted_at', null)
+    .is('vendor_transactions.deleted_at', null)
     .maybeSingle();
 
   if (error) {
@@ -219,14 +220,19 @@ export async function updateTransaction(transactionId: string, data: Partial<Tra
 export async function deleteTransaction(transactionId: string) {
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('vendor_transactions')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', transactionId);
+    .eq('id', transactionId)
+    .select();
 
   if (error) {
     console.error('Error deleting transaction:', error);
     throw new Error('거래 내역 삭제에 실패했습니다.');
+  }
+  
+  if (!data || data.length === 0) {
+    throw new Error('삭제할 내역을 찾을 수 없거나 권한이 없습니다.');
   }
 
   revalidatePath(`/dashboard/vendors`);

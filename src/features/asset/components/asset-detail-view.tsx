@@ -145,10 +145,6 @@ export function AssetDetailView({ asset: initialAsset, userId, storeId }: AssetD
                 <span className="font-mono text-base">{asset.serial_number || '-'}</span>
               </div>
               <div>
-                <span className="text-muted-foreground block mb-1">설치 위치</span>
-                <span className="font-medium text-base">{asset.installation_location || '-'}</span>
-              </div>
-              <div>
                 <span className="text-muted-foreground block mb-1">구매일</span>
                 <span className="text-base">{asset.purchase_date || '-'}</span>
               </div>

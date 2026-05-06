@@ -264,9 +264,9 @@ export function CalendarHeader({
                 variant="default"
                 className="bg-[#1a1a1a] text-white text-[11px] h-auto font-medium px-3 py-1.5 rounded-none rounded-l-md hover:bg-black/80 flex items-center gap-1.5 border-r border-white/20"
                 onClick={onAutoSchedule}
-                title="스케줄 자동 생성"
+                title="스케줄 생성"
               >
-                <Sparkles className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500/20" /> 스케줄 자동 생성
+                스케줄 생성
               </Button>
               <Button 
                 variant="default"

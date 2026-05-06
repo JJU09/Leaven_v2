@@ -83,6 +83,17 @@ export function VendorTable({
     );
   };
 
+  const filteredVendors = vendors.filter(vendor => {
+    const matchesSearch = 
+      (vendor.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (vendor.manager_name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = categoryFilter === 'all' || vendor.category === categoryFilter;
+    const matchesContractType = contractTypeFilter === 'all' || vendor.contract_type === contractTypeFilter;
+
+    return matchesSearch && matchesCategory && matchesContractType;
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -102,10 +113,14 @@ export function VendorTable({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">카테고리 전체</SelectItem>
-              <SelectItem value="food">식자재</SelectItem>
-              <SelectItem value="equipment">장비</SelectItem>
-              <SelectItem value="consumables">소모품</SelectItem>
-              <SelectItem value="other">기타</SelectItem>
+              <SelectItem value="식자재">식자재</SelectItem>
+              <SelectItem value="주류/음료">주류/음료</SelectItem>
+              <SelectItem value="소모품">소모품</SelectItem>
+              <SelectItem value="장비">장비</SelectItem>
+              <SelectItem value="서비스/유지보수">서비스/유지보수</SelectItem>
+              <SelectItem value="마케팅/광고">마케팅/광고</SelectItem>
+              <SelectItem value="공과금">공과금</SelectItem>
+              <SelectItem value="기타">기타</SelectItem>
             </SelectContent>
           </Select>
           <Select value={contractTypeFilter} onValueChange={setContractTypeFilter}>
@@ -146,14 +161,14 @@ export function VendorTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {vendors.length === 0 ? (
+            {filteredVendors.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center">
                   등록된 거래처가 없습니다.
                 </TableCell>
               </TableRow>
             ) : (
-              vendors.map((vendor) => (
+              filteredVendors.map((vendor) => (
                 <TableRow 
                   key={vendor.id}
                   className={canManage ? "cursor-pointer hover:bg-muted/50" : ""}

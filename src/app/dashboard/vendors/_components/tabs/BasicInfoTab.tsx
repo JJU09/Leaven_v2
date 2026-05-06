@@ -47,8 +47,12 @@ export function BasicInfoTab({ vendor }: BasicInfoTabProps) {
         </div>
 
         <div className="space-y-1 col-span-2">
-          <p className="text-sm font-medium text-muted-foreground">계좌번호</p>
-          <p className="text-sm">{vendor.bank_account || '-'}</p>
+          <p className="text-sm font-medium text-muted-foreground">계좌정보</p>
+          <p className="text-sm">
+            {vendor.bank_name || vendor.account_number || vendor.account_holder 
+              ? `${vendor.bank_name || ''} ${vendor.account_number || ''} ${vendor.account_holder ? `(${vendor.account_holder})` : ''}`.trim()
+              : '-'}
+          </p>
         </div>
 
         <div className="space-y-1 col-span-2">

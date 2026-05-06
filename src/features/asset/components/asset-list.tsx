@@ -103,17 +103,6 @@ export function AssetList({ storeId, userId, locations, canManage }: AssetListPr
             </SelectContent>
           </Select>
 
-          <Select value={location} onValueChange={setLocation}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="위치" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">모든 위치</SelectItem>
-              {locations.map((loc) => (
-                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {canManage && (
@@ -135,20 +124,19 @@ export function AssetList({ storeId, userId, locations, canManage }: AssetListPr
               <TableHead className="text-center">자산명</TableHead>
               <TableHead className="text-center">카테고리</TableHead>
               <TableHead className="text-center">상태</TableHead>
-              <TableHead className="text-center">설치 위치</TableHead>
               <TableHead className="text-center">다음 점검일</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center h-24">
+                <TableCell colSpan={5} className="text-center h-24">
                   로딩 중...
                 </TableCell>
               </TableRow>
             ) : data?.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
                   등록된 자산이 없습니다.
                 </TableCell>
               </TableRow>
@@ -167,7 +155,6 @@ export function AssetList({ storeId, userId, locations, canManage }: AssetListPr
                       <AssetStatusBadge status={asset.status} />
                     </div>
                   </TableCell>
-                  <TableCell className="text-center">{asset.installation_location || '-'}</TableCell>
                   <TableCell className={`text-center ${isInspectionDueSoon(asset.next_inspection_date) ? 'text-red-500 font-medium' : ''}`}>
                     {asset.next_inspection_date || '-'}
                   </TableCell>

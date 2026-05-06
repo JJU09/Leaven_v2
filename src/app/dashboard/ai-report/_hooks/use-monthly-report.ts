@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
-export interface DailyReportData {
+export interface MonthlyReportData {
   id?: string
   store_id: string
-  report_type: 'daily'
+  report_type: 'monthly'
   period_key: string
   generated_at?: string
   content: {
@@ -12,32 +12,32 @@ export interface DailyReportData {
       text: string
       insights: { type: 'warning' | 'good' | 'bad' | 'info'; text: string }[]
     }
-    attendance: {
+    staffing: {
+      insights: { type: 'warning' | 'good' | 'bad' | 'info'; text: string }[]
+      hotDays: string[]
+    }
+    tasks?: {
       summary: string
       insights: { type: 'warning' | 'good' | 'bad' | 'info'; text: string }[]
     }
-    tasks: {
-      summary: string
-      insights: { type: 'warning' | 'good' | 'bad' | 'info'; text: string }[]
-    }
-    assets?: {
+    assetsAndVendors: {
       insights: { type: 'warning' | 'good' | 'bad' | 'info'; text: string }[]
     }
     recommendations: { title: string; description: string }[]
   }
 }
 
-export function useDailyReport(storeId: string, targetDate: string) {
+export function useMonthlyReport(storeId: string, targetMonth: string) {
   const queryClient = useQueryClient()
-  const queryKey = ['ai-report', 'daily', storeId, targetDate]
+  const queryKey = ['ai-report', 'monthly', storeId, targetMonth]
 
-  const { data, isLoading, isError, refetch } = useQuery<DailyReportData>({
+  const { data, isLoading, isError, refetch } = useQuery<MonthlyReportData>({
     queryKey,
     queryFn: async () => {
-      const response = await fetch('/api/ai-report/daily', {
+      const response = await fetch('/api/ai-report/monthly', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId, targetDate, forceRefresh: false }),
+        body: JSON.stringify({ storeId, targetMonth, forceRefresh: false }),
       })
 
       if (!response.ok) {
@@ -51,10 +51,10 @@ export function useDailyReport(storeId: string, targetDate: string) {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/ai-report/daily', {
+      const response = await fetch('/api/ai-report/monthly', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId, targetDate, forceRefresh: true }),
+        body: JSON.stringify({ storeId, targetMonth, forceRefresh: true }),
       })
 
       if (!response.ok) {
@@ -65,7 +65,7 @@ export function useDailyReport(storeId: string, targetDate: string) {
     },
     onSuccess: (newData) => {
       queryClient.setQueryData(queryKey, newData)
-      toast.success('AI 리포트가 재생성되었습니다.')
+      toast.success('월간 AI 리포트가 재생성되었습니다.')
     },
     onError: () => {
       toast.error('리포트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')

@@ -12,19 +12,19 @@ interface ReportCardProps {
 
 export function ReportCard({ title, icon, summary, className, children }: ReportCardProps) {
   return (
-    <Card className={cn("overflow-hidden border shadow-sm", className)}>
-      <CardHeader className="bg-muted/30 pb-4">
-        <CardTitle className="text-lg flex items-center gap-2">
+    <Card className={cn("overflow-hidden border shadow-sm h-full flex flex-col", className)}>
+      <CardHeader className="bg-muted/30 pb-2.5 pt-2.5 px-3 flex-none">
+        <CardTitle className="text-[14px] flex items-center gap-1.5">
           {icon && <div className="text-muted-foreground">{icon}</div>}
           {title}
         </CardTitle>
         {summary && (
-          <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+          <p className="text-[12px] text-muted-foreground mt-1 leading-snug">
             {summary}
           </p>
         )}
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="pt-2 px-3 pb-2 flex-1">
         {children}
       </CardContent>
     </Card>

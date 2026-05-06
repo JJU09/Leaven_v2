@@ -12,12 +12,15 @@ import {
   TableRow 
 } from '@/components/ui/table';
 
+import { VendorTransaction } from '@/features/vendor/types';
+
 interface TransactionTabProps {
   vendor: VendorDetail;
   onAddTransaction: () => void;
+  onEditTransaction: (transaction: VendorTransaction) => void;
 }
 
-export function TransactionTab({ vendor, onAddTransaction }: TransactionTabProps) {
+export function TransactionTab({ vendor, onAddTransaction, onEditTransaction }: TransactionTabProps) {
   const transactions = vendor.vendor_transactions || [];
 
   const totalAmount = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
@@ -92,7 +95,11 @@ export function TransactionTab({ vendor, onAddTransaction }: TransactionTabProps
               </TableRow>
             ) : (
               transactions.map((t) => (
-                <TableRow key={t.id}>
+                <TableRow 
+                  key={t.id} 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => onEditTransaction(t)}
+                >
                   <TableCell>{t.transaction_date}</TableCell>
                   <TableCell>{t.description || '-'}</TableCell>
                   <TableCell className="font-medium">{formatCurrency(t.amount)}</TableCell>

@@ -1389,8 +1389,10 @@ export type Database = {
       }
       vendors: {
         Row: {
+          account_holder: string | null
+          account_number: string | null
           address: string | null
-          bank_account: string | null
+          bank_name: string | null
           business_number: string | null
           category: string | null
           contact_number: string | null
@@ -1413,8 +1415,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_holder?: string | null
+          account_number?: string | null
           address?: string | null
-          bank_account?: string | null
+          bank_name?: string | null
           business_number?: string | null
           category?: string | null
           contact_number?: string | null
@@ -1437,8 +1441,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_holder?: string | null
+          account_number?: string | null
           address?: string | null
-          bank_account?: string | null
+          bank_name?: string | null
           business_number?: string | null
           category?: string | null
           contact_number?: string | null

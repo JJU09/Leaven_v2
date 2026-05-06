@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { Vendor, VendorFormData, vendorSchema } from '@/features/vendor/types';
 import { createVendor, updateVendor } from '@/features/vendor/actions';
 import { VendorContractUpload } from './VendorContractUpload';
+import { formatPhoneNumber, formatBusinessNumber } from '@/lib/formatters';
 
 interface VendorFormProps {
   storeId: string;
@@ -50,7 +51,9 @@ export function VendorForm({
       email: vendor?.email || '',
       address: vendor?.address || '',
       business_number: vendor?.business_number || '',
-      bank_account: vendor?.bank_account || '',
+      bank_name: vendor?.bank_name || '',
+      account_number: vendor?.account_number || '',
+      account_holder: vendor?.account_holder || '',
       direct_contact: vendor?.direct_contact || '',
       contract_type: (vendor?.contract_type as any) || undefined,
       contract_amount: vendor?.contract_amount || 0,
@@ -102,7 +105,24 @@ export function VendorForm({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">카테고리</Label>
-                <Input id="category" {...register('category')} placeholder="예: 식자재, 소모품" />
+                <Select 
+                  onValueChange={(v) => setValue('category', v)} 
+                  defaultValue={vendor?.category || undefined}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="카테고리 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="식자재">식자재</SelectItem>
+                    <SelectItem value="주류/음료">주류/음료</SelectItem>
+                    <SelectItem value="소모품">소모품</SelectItem>
+                    <SelectItem value="장비">장비</SelectItem>
+                    <SelectItem value="서비스/유지보수">서비스/유지보수</SelectItem>
+                    <SelectItem value="마케팅/광고">마케팅/광고</SelectItem>
+                    <SelectItem value="공과금">공과금</SelectItem>
+                    <SelectItem value="기타">기타</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -111,12 +131,30 @@ export function VendorForm({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="contact_number">대표 연락처</Label>
-                <Input id="contact_number" {...register('contact_number')} placeholder="02-000-0000" />
+                <Input 
+                  id="contact_number" 
+                  {...register('contact_number', {
+                    onChange: (e) => {
+                      const formatted = formatPhoneNumber(e.target.value);
+                      setValue('contact_number', formatted, { shouldValidate: true });
+                    }
+                  })} 
+                  placeholder="02-000-0000" 
+                />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="direct_contact">직통 연락처</Label>
-                <Input id="direct_contact" {...register('direct_contact')} placeholder="010-0000-0000" />
+                <Input 
+                  id="direct_contact" 
+                  {...register('direct_contact', {
+                    onChange: (e) => {
+                      const formatted = formatPhoneNumber(e.target.value);
+                      setValue('direct_contact', formatted, { shouldValidate: true });
+                    }
+                  })} 
+                  placeholder="010-0000-0000" 
+                />
               </div>
 
               <div className="space-y-2 col-span-1 md:col-span-3">
@@ -131,11 +169,39 @@ export function VendorForm({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="business_number">사업자등록번호</Label>
-                <Input id="business_number" {...register('business_number')} placeholder="000-00-00000" />
+                <Input 
+                  id="business_number" 
+                  {...register('business_number', {
+                    onChange: (e) => {
+                      const formatted = formatBusinessNumber(e.target.value);
+                      setValue('business_number', formatted, { shouldValidate: true });
+                    }
+                  })} 
+                  placeholder="000-00-00000" 
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bank_account">계좌번호</Label>
-                <Input id="bank_account" {...register('bank_account')} placeholder="은행명 계좌번호 예금주" />
+              <div className="space-y-2 col-span-1 md:col-span-2">
+                <Label>계좌 정보</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    className="w-[120px]" 
+                    id="bank_name" 
+                    {...register('bank_name')} 
+                    placeholder="은행명" 
+                  />
+                  <Input 
+                    className="flex-1" 
+                    id="account_number" 
+                    {...register('account_number')} 
+                    placeholder="계좌번호 (숫자만)" 
+                  />
+                  <Input 
+                    className="w-[120px]" 
+                    id="account_holder" 
+                    {...register('account_holder')} 
+                    placeholder="예금주" 
+                  />
+                </div>
               </div>
 
               <div className="space-y-2 col-span-1 md:col-span-3">
@@ -165,6 +231,8 @@ export function VendorForm({
                     <SelectItem value="delivery">납품</SelectItem>
                     <SelectItem value="lease">임대</SelectItem>
                     <SelectItem value="service">서비스</SelectItem>
+                    <SelectItem value="maintenance">유지보수</SelectItem>
+                    <SelectItem value="outsourcing">외주</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -177,33 +245,7 @@ export function VendorForm({
                   placeholder="0" 
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contract_start_date">계약 시작일</Label>
-                <Input id="contract_start_date" type="date" {...register('contract_start_date')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contract_end_date">계약 종료일</Label>
-                <Input id="contract_end_date" type="date" {...register('contract_end_date')} />
-              </div>
-
-              <div className="space-y-2">
-                <Label>결제 주기</Label>
-                <Select 
-                  onValueChange={(v) => setValue('payment_cycle', v as any)} 
-                  defaultValue={vendor?.payment_cycle || undefined}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="결제 주기 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">매월</SelectItem>
-                    <SelectItem value="quarterly">분기별</SelectItem>
-                    <SelectItem value="yearly">매년</SelectItem>
-                    <SelectItem value="per_case">건별결제</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              
               <div className="space-y-2 flex flex-col justify-center">
                 <Label className="mb-2">자동 갱신</Label>
                 <div className="flex items-center space-x-2">
@@ -213,6 +255,15 @@ export function VendorForm({
                   />
                   <span className="text-sm text-muted-foreground">계약 자동 연장</span>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contract_start_date">계약 시작일</Label>
+                <Input id="contract_start_date" type="date" {...register('contract_start_date')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contract_end_date">계약 종료일</Label>
+                <Input id="contract_end_date" type="date" {...register('contract_end_date')} />
               </div>
               
               <div className="space-y-2 col-span-1 md:col-span-3 mt-4">

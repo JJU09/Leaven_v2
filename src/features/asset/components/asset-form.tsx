@@ -21,9 +21,12 @@ const assetFormSchema = z.object({
   model_name: emptyToNull,
   manufacturer: emptyToNull,
   serial_number: emptyToNull,
-  installation_location: emptyToNull,
   purchase_date: emptyToNull,
-  purchase_amount: z.union([z.coerce.number(), z.literal('')]).transform(v => v === '' ? null : v).nullable().optional(),
+  purchase_amount: z.union([z.string(), z.number()]).transform(v => {
+    if (v === '' || v === null || v === undefined) return null;
+    const num = Number(v.toString().replace(/,/g, ''));
+    return isNaN(num) ? null : num;
+  }).nullable().optional(),
   warranty_expiry_date: emptyToNull,
   as_vendor_name: emptyToNull,
   as_contact: emptyToNull,
@@ -55,9 +58,8 @@ export function AssetForm({ storeId, userId, asset, locations = [], onSuccess, o
       model_name: asset?.model_name || '',
       manufacturer: asset?.manufacturer || '',
       serial_number: asset?.serial_number || '',
-      installation_location: asset?.installation_location || '',
       purchase_date: asset?.purchase_date || '',
-      purchase_amount: asset?.purchase_amount ?? ('' as any),
+      purchase_amount: asset?.purchase_amount ? asset.purchase_amount.toLocaleString() : ('' as any),
       warranty_expiry_date: asset?.warranty_expiry_date || '',
       as_vendor_name: asset?.as_vendor_name || '',
       as_contact: asset?.as_contact || '',
@@ -127,12 +129,16 @@ export function AssetForm({ storeId, userId, asset, locations = [], onSuccess, o
                       <SelectValue placeholder="카테고리 선택" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="전자기기">전자기기</SelectItem>
-                    <SelectItem value="가구집기">가구집기</SelectItem>
-                    <SelectItem value="주방기기">주방기기</SelectItem>
-                    <SelectItem value="기타">기타</SelectItem>
-                  </SelectContent>
+                    <SelectContent>
+                      <SelectItem value="전자기기">전자기기</SelectItem>
+                      <SelectItem value="가구집기">가구집기</SelectItem>
+                      <SelectItem value="주방기기">주방기기</SelectItem>
+                      <SelectItem value="소프트웨어">소프트웨어</SelectItem>
+                      <SelectItem value="차량">차량</SelectItem>
+                      <SelectItem value="공구">공구</SelectItem>
+                      <SelectItem value="비품">비품</SelectItem>
+                      <SelectItem value="기타">기타</SelectItem>
+                    </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
@@ -183,20 +189,6 @@ export function AssetForm({ storeId, userId, asset, locations = [], onSuccess, o
 
           <FormField
             control={form.control as any}
-            name="installation_location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>설치 위치</FormLabel>
-                <FormControl>
-                  <Input placeholder="예: 1층 홀, 주방 등" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control as any}
             name="purchase_date"
             render={({ field }) => (
               <FormItem>
@@ -212,11 +204,25 @@ export function AssetForm({ storeId, userId, asset, locations = [], onSuccess, o
           <FormField
             control={form.control as any}
             name="purchase_amount"
-            render={({ field }) => (
+            render={({ field: { onChange, value, ...field } }) => (
               <FormItem>
                 <FormLabel>구매 금액 (원)</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input 
+                    type="text" 
+                    placeholder="0"
+                    value={value || ''}
+                    onChange={(e) => {
+                      const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                      if (!rawValue) {
+                        onChange('');
+                        return;
+                      }
+                      const formatted = Number(rawValue).toLocaleString();
+                      onChange(formatted);
+                    }}
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -272,11 +278,45 @@ export function AssetForm({ storeId, userId, asset, locations = [], onSuccess, o
             <FormField
               control={form.control as any}
               name="as_contact"
-              render={({ field }) => (
+              render={({ field: { onChange, value, ...field } }) => (
                 <FormItem>
                   <FormLabel>A/S 연락처</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input 
+                      placeholder="000-0000-0000"
+                      value={value || ''}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/[^0-9]/g, '');
+                        if (val.length > 11) {
+                          val = val.slice(0, 11);
+                        }
+                        
+                        let formatted = val;
+                        if (val.length === 11) {
+                          formatted = val.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+                        } else if (val.length === 10) {
+                          if (val.startsWith('02')) {
+                            formatted = val.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
+                          } else {
+                            formatted = val.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+                          }
+                        } else if (val.length > 7) {
+                          if (val.startsWith('02')) {
+                            formatted = val.replace(/(\d{2})(\d{3,4})(\d{1,4})/, '$1-$2-$3');
+                          } else {
+                            formatted = val.replace(/(\d{3})(\d{3,4})(\d{1,4})/, '$1-$2-$3');
+                          }
+                        } else if (val.length > 3) {
+                          if (val.startsWith('02')) {
+                            formatted = val.replace(/(\d{2})(\d{1,4})/, '$1-$2');
+                          } else {
+                            formatted = val.replace(/(\d{3})(\d{1,4})/, '$1-$2');
+                          }
+                        }
+                        onChange(formatted);
+                      }}
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

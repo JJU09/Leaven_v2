@@ -979,6 +979,8 @@ export function UnifiedCalendar({
         onOpenChange={setIsAutoScheduleModalOpen}
         storeId={storeId}
         staffList={staffList}
+        storeOpeningHours={storeOpeningHours}
+        approvedLeaves={approvedLeaves}
       />
 
       {/* Bulk Delete Modal */}

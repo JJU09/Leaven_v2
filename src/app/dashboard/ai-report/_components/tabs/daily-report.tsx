@@ -6,7 +6,7 @@ import { ko } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, RefreshCw, Users, ClipboardList, Package2, Loader2, Info, Sparkles } from 'lucide-react'
+import { CalendarIcon, RefreshCw, Users, ClipboardList, Package2, Loader2, Info, Sparkles, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDailyReport } from '../../_hooks/use-daily-report'
 import { ReportCard } from '../shared/report-card'
@@ -78,9 +78,9 @@ export function DailyReport({ storeId }: { storeId: string }) {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           {[1, 2, 3, 4].map(i => (
-            <Skeleton key={i} className="h-[250px] rounded-xl w-full" />
+            <Skeleton key={i} className="h-[200px] rounded-xl w-full" />
           ))}
         </div>
       ) : isError ? (
@@ -107,47 +107,65 @@ export function DailyReport({ storeId }: { storeId: string }) {
           </p>
         </div>
       ) : (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 pb-10">
-          <ReportCard 
-            title="출퇴근 현황" 
-            icon={<Users className="w-5 h-5" />}
-            summary={report.content.attendance.summary}
-          >
-            <div className="space-y-3">
-              {report.content.attendance.insights.map((insight: any, idx: number) => (
-                <InsightItem key={idx} type={insight.type} text={insight.text} />
-              ))}
-            </div>
-          </ReportCard>
-
-          <ReportCard 
-            title="오늘의 업무" 
-            icon={<ClipboardList className="w-5 h-5" />}
-            summary={report.content.tasks.summary}
-          >
-            <div className="space-y-3">
-              {report.content.tasks.insights.map((insight: any, idx: number) => (
-                <InsightItem key={idx} type={insight.type} text={insight.text} />
-              ))}
-            </div>
-          </ReportCard>
-
-          {report.content.assets && report.content.assets.insights.length > 0 && (
+        <div className="flex flex-col gap-4 pb-6">
+          {report.content.summary && (
             <ReportCard 
-              title="자산 및 거래처 동향" 
-              icon={<Package2 className="w-5 h-5" />}
+              title="일간 운영 요약" 
+              icon={<BarChart3 className="w-5 h-5" />}
+              summary={report.content.summary.text}
             >
-              <div className="space-y-3">
-                {report.content.assets.insights.map((insight: any, idx: number) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {report.content.summary.insights?.map((insight: any, idx: number) => (
                   <InsightItem key={idx} type={insight.type} text={insight.text} />
                 ))}
               </div>
             </ReportCard>
           )}
 
-          <div className={cn("md:col-span-2 mt-2", (!report.content.assets || report.content.assets.insights.length === 0) && "md:col-span-2")}>
-            <RecommendationList items={report.content.recommendations} />
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+            <ReportCard 
+              title="출퇴근 현황" 
+              icon={<Users className="w-5 h-5" />}
+              summary={report.content.attendance.summary}
+            >
+              <div className="space-y-2">
+                {report.content.attendance.insights.map((insight: any, idx: number) => (
+                  <InsightItem key={idx} type={insight.type} text={insight.text} />
+                ))}
+              </div>
+            </ReportCard>
+
+            <ReportCard 
+              title="오늘의 업무" 
+              icon={<ClipboardList className="w-5 h-5" />}
+              summary={report.content.tasks.summary}
+            >
+              <div className="space-y-2">
+                {report.content.tasks.insights.map((insight: any, idx: number) => (
+                  <InsightItem key={idx} type={insight.type} text={insight.text} />
+                ))}
+              </div>
+            </ReportCard>
+
+            <ReportCard 
+              title="자산 및 거래처 동향" 
+              icon={<Package2 className="w-5 h-5" />}
+            >
+              <div className="space-y-2">
+                {report.content.assets && report.content.assets.insights.length > 0 ? (
+                  report.content.assets.insights.map((insight: any, idx: number) => (
+                    <InsightItem key={idx} type={insight.type} text={insight.text} />
+                  ))
+                ) : (
+                  <div className="text-[13px] text-muted-foreground p-2 text-center border rounded-md border-dashed">
+                    특이사항 없음
+                  </div>
+                )}
+              </div>
+            </ReportCard>
           </div>
+
+          <RecommendationList items={report.content.recommendations} />
         </div>
       )}
     </div>

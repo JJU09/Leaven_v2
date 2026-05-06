@@ -1,36 +1,34 @@
 'use client'
 
 import { useState } from 'react'
-import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns'
+import { format, subMonths } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CalendarIcon, RefreshCw, BarChart3, Users, Package2, Loader2, Info, Sparkles } from 'lucide-react'
+import { CalendarIcon, RefreshCw, BarChart3, Users, Package2, Loader2, Info, Sparkles, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useWeeklyReport } from '../../_hooks/use-weekly-report'
+import { useMonthlyReport } from '../../_hooks/use-monthly-report'
 import { ReportCard } from '../shared/report-card'
 import { InsightItem } from '../shared/insight-item'
 import { RecommendationList } from '../shared/recommendation-list'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CheckCircle2 } from 'lucide-react'
 
-export function WeeklyReport({ storeId }: { storeId: string }) {
-  const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 })) // 이번 주 월요일
-  const targetDateStr = format(selectedWeekStart, 'yyyy-MM-dd')
+export function MonthlyReport({ storeId }: { storeId: string }) {
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date()) // 이번 달
+  const targetDateStr = format(selectedMonth, 'yyyy-MM')
   
-  const { report, isLoading, isGenerating, isError, generateReport } = useWeeklyReport(storeId, targetDateStr)
+  const { report, isLoading, isGenerating, isError, generateReport } = useMonthlyReport(storeId, targetDateStr)
 
-  const weekOptions = Array.from({ length: 4 }).map((_, i) => {
-    const start = startOfWeek(subWeeks(new Date(), i), { weekStartsOn: 1 })
-    const end = endOfWeek(subWeeks(new Date(), i), { weekStartsOn: 1 })
+  const monthOptions = Array.from({ length: 6 }).map((_, i) => {
+    const d = subMonths(new Date(), i)
     return {
-      label: `${format(start, 'M월 w주차')} (${format(start, 'M/d')} ~ ${format(end, 'M/d')})`,
-      value: start
+      label: format(d, 'yyyy년 M월'),
+      value: d
     }
   })
 
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="flex flex-col gap-4 h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Popover>
@@ -40,17 +38,20 @@ export function WeeklyReport({ storeId }: { storeId: string }) {
                 className="w-[240px] justify-start text-left font-normal bg-card"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {weekOptions.find(o => o.value.getTime() === selectedWeekStart.getTime())?.label || '주차 선택'}
+                {monthOptions.find(o => format(o.value, 'yyyy-MM') === format(selectedMonth, 'yyyy-MM'))?.label || '월 선택'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[240px] p-2" align="start">
               <div className="flex flex-col gap-1">
-                {weekOptions.map((option, i) => (
+                {monthOptions.map((option, i) => (
                   <Button
                     key={i}
-                    variant={option.value.getTime() === selectedWeekStart.getTime() ? "default" : "ghost"}
+                    variant={format(option.value, 'yyyy-MM') === format(selectedMonth, 'yyyy-MM') ? "default" : "ghost"}
                     className="justify-start w-full"
-                    onClick={() => setSelectedWeekStart(option.value)}
+                    onClick={() => {
+                      setSelectedMonth(option.value)
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+                    }}
                   >
                     {option.label}
                   </Button>
@@ -110,16 +111,16 @@ export function WeeklyReport({ storeId }: { storeId: string }) {
           <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mb-4">
             <Sparkles className="w-8 h-8 text-primary/40" />
           </div>
-          <h3 className="text-lg font-medium mb-2">주간 리포트가 없습니다</h3>
+          <h3 className="text-lg font-medium mb-2">월간 리포트가 없습니다</h3>
           <p className="text-muted-foreground max-w-md mb-6 leading-relaxed">
             상단의 '리포트 생성하기' 버튼을 눌러<br/>
-            해당 주간의 데이터 기반 AI 분석 결과를 확인하세요.
+            해당 월의 데이터 기반 AI 분석 결과를 확인하세요.
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-4 pb-6">
           <ReportCard 
-            title="주간 운영 요약" 
+            title="월간 운영 요약" 
             icon={<BarChart3 className="w-5 h-5" />}
             summary={report.content.summary.text}
           >
@@ -149,7 +150,7 @@ export function WeeklyReport({ storeId }: { storeId: string }) {
             </ReportCard>
 
             <ReportCard
-              title="주간 업무 현황"
+              title="월간 업무 현황"
               icon={<CheckCircle2 className="w-5 h-5" />}
               summary={report.content.tasks?.summary}
             >

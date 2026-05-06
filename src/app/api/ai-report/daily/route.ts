@@ -66,6 +66,12 @@ export async function POST(req: Request) {
 **매우 중요: 응답은 마크다운 백틱(\`\`\`json)이나 부가 설명 없이 오직 순수한 JSON 객체 하나만 출력해야 합니다. 파싱이 끊기지 않도록 구조를 엄수하세요.**
 
 {
+  "summary": {
+    "text": "일간 종합 요약 (지각, 업무 달성률 등 특이사항 포함, 한국 시간 기준 3-4문장)",
+    "insights": [
+      { "type": "warning|good|bad|info", "text": "전체적인 인사이트 내용" }
+    ]
+  },
   "attendance": {
     "summary": "출퇴근 현황 요약 (지각자 발생 시 반드시 언급, 한국 시간 기준 2-3문장)",
     "insights": [
@@ -128,6 +134,7 @@ ${JSON.stringify(contextPackage, null, 2)}
       console.error('Failed to parse AI response:', textContent, e)
       // 파싱 실패 시 빈 껍데기(Fallback) 데이터를 반환하여 클라이언트 화면 깨짐 방지
       reportContent = {
+        summary: { text: "데이터를 요약할 수 없습니다.", insights: [] },
         attendance: { summary: "데이터를 요약할 수 없습니다.", insights: [] },
         tasks: { summary: "데이터를 요약할 수 없습니다.", insights: [] },
         assets: { insights: [] },

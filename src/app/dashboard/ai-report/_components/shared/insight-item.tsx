@@ -39,9 +39,9 @@ export function InsightItem({ type, text }: InsightItemProps) {
   const { icon: Icon, color, bgColor, borderColor } = config[type] || config.info
 
   return (
-    <div className={cn("flex items-start gap-3 p-3 rounded-lg border text-sm", bgColor, borderColor)}>
-      <Icon className={cn("w-5 h-5 shrink-0 mt-0.5", color)} />
-      <span className="text-foreground leading-relaxed">{text}</span>
+    <div className={cn("flex items-start gap-2.5 p-2.5 rounded-lg border text-[13px]", bgColor, borderColor)}>
+      <Icon className={cn("w-4 h-4 shrink-0 mt-[2px]", color)} />
+      <span className="text-foreground leading-snug">{text}</span>
     </div>
   )
 }

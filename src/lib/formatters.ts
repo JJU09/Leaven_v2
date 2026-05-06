@@ -3,6 +3,19 @@ export function formatCurrency(amount: number | null | undefined): string {
   return amount.toLocaleString('ko-KR') + '원'
 }
 
+export function formatBusinessNumber(businessNumber: string | null | undefined): string {
+  if (!businessNumber) return ''
+
+  // 숫자만 추출
+  const digits = businessNumber.replace(/[^0-9]/g, '')
+
+  if (digits.length === 10) {
+    return digits.replace(/(\d{3})(\d{2})(\d{5})/, '$1-$2-$3')
+  }
+
+  return businessNumber
+}
+
 export function formatPhoneNumber(phone: string | null | undefined): string {
   if (!phone) return ''
 

@@ -32,12 +32,12 @@ interface VendorDetailViewProps {
   vendorDetail: VendorDetail;
 }
 
-export function VendorDetailView({ vendorDetail: initialVendorDetail }: VendorDetailViewProps) {
+export function VendorDetailView({ vendorDetail }: VendorDetailViewProps) {
   const router = useRouter();
-  const [vendorDetail, setVendorDetail] = useState<VendorDetail>(initialVendorDetail);
   
   // Dialog States
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(false);
+  const [transactionToEdit, setTransactionToEdit] = useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const getContractTypeBadge = (type: string | null) => {
@@ -113,7 +113,14 @@ export function VendorDetailView({ vendorDetail: initialVendorDetail }: VendorDe
           <TabsContent value="transaction" className="mt-0">
             <TransactionTab 
               vendor={vendorDetail} 
-              onAddTransaction={() => setIsTransactionFormOpen(true)} 
+              onAddTransaction={() => {
+                setTransactionToEdit(null);
+                setIsTransactionFormOpen(true);
+              }} 
+              onEditTransaction={(transaction) => {
+                setTransactionToEdit(transaction);
+                setIsTransactionFormOpen(true);
+              }}
             />
           </TabsContent>
           
@@ -126,8 +133,12 @@ export function VendorDetailView({ vendorDetail: initialVendorDetail }: VendorDe
       <TransactionFormDialog 
         storeId={vendorDetail.store_id}
         vendorId={vendorDetail.id}
+        transaction={transactionToEdit}
         isOpen={isTransactionFormOpen}
-        onClose={() => setIsTransactionFormOpen(false)}
+        onClose={() => {
+          setIsTransactionFormOpen(false);
+          setTransactionToEdit(null);
+        }}
         onSuccess={handleRefresh}
       />
 

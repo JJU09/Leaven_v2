@@ -4,8 +4,8 @@ import * as React from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DailyReport } from './tabs/daily-report'
 import { WeeklyReport } from './tabs/weekly-report'
-import { AiChat } from './tabs/ai-chat'
-import { CalendarDays, CalendarRange, Sparkles } from 'lucide-react'
+import { MonthlyReport } from './tabs/monthly-report'
+import { CalendarDays, CalendarRange, Calendar as CalendarIcon, Sparkles } from 'lucide-react'
 
 interface AiReportClientProps {
   storeId: string
@@ -26,10 +26,10 @@ export default function AiReportClient({ storeId }: AiReportClientProps) {
             <span className="hidden sm:inline">주간 리포트</span>
             <span className="sm:hidden">주간</span>
           </TabsTrigger>
-          <TabsTrigger value="chat" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            <span className="hidden sm:inline">AI 질의</span>
-            <span className="sm:hidden">질의</span>
+          <TabsTrigger value="monthly" className="flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">월간 리포트</span>
+            <span className="sm:hidden">월간</span>
           </TabsTrigger>
         </TabsList>
       </div>
@@ -42,9 +42,9 @@ export default function AiReportClient({ storeId }: AiReportClientProps) {
         <TabsContent value="weekly" className="h-full m-0 data-[state=active]:block data-[state=inactive]:hidden p-4 sm:p-6">
           <WeeklyReport storeId={storeId} />
         </TabsContent>
-        
-        <TabsContent value="chat" className="h-full m-0 data-[state=active]:flex data-[state=inactive]:hidden flex-col p-0">
-          <AiChat storeId={storeId} />
+
+        <TabsContent value="monthly" className="h-full m-0 data-[state=active]:block data-[state=inactive]:hidden p-4 sm:p-6">
+          <MonthlyReport storeId={storeId} />
         </TabsContent>
       </div>
     </Tabs>
