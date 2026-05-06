@@ -157,7 +157,7 @@ export async function inviteStaff(storeId: string, formData: FormData) {
     return { error: error.message }
   }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff')
   revalidatePath('/dashboard', 'layout')
   return { success: true }
@@ -283,7 +283,7 @@ export async function createManualStaff(storeId: string, formData: FormData) {
 
   if (error) return { error: error.message }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff')
   revalidatePath('/dashboard', 'layout')
   return { success: true }
@@ -432,7 +432,7 @@ export async function updateStaffInfo(storeId: string, targetMemberId: string, f
     return { error: '업데이트 권한이 없거나 대상을 찾을 수 없습니다.' }
   }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff')
   revalidatePath('/dashboard', 'layout') // 사이드바 데이터 갱신
   return { success: true, data }
@@ -489,7 +489,7 @@ export async function mergeManualStaff(storeId: string, pendingMemberId: string,
 
   if (deleteError) return { error: deleteError.message }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff')
   revalidatePath('/dashboard', 'layout')
   return { success: true }
@@ -516,7 +516,7 @@ export async function approveRequest(storeId: string, memberId: string) {
 
   if (error) return { error: error.message }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff', 'page')
   revalidatePath('/dashboard', 'layout') // 대시보드 알림 및 사이드바 갱신
   return { success: true }
@@ -543,7 +543,7 @@ export async function rejectRequest(storeId: string, memberId: string) {
 
   if (error) return { error: error.message }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff', 'page')
   revalidatePath('/dashboard', 'layout') // 대시보드 알림 및 사이드바 갱신
   return { success: true }
@@ -617,7 +617,7 @@ export async function removeStaff(storeId: string, memberId: string) {
 
   if (error) return { error: error.message }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff', 'page')
   revalidatePath('/dashboard', 'layout') // 사이드바 데이터 갱신
   return { success: true }
@@ -647,7 +647,7 @@ export async function restoreStaff(storeId: string, memberId: string) {
 
   if (error) return { error: error.message }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff', 'page')
   revalidatePath('/dashboard', 'layout') 
   return { success: true }
@@ -674,7 +674,7 @@ export async function deleteStaffRecord(storeId: string, memberId: string) {
 
   if (error) return { error: error.message }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff', 'page')
   revalidatePath('/dashboard', 'layout') 
   return { success: true }
@@ -741,7 +741,7 @@ export async function inviteRegisteredStaff(storeId: string, memberId: string, e
 
   if (updateError) return { error: updateError.message }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff', 'page')
   revalidatePath('/dashboard', 'layout')
   return { success: true }
@@ -785,7 +785,7 @@ export async function cancelContractRequest(storeId: string, memberId: string) {
 
   if (error) return { error: error.message }
 
-  revalidateTag('store-members')
+  revalidateTag('store-members', 'default')
   revalidatePath('/dashboard/staff', 'page')
   revalidatePath('/dashboard', 'layout')
   return { success: true }
