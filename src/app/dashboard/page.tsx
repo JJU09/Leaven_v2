@@ -14,21 +14,30 @@ export default async function DashboardPage() {
     return null
   }
 
-  // 사용자의 매장 정보 조회
-  const { data: members, error } = await supabase
-    .from('store_members')
-    .select('role_id, status, store:stores(*)')
-    .eq('user_id', user.id)
+  // user.id에 의존하는 쿼리들과 독립적인 쿠키 조회를 병렬 실행
+  const [
+    { data: members, error },
+    { data: profile },
+    cookieStore
+  ] = await Promise.all([
+    supabase
+      .from('store_members')
+      .select('role_id, status, store:stores(id, name)')
+      .eq('user_id', user.id),
+    supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single(),
+    cookies()
+  ])
 
   if (error || !members || members.length === 0) {
     redirect('/onboarding')
   }
 
-  // 쿠키에서 선택된 매장 ID 가져오기
-  const cookieStore = await cookies()
   const selectedStoreId = cookieStore.get('leaven_current_store_id')?.value
 
-  // 선택된 매장 찾기
   let activeMember = members.find(m => {
     const storeData = m.store
     const store = Array.isArray(storeData) ? storeData[0] : storeData
@@ -49,13 +58,6 @@ export default async function DashboardPage() {
   if (!store) {
      redirect('/onboarding')
   }
-
-  // 유저 프로필 가져오기 (이름용)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
 
   const userName = profile?.full_name || '관리자'
 
