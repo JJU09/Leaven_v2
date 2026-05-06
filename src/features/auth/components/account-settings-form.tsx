@@ -5,19 +5,19 @@ import { updateProfile, updatePasswordSettings, signInWithGoogle } from '../acti
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { User } from '@supabase/supabase-js'
 import { formatPhoneNumber } from '@/lib/formatters'
+import { useSearchParams } from 'next/navigation'
 
 interface AccountSettingsFormProps {
   user: User
   profile?: { full_name?: string | null, phone?: string | null } | null
+  isOnboarding?: boolean
 }
 
-import { useSearchParams } from 'next/navigation'
-
-export function AccountSettingsForm({ user, profile }: AccountSettingsFormProps) {
+export function AccountSettingsForm({ user, profile, isOnboarding = false }: AccountSettingsFormProps) {
   const [profileMessage, setProfileMessage] = useState<string | null>(null)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
@@ -27,11 +27,14 @@ export function AccountSettingsForm({ user, profile }: AccountSettingsFormProps)
   const initialPhone = profile?.phone || user.user_metadata?.phone || ''
   const [phoneValue, setPhoneValue] = useState(formatPhoneNumber(initialPhone))
 
+  const [loading, setLoading] = useState(false)
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhoneValue(formatPhoneNumber(e.target.value))
   }
 
   async function handleUpdateProfile(formData: FormData) {
+    setLoading(true)
     if (nextUrl) {
       formData.append('nextUrl', nextUrl)
     }
@@ -40,6 +43,7 @@ export function AccountSettingsForm({ user, profile }: AccountSettingsFormProps)
       setProfileMessage(result.message)
       setTimeout(() => setProfileMessage(null), 3000)
     }
+    setLoading(false)
   }
 
   async function handleUpdatePassword(formData: FormData) {
@@ -61,14 +65,60 @@ export function AccountSettingsForm({ user, profile }: AccountSettingsFormProps)
   // 소셜 연동 상태 확인
   const googleIdentity = user.identities?.find(id => id.provider === 'google')
 
+  const profileFormContent = (
+    <form action={handleUpdateProfile} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">이메일 계정</Label>
+        <Input id="email" value={user.email} disabled className="bg-muted" />
+        <p className="text-xs text-muted-foreground">이메일은 변경할 수 없습니다.</p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="fullName">이름 (실명)</Label>
+        <Input 
+          id="fullName" 
+          name="fullName" 
+          defaultValue={profile?.full_name || user.user_metadata.full_name || ''} 
+          placeholder="이름을 입력하세요"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="phone">전화번호</Label>
+        <Input 
+          id="phone" 
+          name="phone" 
+          value={phoneValue}
+          onChange={handlePhoneChange}
+          placeholder="전화번호를 입력하세요 (- 제외)"
+          required
+          maxLength={13}
+        />
+      </div>
+      {profileMessage && <p className="text-sm text-green-600">{profileMessage}</p>}
+      <div className="mt-8">
+        <Button type="submit" disabled={loading} className={isOnboarding ? "w-full" : ""}>
+          {loading ? '저장 중...' : isOnboarding ? '프로필 설정 완료' : '저장하기'}
+        </Button>
+      </div>
+    </form>
+  )
+
+  if (isOnboarding) {
+    return (
+      <div className="w-full">
+        {profileFormContent}
+      </div>
+    )
+  }
+
   return (
     <Tabs defaultValue="profile" className="w-full max-w-2xl">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="profile">프로필</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-2 mb-8">
+        <TabsTrigger value="profile">프로필 설정</TabsTrigger>
         <TabsTrigger value="security">보안 및 로그인</TabsTrigger>
       </TabsList>
       
-      <TabsContent value="profile">
+      <TabsContent value="profile" className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>프로필 정보</CardTitle>
@@ -77,42 +127,12 @@ export function AccountSettingsForm({ user, profile }: AccountSettingsFormProps)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={handleUpdateProfile} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">이메일</Label>
-                <Input id="email" value={user.email} disabled className="bg-muted" />
-                <p className="text-xs text-muted-foreground">이메일은 변경할 수 없습니다.</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="fullName">이름</Label>
-                <Input 
-                  id="fullName" 
-                  name="fullName" 
-                  defaultValue={profile?.full_name || user.user_metadata.full_name || ''} 
-                  placeholder="이름을 입력하세요"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">전화번호</Label>
-                <Input 
-                  id="phone" 
-                  name="phone" 
-                  value={phoneValue}
-                  onChange={handlePhoneChange}
-                  placeholder="전화번호를 입력하세요 (- 제외)"
-                  required
-                  maxLength={13}
-                />
-              </div>
-              {profileMessage && <p className="text-sm text-green-600">{profileMessage}</p>}
-              <Button type="submit">저장</Button>
-            </form>
+            {profileFormContent}
           </CardContent>
         </Card>
       </TabsContent>
       
-      <TabsContent value="security">
+      <TabsContent value="security" className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>보안 및 로그인</CardTitle>

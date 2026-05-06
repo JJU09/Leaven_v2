@@ -27,12 +27,9 @@ export async function hasPermission(
   
   if (!member) return false
 
-  // 비활성(inactive)이거나 승인 대기(pending_approval) 상태인 경우 권한 제한
+  // 비활성(inactive)이거나 승인 대기(pending_approval) 상태인 경우 모든 권한 차단
   if (member.status !== 'active') {
-    // 관리 권한(manage_*)이나 민감한 조회 권한(view_salary 등)은 모두 차단
-    if (permission.startsWith('manage_') || permission === 'view_salary') {
-      return false
-    }
+    return false
   }
   
   // role 값을 안전하게 추출 (role_info 기반)

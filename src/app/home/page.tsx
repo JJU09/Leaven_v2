@@ -25,6 +25,22 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
     redirect('/login')
   }
 
+  // 사용자 프로필 조회 (가장 먼저 수행하여 온보딩 체크)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, avatar_url, email, phone')
+    .eq('id', user.id)
+    .single()
+
+  // 프로필 필수 정보 체크 (빈 문자열 포함 강력하게 체크)
+  const isProfileIncomplete = 
+    !profile?.full_name || profile.full_name.trim() === '' ||
+    !profile?.phone || profile.phone.trim() === '';
+
+  if (isProfileIncomplete) {
+    redirect('/onboarding/profile?next=/home')
+  }
+
   // 데이터 병렬 조회
   const [stores, invitations] = await Promise.all([
     getUserStores(),
@@ -33,13 +49,6 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
 
   const searchParams = await props.searchParams
   const isBypass = searchParams?.bypass === 'true'
-
-  // 사용자 프로필 조회 (환영 메시지용)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, avatar_url, email, phone')
-    .eq('id', user.id)
-    .single()
 
   const userName = profile?.full_name || user.user_metadata?.full_name || '사용자'
   const userPhone = profile?.phone || ''
