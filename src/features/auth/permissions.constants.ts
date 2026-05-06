@@ -80,8 +80,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, PermissionCode[]> = {
   ],
   직원: [
     'view_dashboard',
-    'view_announcements',
-    'view_staff', 
+    'view_announcements', 
     'view_attendance',
     'view_leave', 
     'view_salary',

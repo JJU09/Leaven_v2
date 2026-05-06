@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { getUserStores } from '@/features/store/actions'
 import { hasPermission } from '@/features/auth/permissions'
 import { getMemberDisplayName } from '@/lib/utils'
+import { getCachedProfile, getCachedMyMember, getCachedStaffList } from '@/lib/cache/dashboard'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,17 +16,16 @@ export default async function DashboardLayout({
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!user) {
+  if (!user || !session?.access_token) {
     redirect('/login')
   }
 
-  // 프로필 필수 입력 확인
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, phone')
-    .eq('id', user.id)
-    .single()
+  const accessToken = session.access_token
+
+  // 1. 프로필 조회 (캐시)
+  const profile = await getCachedProfile(user.id, accessToken)
 
   if (!profile || !profile.full_name || !profile.phone) {
     // dashboard 레이아웃에서 프로필이 미완성인 경우 /account로 리다이렉트
@@ -54,32 +54,16 @@ export default async function DashboardLayout({
     currentMember = members.find(m => m.status === 'active') || members[0]
   }
 
-  // Set the fallback current store to the cookie if it wasn't matched
-  if (currentMember && (!selectedStoreId || (currentMember.store as any)?.id !== selectedStoreId)) {
-    // Next.js Server Components cannot set cookies directly via cookies().set in a layout.
-    // However, we rely on the sub-pages using the same fallback logic, or we let the client
-    // set the cookie when navigating. For now, just rely on consistent fallback logic.
-  }
+  const currentStore = currentMember.store as any // 타입 단언 필요할 수 있음
+  const currentStoreId = currentStore?.id
 
-  // 상세 정보 조회를 위해 currentMember를 다시 한 번 정확하게 가져옴 (role_info 등 포함)
-  // getUserStores에서 가져온 currentMember는 name과 role_info가 없으므로 다시 조회함
-  const { data: memberDetail } = await supabase
-    .from('store_members')
-    .select(`
-      id,
-      user_id,
-      store_id,
-      status,
-      name,
-      profile:profiles(full_name),
-      role_info:store_roles(id, name, color, hierarchy_level, is_system)
-    `)
-    .eq('user_id', user.id)
-    .eq('store_id', (currentMember.store as any).id)
-    .single()
+  // 2. 내 상세 정보와 전체 직원 목록을 병렬로 캐시에서 조회
+  const [memberDetail, rawStaffList] = await Promise.all([
+    getCachedMyMember(user.id, currentStoreId, accessToken),
+    getCachedStaffList(currentStoreId, accessToken)
+  ])
 
   const finalMember = (memberDetail || currentMember) as any
-  const currentStore = currentMember.store as any // 타입 단언 필요할 수 있음
   const storeName = currentStore?.name || 'Leaven'
   
   const finalRoleString = finalMember.role_info?.name 
@@ -98,24 +82,6 @@ export default async function DashboardLayout({
     }
   }).filter(s => s.id)
 
-  // 현재 매장의 전체 직원 목록 조회 (우측 사이드바용)
-  // currentStore가 없을 수도 있으므로 체크 필요하지만, getUserStores에서 필터링된 데이터라면 있을 것임
-  // 하지만 store_id는 store 객체 안에 있는 게 아니라 member 객체 안에 있어야 하는데, getUserStores는 store_id를 반환하지 않음 (select에 없음)
-  // 따라서 store.id를 사용해야 함
-  const currentStoreId = currentStore?.id
-
-  // 현재 매장의 전체 직원 목록 조회 (우측 사이드바용)
-  const { data: rawStaffList } = await supabase
-    .from('store_members')
-    .select(`
-      id,
-      status,
-      name,
-      profile:profiles(full_name, email, avatar_url),
-      role_info:store_roles(id, name, color, hierarchy_level, is_system)
-    `)
-    .eq('store_id', currentStoreId)
-    
   // 데이터 가공 (타입 맞춤)
   const staffList = rawStaffList?.map((staff: any) => ({
     ...staff,

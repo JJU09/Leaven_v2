@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ensureDefaultRoles } from '@/features/store/roles'
@@ -60,6 +60,7 @@ export async function createStore(formData: FormData) {
       id: user.id,
       full_name: fallbackName,
     })
+    revalidateTag('profile')
     profile = { full_name: fallbackName, phone: profile?.phone || null }
   }
 
@@ -87,6 +88,7 @@ export async function createStore(formData: FormData) {
     return { error: '점주 계정 등록에 실패했습니다.' }
   }
 
+  revalidateTag('store-members')
   revalidatePath('/', 'layout')
   revalidatePath('/home')
   redirect('/home') // 변경: dashboard -> home
@@ -184,6 +186,7 @@ export async function acceptInvitation(storeId: string) {
     return { error: '초대 수락 중 오류가 발생했습니다: ' + error.message }
   }
 
+  revalidateTag('store-members')
   revalidatePath('/', 'layout')
   revalidatePath('/home')
   redirect('/home')
@@ -205,6 +208,7 @@ export async function rejectInvitation(storeId: string) {
 
   if (error) return { error: error.message }
 
+  revalidateTag('store-members')
   revalidatePath('/home')
   return { success: true }
 }
@@ -225,6 +229,7 @@ export async function cancelRequest(storeId: string) {
 
   if (error) return { error: error.message }
 
+  revalidateTag('store-members')
   revalidatePath('/home')
 }
 
@@ -300,6 +305,7 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
     await supabase
       .from('profiles')
       .upsert({ id: user.id, ...updates }, { onConflict: 'id' })
+    revalidateTag('profile')
   }
   
   // 방금 업데이트했거나 기존에 있던 프로필 정보
@@ -334,6 +340,7 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
       .eq('store_id', storeId)
       .eq('user_id', user.id)
 
+    revalidateTag('store-members')
     revalidatePath('/', 'layout')
     revalidatePath('/home')
     return { success: true }
@@ -382,6 +389,7 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
   if (error) {
     // 혹시라도 동시성 문제로 unique 제약 조건 에러가 난다면, 이미 가입된 것으로 간주하고 성공 처리
     if (error.code === '23505' || error.message.includes('duplicate key')) {
+      revalidateTag('store-members')
       revalidatePath('/', 'layout')
       revalidatePath('/home')
       return { success: true }
@@ -389,6 +397,7 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
     return { error: '가입 요청 중 오류가 발생했습니다: ' + error.message }
   }
 
+  revalidateTag('store-members')
   revalidatePath('/', 'layout')
   revalidatePath('/home')
   return { success: true }
