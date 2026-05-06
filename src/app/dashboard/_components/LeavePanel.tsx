@@ -9,30 +9,14 @@ interface LeaveRequest {
   start_date: string
   end_date: string
   status: string
-  member?: {
-    name?: string | null
-    profiles?: { full_name: string } | null
-    role?: { name: string } | null
-  } | null
-}
-
-interface StaffLeave {
-  id: string
-  member_id: string
-  total_days: number | null
-  used_days: number
-  member?: {
-    name?: string | null
-    profiles?: { full_name: string } | null
-  } | null
+  member?: any
 }
 
 interface LeavePanelProps {
   monthLeaves: LeaveRequest[]
-  staffLeaves: StaffLeave[]
 }
 
-export function LeavePanel({ monthLeaves, staffLeaves }: LeavePanelProps) {
+export function LeavePanel({ monthLeaves }: LeavePanelProps) {
   
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -74,7 +58,8 @@ export function LeavePanel({ monthLeaves, staffLeaves }: LeavePanelProps) {
           ) : (
             <div className="space-y-2">
               {monthLeaves.slice(0, 3).map(leave => {
-                const name = leave.member?.name || leave.member?.profiles?.full_name || '이름 없음'
+                const memberData = Array.isArray(leave.member) ? leave.member[0] : leave.member
+                const name = memberData?.name || memberData?.profiles?.full_name || '이름 없음'
                 return (
                 <Link 
                   key={leave.id} 

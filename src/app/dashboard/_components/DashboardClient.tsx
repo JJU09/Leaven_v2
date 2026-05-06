@@ -60,7 +60,7 @@ export default function DashboardClient({ storeId, storeName, userName, canManag
     )
   }
 
-  const { metrics, alerts, hasMoreAlerts, weeklyData, monthLeaves, staffLeaves, assetsSummary, vendorsSummary, vendorTransactions } = data
+  const { metrics, alerts, hasMoreAlerts, weeklyData, monthLeaves, assetsSummary, vendorsSummary, vendorTransactions } = data
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
@@ -130,7 +130,7 @@ export default function DashboardClient({ storeId, storeName, userName, canManag
         
         {/* 연차·휴가 현황 */}
         <div className="h-100">
-          <LeavePanel monthLeaves={monthLeaves} staffLeaves={staffLeaves} />
+          <LeavePanel monthLeaves={monthLeaves} />
         </div>
       </div>
 
