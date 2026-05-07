@@ -32,77 +32,59 @@ export async function updateStore(formData: FormData) {
   if (!hasManagePermission) {
     return { error: 'Permission denied' }
   }
-  const name = formData.get('name') as string
-  const address = formData.get('address') as string
-  const businessNumber = formData.get('business_number') as string
-  const description = formData.get('description') as string
-  const ownerName = formData.get('owner_name') as string
-  const storePhone = formData.get('store_phone') as string
-  const zipCode = formData.get('zip_code') as string
-  const addressDetail = formData.get('address_detail') as string
-  const imageUrl = formData.get('image_url') as string
-  const stampImageUrl = formData.get('stamp_image_url') as string
-  const leaveCalcType = formData.get('leave_calc_type') as string
-  
-  const latitude = formData.get('latitude') ? parseFloat(formData.get('latitude') as string) : null
-  const longitude = formData.get('longitude') ? parseFloat(formData.get('longitude') as string) : null
-  const authRadius = formData.get('auth_radius') ? parseInt(formData.get('auth_radius') as string, 10) : 200
-  
-  const wageStartDay = formData.get('wage_start_day') ? parseInt(formData.get('wage_start_day') as string, 10) : 1
-  const wageEndDay = formData.get('wage_end_day') ? parseInt(formData.get('wage_end_day') as string, 10) : 0
-  const payDay = formData.get('pay_day') ? parseInt(formData.get('pay_day') as string, 10) : 10
 
-  let wageExceptions = {}
-  try {
-    const exceptionsStr = formData.get('wage_exceptions') as string
-    if (exceptionsStr) {
-      wageExceptions = JSON.parse(exceptionsStr)
-    }
-  } catch (e) {
-    console.error('Error parsing wage exceptions:', e)
+  const updateData: any = {
+    updated_at: new Date().toISOString(),
   }
 
-  let openingHours = {}
-  try {
-    const openingHoursStr = formData.get('opening_hours') as string
-    if (openingHoursStr) {
-      openingHours = JSON.parse(openingHoursStr)
+  // String fields
+  if (formData.has('name')) updateData.name = formData.get('name') as string
+  if (formData.has('address')) updateData.address = formData.get('address') as string
+  if (formData.has('business_number')) updateData.business_number = formData.get('business_number') as string
+  if (formData.has('description')) updateData.description = formData.get('description') as string
+  if (formData.has('owner_name')) updateData.owner_name = formData.get('owner_name') as string
+  if (formData.has('store_phone')) updateData.store_phone = formData.get('store_phone') as string
+  if (formData.has('zip_code')) updateData.zip_code = formData.get('zip_code') as string
+  if (formData.has('address_detail')) updateData.address_detail = formData.get('address_detail') as string
+  if (formData.has('image_url')) updateData.image_url = formData.get('image_url') as string
+  if (formData.has('stamp_image_url')) updateData.stamp_image_url = formData.get('stamp_image_url') as string
+  if (formData.has('leave_calc_type')) updateData.leave_calc_type = formData.get('leave_calc_type') as string
+
+  // Number fields
+  if (formData.has('latitude')) updateData.latitude = parseFloat(formData.get('latitude') as string)
+  if (formData.has('longitude')) updateData.longitude = parseFloat(formData.get('longitude') as string)
+  if (formData.has('auth_radius')) updateData.attendance_radius = parseInt(formData.get('auth_radius') as string, 10)
+  if (formData.has('wage_start_day')) updateData.wage_start_day = parseInt(formData.get('wage_start_day') as string, 10)
+  if (formData.has('wage_end_day')) updateData.wage_end_day = parseInt(formData.get('wage_end_day') as string, 10)
+  if (formData.has('pay_day')) updateData.pay_day = parseInt(formData.get('pay_day') as string, 10)
+
+  // JSON fields
+  if (formData.has('wage_exceptions')) {
+    try {
+      updateData.wage_exceptions = JSON.parse(formData.get('wage_exceptions') as string)
+    } catch (e) {
+      console.error('Error parsing wage exceptions:', e)
     }
-  } catch (e) {
-    console.error('Error parsing opening hours:', e)
+  }
+
+  if (formData.has('opening_hours')) {
+    try {
+      updateData.operating_hours = JSON.parse(formData.get('opening_hours') as string)
+    } catch (e) {
+      console.error('Error parsing opening hours:', e)
+    }
   }
 
   const { error } = await supabase
     .from('stores')
-    .update({
-      name,
-      address,
-      business_number: businessNumber,
-      description,
-      owner_name: ownerName,
-      store_phone: storePhone,
-      zip_code: zipCode,
-      address_detail: addressDetail,
-      image_url: imageUrl,
-      stamp_image_url: stampImageUrl,
-      operating_hours: openingHours,
-      latitude,
-      longitude,
-      attendance_radius: authRadius,
-      wage_start_day: wageStartDay,
-      wage_end_day: wageEndDay,
-      pay_day: payDay,
-      wage_exceptions: wageExceptions,
-      leave_calc_type: leaveCalcType,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', storeId)
 
   if (error) {
     return { error: error.message }
   }
 
-  revalidatePath('/dashboard/settings')
+  revalidatePath('/dashboard', 'layout')
   return { success: true }
 }
 
