@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { hasPermission } from '@/features/auth/permissions'
 import { cookies } from 'next/headers'
-import { getStoreRoles } from '@/features/store/actions'
+import { getStoreRoles, getStoreSettings } from '@/features/store/actions'
 import { getStaffList } from '@/features/staff/actions'
 import { LeaveClientPage } from '@/features/leave/components/leave-client'
 
@@ -47,7 +47,9 @@ export default async function LeavePage() {
     return s.status !== 'invited' && roleInfo?.name !== 'owner';
   })
 
-  const leaveCalcType = 'hire_date' // 임시로 기본값 사용
+  // 매장 설정에서 연차 산정 방식 가져오기
+  const storeSettings = await getStoreSettings(member.store_id)
+  const leaveCalcType = (storeSettings?.leave_calc_type as 'hire_date' | 'fiscal_year') || 'hire_date'
 
   return (
     <div className="flex flex-col h-full overflow-hidden w-full max-w-full">
