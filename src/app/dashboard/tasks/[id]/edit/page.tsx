@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { TaskEditForm } from './_components/TaskEditForm';
 
 export const metadata: Metadata = {
-  title: '업무 수정 | Leaven',
+  title: '업무 수정 | ShopWork AI',
 };
 
 interface EditTaskPageProps {

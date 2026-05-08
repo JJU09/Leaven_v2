@@ -50,6 +50,7 @@ export async function updateProfile(formData: FormData) {
   const supabase = await createClient()
   const fullName = formData.get('fullName') as string
   const phone = formData.get('phone') as string
+  const userType = formData.get('userType') as string
 
   // 1. auth_users 메타데이터 업데이트 (full_name)
   const { data: { user }, error: authError } = await supabase.auth.updateUser({
@@ -69,10 +70,12 @@ export async function updateProfile(formData: FormData) {
         email: user.email,
         full_name: fullName,
         phone: phone || null,
+        user_type: userType || null,
       }, { onConflict: 'id' })
 
     if (profileError) {
-      return { error: '프로필 정보 업데이트에 실패했습니다.' }
+      console.error('[updateProfile] profile update error:', profileError)
+      return { error: `프로필 정보 업데이트에 실패했습니다: ${profileError.message}` }
     }
   }
 

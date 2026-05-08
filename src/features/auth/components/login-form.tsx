@@ -47,7 +47,7 @@ export function LoginForm({ nextUrl = '/home', defaultEmail = '' }: { nextUrl?: 
         </div>
         <h1 className="text-2xl font-bold">환영합니다</h1>
         <p className="text-sm text-muted-foreground">
-          Leaven 서비스 이용을 위해 로그인해주세요
+          ShopWork AI 서비스 이용을 위해 로그인해주세요
         </p>
       </div>
       <Card className="w-full">

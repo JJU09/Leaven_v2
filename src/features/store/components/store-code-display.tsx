@@ -31,7 +31,7 @@ export function StoreCodeDisplay({ code, className }: StoreCodeDisplayProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   // Use current origin if in browser, fallback for SSR
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://leaven.app'
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://shopwork.ai'
   const magicLink = `${origin}/join/${code}`
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(magicLink)}`
 
@@ -57,7 +57,7 @@ export function StoreCodeDisplay({ code, className }: StoreCodeDisplayProps) {
       const a = document.createElement('a')
       a.style.display = 'none'
       a.href = url
-      a.download = `Leaven_초대_QR_${code}.png`
+      a.download = `ShopWorkAI_초대_QR_${code}.png`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)

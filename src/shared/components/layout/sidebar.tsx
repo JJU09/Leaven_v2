@@ -194,7 +194,7 @@ export function Sidebar({
       )}>
         <Package2 className="h-6 w-6 text-primary" />
         {!isCollapsed && (
-          <span className="text-lg font-bold truncate">Leaven</span>
+          <span className="text-lg font-bold truncate">ShopWork AI</span>
         )}
       </div>
 

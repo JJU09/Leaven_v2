@@ -28,14 +28,15 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
   // 사용자 프로필 조회 (가장 먼저 수행하여 온보딩 체크)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, avatar_url, email, phone')
+    .select('full_name, avatar_url, email, phone, user_type')
     .eq('id', user.id)
     .single()
 
   // 프로필 필수 정보 체크 (빈 문자열 포함 강력하게 체크)
   const isProfileIncomplete = 
     !profile?.full_name || profile.full_name.trim() === '' ||
-    !profile?.phone || profile.phone.trim() === '';
+    !profile?.phone || profile.phone.trim() === '' ||
+    !profile?.user_type;
 
   if (isProfileIncomplete) {
     redirect('/onboarding/profile?next=/home')
@@ -62,6 +63,8 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
   const activeStores = stores.filter(s => s.status === 'active')
   const pendingStores = stores.filter(s => s.status === 'pending_approval')
   
+  const userType = profile?.user_type as 'owner' | 'staff'
+
   const phase = (activeStores.length === 0 && pendingStores.length === 0 && invitations.length === 0) ? 1 : 
                 (activeStores.length === 0 && (pendingStores.length > 0 || invitations.length > 0)) ? 2 : 4;
 
@@ -72,7 +75,7 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
         <div className="container flex h-16 items-center justify-between px-4 md:px-6 mx-auto max-w-5xl">
           <div className="flex items-center gap-2 font-bold text-xl">
             <Package2 className="h-6 w-6 text-primary" />
-            <span>Leaven</span>
+            <span>ShopWork AI</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Button variant="ghost" size="icon" asChild title="계정 설정">
@@ -117,40 +120,44 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
                 환영합니다, {userName}님! 🎉
               </h1>
               <p className="text-muted-foreground text-lg max-w-lg mx-auto leading-relaxed">
-                Leaven에 처음 오셨군요.<br/>어떤 목적으로 찾아오셨는지 선택해주세요.
+                {userType === 'owner' 
+                  ? 'ShopWork AI에 오신 것을 환영합니다.\n먼저 관리하실 매장을 등록해주세요.'
+                  : 'ShopWork AI에 오신 것을 환영합니다.\n점장님의 초대를 기다리고 있습니다.'}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-3xl">
-              {/* 점주용 큰 카드 */}
-              <Link href="/onboarding/owner" className="group">
-                <Card className="h-full flex flex-col items-center text-center p-8 hover:border-primary/50 hover:shadow-lg transition-all duration-300 border-2 cursor-pointer bg-white">
-                  <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 border border-blue-100 text-blue-600 shadow-sm">
-                    <Building className="w-10 h-10" />
+            <div className="w-full max-w-md mx-auto">
+              {userType === 'owner' ? (
+                /* 점주용 단일 카드 */
+                <Link href="/onboarding/owner" className="group">
+                  <Card className="flex flex-col items-center text-center p-10 hover:border-primary/50 hover:shadow-xl transition-all duration-300 border-2 cursor-pointer bg-white">
+                    <div className="w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300 border border-blue-100 text-blue-600 shadow-sm">
+                      <Building className="w-12 h-12" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-4 text-gray-900">매장 개설하기</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed mb-8">
+                      새로운 매장을 등록하고<br/>직원들의 근태와 스케줄을 우아하게 관리하세요.
+                    </p>
+                    <Button className="w-full h-12 text-base font-bold tracking-wide" variant="default">
+                      <Plus className="w-5 h-5 mr-2" /> 새 매장 만들기
+                    </Button>
+                  </Card>
+                </Link>
+              ) : (
+                /* 직원용 단일 카드 */
+                <Card className="flex flex-col items-center text-center p-10 border-2 bg-white shadow-sm">
+                  <div className="w-24 h-24 rounded-full bg-emerald-50 flex items-center justify-center mb-8 border border-emerald-100 text-emerald-600 shadow-sm">
+                    <Store className="w-12 h-12" />
                   </div>
-                  <h3 className="text-xl font-bold mb-3 text-gray-900">사장님이신가요?</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-                    새로운 매장을 등록하고<br/>직원들의 근태와 스케줄을 우아하게 관리하세요.
+                  <h3 className="text-2xl font-bold mb-4 text-gray-900">초대를 기다려주세요</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-8">
+                    점장님에게 전달받은 초대 링크를 클릭하거나<br/>초대장이 도착하면 이 화면에서 확인하실 수 있습니다.
                   </p>
-                  <Button className="w-full mt-auto font-bold tracking-wide" variant="default">
-                    <Plus className="w-4 h-4 mr-2" /> 새 매장 개설하기
-                  </Button>
+                  <div className="w-full p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 text-emerald-700 font-bold text-sm flex items-center justify-center">
+                    점장님께 초대 링크를 요청해주세요!
+                  </div>
                 </Card>
-              </Link>
-
-              {/* 직원용 큰 카드 */}
-              <Card className="h-full flex flex-col items-center text-center p-8 hover:border-primary/50 hover:shadow-lg transition-all duration-300 border-2 bg-white">
-                <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mb-6 border border-emerald-100 text-emerald-600 shadow-sm">
-                  <Store className="w-10 h-10" />
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-900">직원이신가요?</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-                  더 이상 코드를 직접 입력할 필요가 없습니다.<br/>점장님에게 전달받은 초대 링크를 클릭하여 매장에 합류하세요.
-                </p>
-                <div className="w-full mt-auto p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 text-emerald-700 font-medium text-sm flex items-center justify-center">
-                  점장님께 초대 링크를 요청해주세요!
-                </div>
-              </Card>
+              )}
             </div>
           </div>
         )}
@@ -237,6 +244,13 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
               <h2 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
                 <Building className="w-6 h-6 text-primary" /> 내 매장 및 근무지
               </h2>
+              {userType === 'owner' && (
+                <Button asChild variant="outline" size="sm" className="font-bold border-primary/20 text-primary hover:bg-primary/5">
+                  <Link href="/onboarding/owner">
+                    <Plus className="w-4 h-4 mr-1" /> 매장 추가
+                  </Link>
+                </Button>
+              )}
             </div>
 
             <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-12">
@@ -322,45 +336,6 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
               ))}
             </div>
 
-            {/* 새로운 합류 및 생성 섹션 */}
-            <div className="pt-8 border-t border-border/60">
-              <h3 className="text-lg font-bold mb-6 text-gray-800">새로운 여정 시작하기</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
-                
-                {/* 직원: 초대 코드로 합류 */}
-                <Card className="bg-slate-50/50 border-dashed border-2 hover:border-primary/40 transition-colors shadow-none">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Store className="w-5 h-5 text-emerald-600" /> 링크로 매장 가입하기
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      점장님에게 전달받은 초대 링크를 클릭하여 가입하세요.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="w-full p-3 bg-emerald-50/50 rounded-lg border border-emerald-100 text-emerald-700 font-medium text-xs text-center flex items-center justify-center">
-                      점장님께 초대 링크를 요청해주세요!
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 점주: 새 매장 개설 */}
-                <Card className="bg-slate-50/50 border-dashed border-2 hover:border-primary/40 transition-colors shadow-none">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Plus className="w-5 h-5 text-blue-600" /> 새 매장 만들기
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex items-center">
-                    <Button asChild variant="outline" className="w-full bg-white border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800">
-                      <Link href="/onboarding/owner">
-                        새 매장 개설하기 <ArrowRight className="ml-2 w-4 h-4" />
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
 
             {/* 받은 초대장 영역 (Phase 4 내에 포함) */}
             {invitations.length > 0 && (

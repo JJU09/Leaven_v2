@@ -12,7 +12,7 @@ export function RoleSelection() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Welcome to Leaven</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome to ShopWork AI</h1>
         <p className="mt-2 text-gray-500 dark:text-gray-400">
           서비스 이용을 위해 역할을 선택해주세요.
         </p>

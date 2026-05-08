@@ -8,24 +8,40 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { User } from '@supabase/supabase-js'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Building, User as UserIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { formatPhoneNumber } from '@/lib/formatters'
 import { useSearchParams } from 'next/navigation'
 
 interface AccountSettingsFormProps {
   user: User
-  profile?: { full_name?: string | null, phone?: string | null } | null
+  profile?: { full_name?: string | null, phone?: string | null, user_type?: string | null } | null
   isOnboarding?: boolean
 }
 
 export function AccountSettingsForm({ user, profile, isOnboarding = false }: AccountSettingsFormProps) {
   const [profileMessage, setProfileMessage] = useState<string | null>(null)
+  const [profileError, setProfileError] = useState<string | null>(null)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const nextUrl = searchParams.get('next')
 
-  const initialPhone = profile?.phone || user.user_metadata?.phone || ''
+  // phone과 full_name 우선순위: profile DB -> user metadata -> user top level
+  const initialPhone = profile?.phone || user.user_metadata?.phone || user.phone || ''
+  
+  // 디버깅을 위한 콘솔 로그 (브라우저 개발자 도구에서 확인 가능)
+  console.log('[AccountSettingsForm] Initial Data:', { 
+    userId: user.id, 
+    profilePhone: profile?.phone, 
+    metadataPhone: user.user_metadata?.phone, 
+    userTopPhone: user.phone,
+    finalInitialPhone: initialPhone 
+  })
+
   const [phoneValue, setPhoneValue] = useState(formatPhoneNumber(initialPhone))
+  const [userType, setUserType] = useState<string>(profile?.user_type || '')
 
   const [loading, setLoading] = useState(false)
 
@@ -35,11 +51,18 @@ export function AccountSettingsForm({ user, profile, isOnboarding = false }: Acc
 
   async function handleUpdateProfile(formData: FormData) {
     setLoading(true)
+    setProfileError(null)
+    setProfileMessage(null)
+    
     if (nextUrl) {
       formData.append('nextUrl', nextUrl)
     }
+    
     const result = await updateProfile(formData)
-    if (result?.message) {
+    
+    if (result?.error) {
+      setProfileError(result.error)
+    } else if (result?.message) {
       setProfileMessage(result.message)
       setTimeout(() => setProfileMessage(null), 3000)
     }
@@ -66,7 +89,51 @@ export function AccountSettingsForm({ user, profile, isOnboarding = false }: Acc
   const googleIdentity = user.identities?.find(id => id.provider === 'google')
 
   const profileFormContent = (
-    <form action={handleUpdateProfile} className="space-y-4">
+    <form action={handleUpdateProfile} className="space-y-6">
+      {/* 폼 데이터로 userType을 확실히 넘기기 위한 hidden input */}
+      {isOnboarding && <input type="hidden" name="userType" value={userType} />}
+
+      {isOnboarding && (
+        <div className="space-y-4 pb-4 border-b">
+          <Label className="text-base font-bold">어떤 목적으로 서비스를 이용하시나요?</Label>
+          <RadioGroup 
+            name="userType" 
+            value={userType} 
+            onValueChange={setUserType}
+            className="grid grid-cols-2 gap-4"
+            required
+          >
+            <div>
+              <RadioGroupItem value="owner" id="owner" className="peer sr-only" />
+              <Label
+                htmlFor="owner"
+                className={cn(
+                  "flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all",
+                  userType === 'owner' ? "border-primary bg-primary/5" : ""
+                )}
+              >
+                <Building className="mb-3 h-6 w-6 text-primary" />
+                <span className="font-bold">점주 / 사장님</span>
+                <span className="text-[10px] text-muted-foreground mt-1">매장을 운영하고 관리합니다</span>
+              </Label>
+            </div>
+            <div>
+              <RadioGroupItem value="staff" id="staff" className="peer sr-only" />
+              <Label
+                htmlFor="staff"
+                className={cn(
+                  "flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer transition-all",
+                  userType === 'staff' ? "border-primary bg-primary/5" : ""
+                )}
+              >
+                <UserIcon className="mb-3 h-6 w-6 text-emerald-600" />
+                <span className="font-bold">직원 / 알바생</span>
+                <span className="text-[10px] text-muted-foreground mt-1">매장에 소속되어 근무합니다</span>
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="email">이메일 계정</Label>
         <Input id="email" value={user.email} disabled className="bg-muted" />
@@ -94,6 +161,7 @@ export function AccountSettingsForm({ user, profile, isOnboarding = false }: Acc
           maxLength={13}
         />
       </div>
+      {profileError && <p className="text-sm text-red-500">{profileError}</p>}
       {profileMessage && <p className="text-sm text-green-600">{profileMessage}</p>}
       <div className="mt-8">
         <Button type="submit" disabled={loading} className={isOnboarding ? "w-full" : ""}>

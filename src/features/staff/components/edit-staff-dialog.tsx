@@ -377,7 +377,7 @@ export function EditStaffDialog({
     if (result?.error) {
       toast.error('초대 실패', { description: result.error })
     } else if (result?.notRegistered) {
-      toast.info('미가입 이메일입니다.', { description: '해당 이메일로 가입된 Leaven 계정이 없습니다. 앱 설치 및 가입을 안내해주세요.' })
+      toast.info('미가입 이메일입니다.', { description: '해당 이메일로 가입된 ShopWork AI 계정이 없습니다. 앱 설치 및 가입을 안내해주세요.' })
     } else {
       toast.success('초대 완료', { description: '직원에게 앱 가입 초대가 발송되었습니다. (로그인 시 알림)' })
       if (onSuccess) onSuccess('approve', staff.id) // UI 갱신을 위해 임의로 호출 (또는 router.refresh)
@@ -505,7 +505,7 @@ export function EditStaffDialog({
                        <div className={cn(
                          "px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide border flex items-center gap-1 shadow-sm",
                          isLinked ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-muted text-muted-foreground border-muted-foreground/20"
-                       )} title={isLinked ? "Leaven 계정과 연결됨" : "수기 등록 (계정 미연동)"}>
+                       )} title={isLinked ? "ShopWork AI 계정과 연결됨" : "수기 등록 (계정 미연동)"}>
                          {isLinked ? <Link2 className="w-3 h-3" /> : <Link2Off className="w-3 h-3" />}
                          {isLinked ? '계정 연동됨' : '수기 등록'}
                        </div>

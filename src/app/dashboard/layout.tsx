@@ -64,7 +64,7 @@ export default async function DashboardLayout({
   ])
 
   const finalMember = (memberDetail || currentMember) as any
-  const storeName = currentStore?.name || 'Leaven'
+  const storeName = currentStore?.name || 'ShopWork AI'
   
   const finalRoleString = finalMember.role_info?.name 
     || (Array.isArray(finalMember.role) ? finalMember.role[0]?.name : (typeof finalMember.role === 'object' ? finalMember.role?.name : finalMember.role))
@@ -126,6 +126,7 @@ export default async function DashboardLayout({
         avatar_url: user.user_metadata.avatar_url,
       }}
       memberId={finalMember.id}
+      storeId={currentStoreId}
       role={finalRoleString}
       roleName={finalMember.role_info?.name || finalRoleString}
       roleColor={finalMember.role_info?.color}

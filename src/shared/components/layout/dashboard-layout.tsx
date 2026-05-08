@@ -20,6 +20,7 @@ interface DashboardLayoutProps {
     avatar_url: string | null
   }
   memberId: string
+  storeId?: string
   role: string
   roleName?: string
   roleColor?: string
@@ -39,6 +40,7 @@ export function DashboardClientLayout({
   children,
   user,
   memberId,
+  storeId,
   role,
   roleName,
   roleColor,
@@ -51,7 +53,7 @@ export function DashboardClientLayout({
     <div className="h-screen w-full bg-background overflow-hidden flex">
       {/* Mobile Layout (Hidden on LG and above) */}
       <div className="flex flex-col h-full w-full lg:hidden pb-16 relative">
-        <Header storeName={storeName} />
+        <Header storeName={storeName} storeId={storeId} />
         <main className="flex-1 overflow-auto bg-muted/5 hide-scrollbar">
           {children}
         </main>
@@ -143,7 +145,7 @@ export function DashboardClientLayout({
 
         {/* 3. Main Content */}
         <div className="flex-1 h-full min-w-0 flex flex-col overflow-hidden relative">
-          <Header storeName={storeName} />
+          <Header storeName={storeName} storeId={storeId} />
           <main className="flex-1 overflow-auto p-6 bg-muted/5">
             {children}
           </main>

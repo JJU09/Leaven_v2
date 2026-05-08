@@ -66,7 +66,7 @@ export function SignupForm({ nextUrl = '/home' }: { nextUrl?: string }) {
         </div>
         <h1 className="text-2xl font-bold">회원가입</h1>
         <p className="text-sm text-muted-foreground">
-          Leaven 서비스 이용을 위해 계정을 생성해주세요
+          ShopWork AI 서비스 이용을 위해 계정을 생성해주세요
         </p>
       </div>
       <Card className="w-full">

@@ -74,7 +74,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           <div className="flex items-center gap-2 font-bold text-xl">
             <Link href="/home" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Package2 className="h-6 w-6 text-primary" />
-              <span>Leaven</span>
+              <span>ShopWork AI</span>
             </Link>
           </div>
           <Button variant="ghost" asChild>

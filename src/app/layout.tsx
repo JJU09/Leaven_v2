@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Leaven",
-  description: "매장 관리의 모든 것, Leaven",
+  title: "ShopWork AI",
+  description: "매장 관리의 모든 것, ShopWork AI",
 };
 
 export default function RootLayout({

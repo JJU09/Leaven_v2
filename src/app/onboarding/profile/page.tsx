@@ -15,14 +15,18 @@ export default async function ProfileOnboardingPage({ searchParams }: ProfileOnb
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('full_name, phone')
+    .select('full_name, phone, user_type')
     .eq('id', user.id)
-    .single()
+    .maybeSingle() // single() 대신 maybeSingle()을 사용하여 결과가 없을 때 에러 방지
+
+  if (profileError) {
+    console.error('[ProfileOnboardingPage] Error fetching profile:', profileError)
+  }
 
   // 이미 프로필이 완성되어 있다면 다음 단계로 이동
-  if (profile?.full_name && profile?.phone) {
+  if (profile?.full_name && profile?.phone && profile?.user_type) {
     const { next: nextParam } = await searchParams
     const next = typeof nextParam === 'string' ? nextParam : '/onboarding'
     redirect(next)
