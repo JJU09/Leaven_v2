@@ -13,9 +13,10 @@ interface JoinStoreClientFormProps {
   code: string
   defaultName: string
   defaultPhone: string
+  manualStaffId?: string
 }
 
-export function JoinStoreClientForm({ code, defaultName, defaultPhone }: JoinStoreClientFormProps) {
+export function JoinStoreClientForm({ code, defaultName, defaultPhone, manualStaffId }: JoinStoreClientFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [phoneValue, setPhoneValue] = useState(formatPhoneNumber(defaultPhone))
   const router = useRouter()
@@ -33,7 +34,7 @@ export function JoinStoreClientForm({ code, defaultName, defaultPhone }: JoinSto
       const name = formData.get('name') as string
       const phone = formData.get('phone') as string
       
-      const result = await joinStoreByCode(code, name, phone)
+      const result = await joinStoreByCode(code, name, phone, manualStaffId)
       
       if (result?.error) {
         alert(`가입 실패: ${result.error}`)

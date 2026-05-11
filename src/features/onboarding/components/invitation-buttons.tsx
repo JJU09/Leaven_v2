@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import { acceptInvitation, rejectInvitation } from '@/features/onboarding/actions'
@@ -12,6 +13,7 @@ interface InvitationButtonsProps {
 }
 
 export function InvitationButtons({ storeId, variant = 'large' }: InvitationButtonsProps) {
+  const router = useRouter()
   const [loading, setLoading] = useState<'accept' | 'reject' | null>(null)
 
   const handleAccept = async () => {
@@ -22,8 +24,12 @@ export function InvitationButtons({ storeId, variant = 'large' }: InvitationButt
         toast.error(result.error)
       } else {
         toast.success('초대를 수락했습니다.')
+        router.refresh()
+        router.push('/home')
       }
     } catch (error: any) {
+      // Next.js redirect() throws a special error that should not be caught as a normal error
+      if (error.message === 'NEXT_REDIRECT') return
       toast.error(error.message || '초대 수락 중 오류가 발생했습니다.')
     } finally {
       setLoading(null)
@@ -38,8 +44,10 @@ export function InvitationButtons({ storeId, variant = 'large' }: InvitationButt
         toast.error(result.error)
       } else {
         toast.success('초대를 거절했습니다.')
+        router.refresh()
       }
     } catch (error: any) {
+      if (error.message === 'NEXT_REDIRECT') return
       toast.error(error.message || '초대 거절 중 오류가 발생했습니다.')
     } finally {
       setLoading(null)

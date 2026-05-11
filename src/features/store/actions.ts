@@ -173,7 +173,7 @@ export async function getStoreSettings(storeId: string) {
   
   const { data, error } = await supabase
     .from('stores')
-    .select('wage_start_day, wage_end_day, pay_day, wage_exceptions, leave_calc_type')
+    .select('invite_code, wage_start_day, wage_end_day, pay_day, wage_exceptions, leave_calc_type')
     .eq('id', storeId)
     .single()
     

@@ -7,8 +7,12 @@ import { Store, X } from 'lucide-react'
 import { formatPhoneNumber } from '@/lib/formatters'
 import { JoinStoreClientForm } from './_components/join-store-client-form'
 
-export default async function JoinStorePage(props: { params: Promise<{ code: string }> }) {
+export default async function JoinStorePage(props: { 
+  params: Promise<{ code: string }>,
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const { code } = await props.params
+  const { m: manualStaffId } = await props.searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -92,6 +96,7 @@ export default async function JoinStorePage(props: { params: Promise<{ code: str
             code={code} 
             defaultName={defaultName} 
             defaultPhone={defaultPhone} 
+            manualStaffId={manualStaffId as string}
           />
         </CardContent>
       </Card>

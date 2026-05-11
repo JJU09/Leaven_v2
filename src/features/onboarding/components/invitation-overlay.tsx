@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { acceptInvitation } from '@/features/onboarding/actions'
 import { toast } from 'sonner'
@@ -21,19 +22,27 @@ interface InvitationOverlayProps {
 }
 
 export function InvitationOverlay({ storeId, storeName, role }: InvitationOverlayProps) {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
 
   const handleAccept = async () => {
     setIsLoading(true)
-    const result = await acceptInvitation(storeId)
-    
-    if (result?.error) {
-      toast.error(result.error)
+    try {
+      const result = await acceptInvitation(storeId)
+      
+      if (result?.error) {
+        toast.error(result.error)
+        setIsLoading(false)
+      } else {
+        toast.success('매장에 성공적으로 합류했습니다!')
+        router.refresh()
+        router.push('/home')
+      }
+    } catch (error: any) {
+      if (error.message === 'NEXT_REDIRECT') return
+      toast.error(error.message || '초대 수락 중 오류가 발생했습니다.')
       setIsLoading(false)
-    } else {
-      toast.success('매장에 성공적으로 합류했습니다!')
-      // Redirect happens in server action
     }
   }
 

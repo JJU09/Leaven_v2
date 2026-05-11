@@ -174,13 +174,10 @@ export async function acceptInvitation(storeId: string) {
 
   if (!user) return { error: 'Unauthorized' }
 
-  // 직원이 초대를 수락하더라도 점주의 최종 확인 전까지는 'pending_approval'(합류 대기) 상태로 둡니다.
-  const { error } = await supabase
-    .from('store_members')
-    .update({ status: 'pending_approval', joined_at: new Date().toISOString() })
-    .eq('store_id', storeId)
-    .eq('user_id', user.id)
-    .eq('status', 'invited')
+  // RPC를 통해 SECURITY DEFINER 권한으로 상태 업데이트 (invited -> active)
+  const { error } = await supabase.rpc('accept_invitation', {
+    p_store_id: storeId
+  })
 
   if (error) {
     return { error: '초대 수락 중 오류가 발생했습니다: ' + error.message }
@@ -189,7 +186,7 @@ export async function acceptInvitation(storeId: string) {
   revalidateTag('store-members', 'default')
   revalidatePath('/', 'layout')
   revalidatePath('/home')
-  redirect('/home')
+  return { success: true }
 }
 
 // 2.1 초대 거절 (New)
@@ -199,12 +196,10 @@ export async function rejectInvitation(storeId: string) {
 
   if (!user) return { error: 'Unauthorized' }
 
-  const { error } = await supabase
-    .from('store_members')
-    .delete()
-    .eq('store_id', storeId)
-    .eq('user_id', user.id)
-    .eq('status', 'invited')
+  // RPC를 통해 수기 등록 정보 보존하며 연결 해제 (invited -> user_id=null, status=active)
+  const { error } = await supabase.rpc('reject_invitation', {
+    p_store_id: storeId
+  })
 
   if (error) return { error: error.message }
 
@@ -220,17 +215,16 @@ export async function cancelRequest(storeId: string) {
 
   if (!user) return { error: 'Unauthorized' }
 
-  const { error } = await supabase
-    .from('store_members')
-    .delete()
-    .eq('store_id', storeId)
-    .eq('user_id', user.id)
-    .eq('status', 'pending_approval')
+  // RPC를 통해 가입 요청 삭제
+  const { error } = await supabase.rpc('cancel_join_request', {
+    p_store_id: storeId
+  })
 
   if (error) return { error: error.message }
 
   revalidateTag('store-members', 'default')
   revalidatePath('/home')
+  return { success: true }
 }
 
 // 4. 매장 코드로 매장 찾기 (RPC 사용)
@@ -246,7 +240,7 @@ export async function verifyInviteCode(code: string) {
 }
 
 // 5. 매장 코드로 가입 요청
-export async function joinStoreByCode(code: string, name: string, phone: string) {
+export async function joinStoreByCode(code: string, name: string, phone: string, manualStaffId?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -313,22 +307,49 @@ export async function joinStoreByCode(code: string, name: string, phone: string)
   const finalProfilePhone = updates.phone || profile?.phone || phone
 
   // 4. 수기 등록 직원 매칭 시도
-  // 이름과 전화번호가 일치하는 수기 등록 직원(user_id is null)이 있으면 해당 레코드를 승계합니다.
   let claimed = false
-  try {
-    const { data: claimResult, error: claimError } = await supabase.rpc('claim_manual_staff', {
-      store_id_param: storeId,
-      name_param: name,
-      phone_param: phone,
-    })
 
-    if (claimError) {
-      console.error('Claim manual staff error:', claimError)
-    } else {
-      claimed = !!claimResult
+  // 4-1. 명시적 매칭 (URL에 manualStaffId가 포함된 경우)
+  if (manualStaffId) {
+    const { data: manualStaff, error: msError } = await supabase
+      .from('store_members')
+      .select('id')
+      .eq('id', manualStaffId)
+      .eq('store_id', storeId)
+      .is('user_id', null)
+      .single()
+
+    if (manualStaff && !msError) {
+      const { error: updateError } = await supabase
+        .from('store_members')
+        .update({ 
+          user_id: user.id,
+          status: 'pending_approval',
+          joined_at: new Date().toISOString()
+        })
+        .eq('id', manualStaffId)
+      
+      if (!updateError) claimed = true
     }
-  } catch (err) {
-    console.error('Exception during claim_manual_staff:', err)
+  }
+
+  // 4-2. 이름/전화번호 기반 자동 매칭 (명시적 매칭이 실패했거나 없는 경우)
+  if (!claimed) {
+    try {
+      const { data: claimResult, error: claimError } = await supabase.rpc('claim_manual_staff', {
+        store_id_param: storeId,
+        name_param: name,
+        phone_param: phone,
+      })
+
+      if (claimError) {
+        console.error('Claim manual staff error:', claimError)
+      } else {
+        claimed = !!claimResult
+      }
+    } catch (err) {
+      console.error('Exception during claim_manual_staff:', err)
+    }
   }
 
   // 매칭 성공 시 종료

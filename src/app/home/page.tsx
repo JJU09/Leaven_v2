@@ -253,83 +253,80 @@ export default async function HomePage(props: { searchParams?: Promise<{ [key: s
               )}
             </div>
 
-            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-12">
-              {/* 내 매장 카드 */}
+            <div className="grid gap-5 mb-12 max-w-4xl">
+              {/* 내 매장 카드 (가로 리스트형 - 디자인 최적화) */}
               {stores.map((member) => (
                 <Card 
                   key={member.store.id} 
                   className={cn(
-                    "flex flex-col overflow-hidden transition-all duration-300 border shadow-sm group/card",
+                    "flex flex-col sm:flex-row items-stretch overflow-hidden transition-all duration-300 border shadow-sm group/card",
                     member.status !== 'active' 
                       ? "opacity-75 bg-slate-50/50 border-dashed" 
-                      : "hover:shadow-xl hover:border-primary/30 bg-white sm:hover:-translate-y-1"
+                      : "hover:shadow-md hover:border-primary/20 bg-white sm:hover:-translate-y-0.5"
                   )}
                 >
-                  <CardHeader className="p-4 sm:pb-4 relative overflow-hidden">
-                    {/* Background decoration - subtle on mobile */}
-                    <div className={cn(
-                      "absolute top-0 right-0 p-6 sm:p-8 -mr-4 -mt-4 opacity-[0.02] sm:opacity-[0.03] transition-transform duration-500 group-hover/card:scale-110",
-                      // @ts-ignore
-                      (Array.isArray(member.role) ? member.role[0]?.name : member.role?.name) === 'owner' ? "text-purple-600" : "text-emerald-600"
-                    )}>
-                      <Building className="w-16 h-16 sm:w-24 sm:h-24 rotate-12" />
-                    </div>
-
-                    <div className="flex justify-between items-start relative z-10">
-                      <div className="space-y-1 sm:space-y-1.5 overflow-hidden pr-2">
-                        <CardTitle className="text-lg sm:text-xl font-bold truncate tracking-tight text-slate-900 group-hover/card:text-primary transition-colors">
-                          {member.store.name}
-                        </CardTitle>
-                        <div className="flex items-center text-slate-500 gap-1">
-                          <MapPin className="w-3 h-3 shrink-0" />
-                          <p className="truncate text-[10px] sm:text-[11px] font-medium leading-none">
+                  <div className="flex-1 flex flex-col sm:flex-row">
+                    <CardHeader className="p-5 sm:p-6 flex-1">
+                      <div className="flex flex-col h-full justify-center space-y-2.5">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <CardTitle className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 group-hover/card:text-primary transition-colors">
+                            {member.store.name}
+                          </CardTitle>
+                          {/* @ts-ignore */}
+                          {(Array.isArray(member.role) ? member.role[0]?.name : member.role?.name) === 'owner' || userType === 'owner' ? (
+                            <Badge className="bg-indigo-50 text-indigo-700 border-indigo-100 shadow-none px-2 py-0.5 h-5 rounded-full">
+                              <ShieldCheck className="w-3 h-3 mr-1" />
+                              <span className="text-[10px] font-bold">점주</span>
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-emerald-50/50 text-emerald-700 border-emerald-100 shadow-none px-2 py-0.5 h-5 rounded-full">
+                              <User className="w-3 h-3 mr-1" />
+                              <span className="text-[10px] font-bold">직원</span>
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center text-slate-400 group-hover/card:text-slate-500 transition-colors gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 shrink-0" />
+                          <p className="text-xs font-medium">
                             {member.store.address || '주소 정보 없음'}
                           </p>
                         </div>
                       </div>
-                      
-                      {/* @ts-ignore */}
-                      {(Array.isArray(member.role) ? member.role[0]?.name : member.role?.name) === 'owner' ? (
-                        <Badge className="bg-purple-50 text-purple-700 border-purple-200/50 shadow-none hover:bg-purple-100 transition-colors shrink-0 px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 flex gap-1 items-center">
-                          <ShieldCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          <span className="text-[10px] sm:text-[11px] font-bold">점주</span>
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-emerald-50/50 text-emerald-700 border-emerald-200/50 shadow-none hover:bg-emerald-100/50 transition-colors shrink-0 px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 flex gap-1 items-center">
-                          <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          <span className="text-[10px] sm:text-[11px] font-bold">직원</span>
-                        </Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 px-4 pt-0 pb-4 sm:pb-6">
-                    <div className="flex items-center gap-2 text-sm relative z-10">
-                      {member.status === 'active' ? (
-                        <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50/80 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold border border-emerald-100/80 w-full justify-center shadow-sm group-hover/card:bg-emerald-50 transition-colors">
-                          <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-[11px] sm:text-xs">정상 운영 중</span>
+                    </CardHeader>
+
+                    {/* Quick Stats Section (Compact) */}
+                    <CardContent className="px-5 py-4 sm:py-0 sm:px-6 flex items-center bg-slate-50/30 sm:bg-transparent border-y sm:border-y-0 sm:border-x border-slate-100/60">
+                      <div className="grid grid-cols-2 sm:flex sm:items-center gap-6 sm:gap-10 w-full">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">상태</span>
+                          {member.status === 'active' ? (
+                            <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                              <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-[11px]">정상 운영</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-orange-600 font-bold">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span className="text-[11px] text-nowrap">승인 대기</span>
+                            </div>
+                          )}
                         </div>
-                      ) : member.status === 'pending_approval' ? (
-                        <div className="flex items-center gap-1.5 text-orange-600 bg-orange-50/80 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold border border-orange-100/80 w-full justify-center group-hover/card:bg-orange-50 transition-colors">
-                          <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 animate-spin" />
-                          <span className="text-[11px] sm:text-xs">가입 승인 대기</span>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">관리</span>
+                          <div className="flex items-center gap-1.5 text-slate-500 font-bold">
+                            <Package2 className="w-3 h-3 text-slate-400" />
+                            <span className="text-[11px]">준비중</span>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-slate-500 bg-slate-100/80 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold border border-slate-200/80 w-full justify-center">
-                          <span className="text-[11px] sm:text-xs">{member.status}</span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                  <CardFooter className="pt-0 pb-4 sm:pb-5 px-4 sm:px-5">
+                      </div>
+                    </CardContent>
+                  </div>
+
+                  <CardFooter className="p-5 sm:p-6 sm:w-40 flex items-center justify-center bg-slate-50/50 sm:bg-white border-t sm:border-t-0">
                     {member.status === 'active' ? (
                       <EnterStoreButton storeId={member.store.id} />
-                    ) : member.status === 'pending_approval' ? (
-                      <div className="w-full text-center">
-                        <span className="text-xs text-muted-foreground">승인 대기 중에는 입장 불가</span>
-                      </div>
                     ) : (
-                      <Button disabled variant="outline" className="w-full bg-muted/50">비활성 상태</Button>
+                      <Button disabled variant="ghost" className="w-full text-slate-400 text-xs font-bold">진입 불가</Button>
                     )}
                   </CardFooter>
                 </Card>

@@ -15,7 +15,7 @@ export async function getStaffList(storeId: string) {
     .select(`
       id, user_id, role_id, status, store_id, wage_type, employment_type,
       base_hourly_wage, base_monthly_wage, base_yearly_wage, base_daily_wage,
-      joined_at, name, email, phone,
+      joined_at, resigned_at, name, email, phone,
       address, birth_date, emergency_contact, custom_pay_day, weekly_holiday,
       contract_end_date, insurance_status, custom_wage_settings, work_schedules,
       memo, hired_at, contract_status,
@@ -703,38 +703,46 @@ export async function inviteRegisteredStaff(storeId: string, memberId: string, e
     return { notRegistered: true }
   }
 
-  // 2. 이미 다른 매장 멤버로 등록되어 있는지 확인 (옵션)
-  // 퇴사자('inactive' 상태)는 제외하여 재입사가 가능하도록 처리
+  // 2. 이미 다른 매장 멤버로 등록되어 있는지 확인
+  // 중복된 레코드가 있다면 에러 대신 '스마트 병합'을 시도합니다.
   const { data: existingMember } = await supabase
     .from('store_members')
-    .select('id')
+    .select('id, status')
     .eq('store_id', storeId)
     .eq('user_id', profile.id)
     .neq('id', memberId)
-    .neq('status', 'inactive')
-    .is('resigned_at', null)
-    .single()
+    .maybeSingle()
 
   if (existingMember) {
-    return { error: '해당 사용자는 이미 현재 매장에서 활동 중입니다.' }
+    if (existingMember.status === 'inactive') {
+      // 3-1. 기존 퇴사자(재입사 대상)의 경우: 기존 레코드의 user_id를 해제하여 Unique 제약 조건 충돌 방지
+      await supabase
+        .from('store_members')
+        .update({ user_id: null })
+        .eq('id', existingMember.id)
+    } else {
+      // 3-2. 가입 대기중이거나 이미 활동 중인 경우: 
+      // 점주가 수기 등록 데이터와 연동하겠다는 명시적 의사를 보였으므로, 
+      // 정보가 없는 기존의 중복 레코드를 삭제하고 수기 등록 레코드 위주로 병합합니다.
+      const { error: deleteError } = await supabase
+        .from('store_members')
+        .delete()
+        .eq('id', existingMember.id)
+      
+      if (deleteError) {
+        return { error: '기존 가입 정보 병합 중 오류가 발생했습니다.' }
+      }
+    }
   }
 
-  // 3. 기존 퇴사자(재입사 대상)의 레코드에서 user_id 연결 해제 (Unique 제약 조건 충돌 방지)
-  // 기존 레코드는 기록용으로 남겨두고(이름/기록 유지), user_id만 null로 변경
-  await supabase
-    .from('store_members')
-    .update({ user_id: null })
-    .eq('store_id', storeId)
-    .eq('user_id', profile.id)
-    .eq('status', 'inactive')
-    .neq('id', memberId)
-
-  // 4. 수기 계정에 user_id 매핑 (상태는 invited 유지, 직원이 수락하면 active로 변경)
+  // 4. 수기 계정에 user_id 매핑 및 상태를 'invited'로 변경 (직원의 동의 필요)
   const { error: updateError } = await supabase
     .from('store_members')
     .update({ 
       user_id: profile.id,
-      email: email
+      email: email,
+      status: 'invited', // 즉시 active가 아닌 '초대됨' 상태로 설정
+      joined_at: new Date().toISOString() // 초대 발송 시점을 가입일로 기록
     })
     .eq('id', memberId)
     .eq('store_id', storeId)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Table,
   TableBody,
@@ -18,7 +19,6 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StoreCodeDisplay } from '@/features/store/components/store-code-display'
-import { EditStaffDialog } from './edit-staff-dialog'
 import { StaffTableRow } from './staff-table-row'
 import { approveRequest, rejectRequest, removeStaff, deleteStaffRecord, restoreStaff } from '../actions'
 import { toast } from 'sonner'
@@ -101,9 +101,11 @@ interface StaffListProps {
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 export function StaffList({ initialData, storeId, canManage, inviteCode }: StaffListProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const defaultTab = searchParams.get('tab') || 'active'
+  
   const [staffList, setStaffList] = useState<StaffMember[]>(initialData)
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [isMounted, setIsMounted] = useState(false)
 
@@ -333,10 +335,7 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
             <Button 
               variant="outline" 
               className="bg-white border-dashed border-2 hover:border-primary/40 hover:bg-slate-50 text-slate-700 font-semibold shadow-none h-[34px] px-3 shrink-0 transition-all"
-              onClick={() => {
-                setEditingStaff(null)
-                setDialogOpen(true)
-              }}
+              onClick={() => router.push('/dashboard/staff/new')}
             >
               <PencilLine className="mr-1.5 h-3.5 w-3.5 text-slate-400" />
               수기 등록
@@ -346,7 +345,7 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
       </div>
 
       {/* 2. 탭 및 리스트 뷰 */}
-      <Tabs defaultValue="active" className="w-full rounded-xl border bg-card shadow-sm overflow-hidden flex flex-col">
+      <Tabs defaultValue={defaultTab} className="w-full rounded-xl border bg-card shadow-sm overflow-hidden flex flex-col">
         {/* Table Toolbar (Tabs + Mac OS Style Filter) */}
         <div className="bg-slate-50/50 border-b flex flex-col md:flex-row md:items-center justify-between px-4 pt-3 gap-4">
           
@@ -434,8 +433,7 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
                         onRestoreRecord={handleRestoreRecordClick}
                         onClick={() => {
                           if (!canManage) return
-                          setEditingStaff(staff)
-                          setDialogOpen(true)
+                          router.push(`/dashboard/staff/${staff.id}`)
                         }}
                       />
                     ))}
@@ -495,45 +493,6 @@ export function StaffList({ initialData, storeId, canManage, inviteCode }: Staff
           )
         })}
       </Tabs>
-
-      <EditStaffDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        staff={editingStaff}
-        storeId={storeId}
-        canManage={canManage}
-        onSuccess={(action: 'approve' | 'reject' | 'remove' | 'update', staffId: string, updatedData?: any) => {
-          if (action === 'approve') {
-            setStaffList(prev => prev.map(s => s.id === staffId ? { ...s, status: 'active' } : s))
-          } else if (action === 'reject') {
-            setStaffList(prev => prev.filter(s => s.id !== staffId))
-          } else if (action === 'remove') {
-            // 퇴사 시 상태를 inactive로, resigned_at을 현재 시간으로 설정 (기존 정보 보존)
-            setStaffList(prev => prev.map(s => {
-              if (s.id === staffId) {
-                const lastRoleName = s.role_info?.name || (s.role === 'owner' ? '점주' : s.role === 'manager' ? '매니저' : '직원')
-                return { 
-                  ...s, 
-                  status: 'inactive', 
-                  resigned_at: new Date().toISOString(),
-                  name: getMemberDisplayName(s),
-                  email: s.email || s.profile?.email || '',
-                  phone: s.phone || s.profile?.phone || '',
-                  details: { ...s.details, last_role_name: lastRoleName }
-                } as StaffMember
-              }
-              return s
-            }))
-          } else if (action === 'update' && updatedData) {
-            setStaffList(prev => prev.map(s => {
-              if (s.id === staffId) {
-                return { ...s, ...updatedData }
-              }
-              return s
-            }))
-          }
-        }}
-      />
 
       <AlertDialog 
         open={confirmDialog.open} 
