@@ -13,7 +13,8 @@ import {
   ClipboardList,
   Calculator,
   ShieldCheck,
-  Smartphone
+  Smartphone,
+  Play
 } from "lucide-react"
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -63,6 +64,49 @@ export default async function LandingPage() {
                     지금 무료로 시작하기 <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Tutorial Video Section */}
+        <section className="w-full py-12 md:py-24 bg-gray-50/50 dark:bg-gray-900/50">
+          <div className="container px-4 md:px-6 mx-auto">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+              <div className="space-y-2">
+                <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium">
+                  Quick Tour
+                </div>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
+                  1분 만에 살펴보는 ShopWork AI
+                </h2>
+                <p className="max-w-225 text-gray-500 md:text-lg dark:text-gray-400">
+                  복잡한 매장 관리가 어떻게 쉬워지는지 직접 확인해보세요.
+                </p>
+              </div>
+            </div>
+            
+            <div className="mx-auto max-w-4xl relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary to-blue-600 rounded-2xl blur-sm opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+              <div className="relative aspect-video rounded-xl overflow-hidden shadow-2xl border bg-black">
+                <video 
+                  className="w-full h-full object-cover"
+                  autoPlay 
+                  muted 
+                  loop 
+                  playsInline
+                  poster="/dashboard.png"
+                >
+                  <source src="/tutorial.mp4" type="video/mp4" />
+                  브라우저가 비디오 태그를 지원하지 않습니다.
+                </video>
+                
+                {/* Overlay Play Hint */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors pointer-events-none">
+                  <div className="bg-white/20 backdrop-blur-sm p-4 rounded-full border border-white/30 group-hover:scale-110 transition-transform">
+                    <Play className="h-8 w-8 text-white fill-white" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
