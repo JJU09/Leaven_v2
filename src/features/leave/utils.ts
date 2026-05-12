@@ -10,6 +10,34 @@
  * @param calcType 연차 발생 기준 ('hire_date' | 'fiscal_year')
  * @returns 기준일 시점에 발생 완료된(보유 중인) 총 연차 일수 (number)
  */
+export const LEAVE_POLICY_MAP = {
+  annual: {
+    full: { type: 'multiplier', value: 1 },
+    am:   { type: 'fixed', value: 0.5 },
+    pm:   { type: 'fixed', value: 0.5 },
+  },
+  sick: {
+    full: { type: 'fixed', value: 0 },
+    am:   { type: 'fixed', value: 0 },
+    pm:   { type: 'fixed', value: 0 },
+  },
+  unpaid: {
+    full: { type: 'fixed', value: 0 },
+    am:   { type: 'fixed', value: 0 },
+    pm:   { type: 'fixed', value: 0 },
+  }
+} as const;
+
+/**
+ * 휴가 타입과 단위에 따라 차감될 연차 일수를 계산합니다.
+ */
+export function calculateDeductedDays(leaveType: string, leavePortion: string, requestedDays: number): number {
+  const policy = LEAVE_POLICY_MAP[leaveType as keyof typeof LEAVE_POLICY_MAP]?.[leavePortion as 'full' | 'am' | 'pm'];
+  
+  if (!policy) return 0;
+  return policy.type === 'fixed' ? policy.value : requestedDays * policy.value;
+}
+
 export function calculateAnnualLeave(joinDateStr: string | null | undefined, referenceDate: Date, calcType: 'hire_date' | 'fiscal_year'): number {
   if (!joinDateStr) return 0
 

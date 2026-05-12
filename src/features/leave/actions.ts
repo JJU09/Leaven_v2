@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { unstable_noStore as noStore } from 'next/cache'
 import { requirePermission } from '@/features/auth/permissions'
 import { toUTCISOString } from '@/shared/lib/date-utils'
+import { calculateDeductedDays } from './utils'
 
 export async function getLeaveBalances(storeId: string, year: number) {
   noStore()
@@ -56,7 +57,8 @@ export async function createLeaveRequest(
   endDate: string,
   requestedDays: number,
   reason: string,
-  attachmentUrl?: string
+  attachmentUrl?: string,
+  leavePortion: 'full' | 'am' | 'pm' = 'full'
 ) {
   const supabase = await createClient()
   
@@ -71,13 +73,20 @@ export async function createLeaveRequest(
       requested_days: requestedDays,
       reason: reason,
       attachment_url: attachmentUrl,
-      status: 'pending'
+      status: 'pending',
+      leave_portion: leavePortion
     })
     .select()
     .single()
     
   if (error) {
     console.error('Error creating leave request:', error)
+    
+    const errorMsg = error.message || (error as any).details || (error as any).hint || ''
+    if (errorMsg.includes('이미 신청되거나 승인된 휴가')) {
+      return { error: errorMsg }
+    }
+    
     return { error: '휴가 신청 중 오류가 발생했습니다.' }
   }
   
@@ -132,8 +141,10 @@ export async function resolveLeaveRequest(requestId: string, storeId: string, st
     return { error: '상태 업데이트 중 오류가 발생했습니다.' }
   }
 
-  // 3. 승인인 경우 연차 차감 (수동 롤백 패턴 적용)
-  if (status === 'approved') {
+  // 3. 승인인 경우 연차 차감 로직 실행 (수동 롤백 패턴 적용)
+  const daysToDeduct = calculateDeductedDays(request.leave_type, request.leave_portion, Number(request.requested_days))
+
+  if (status === 'approved' && daysToDeduct > 0) {
     // 잔여 연차 조회
     const { data: balance, error: balanceError } = await adminClient
       .from('leave_balances')
@@ -145,7 +156,7 @@ export async function resolveLeaveRequest(requestId: string, storeId: string, st
 
     if (!balanceError && balance) {
       // 연차 차감 로직 (사용일수 증가)
-      const newUsedDays = Number(balance.used_days) + Number(request.requested_days)
+      const newUsedDays = Number(balance.used_days) + daysToDeduct
       
       const { error: deductError } = await adminClient
         .from('leave_balances')
@@ -178,7 +189,7 @@ export async function resolveLeaveRequest(requestId: string, storeId: string, st
           member_id: request.member_id,
           year: year,
           total_days: null,
-          used_days: request.requested_days
+          used_days: daysToDeduct
         })
 
       if (insertError) {
@@ -250,38 +261,42 @@ export async function revokeLeaveRequest(requestId: string, storeId: string) {
   }
 
   // 3. 연차 복구 (수동 롤백 패턴 적용)
-  const { data: balance, error: balanceError } = await adminClient
-    .from('leave_balances')
-    .select('*')
-    .eq('store_id', storeId)
-    .eq('member_id', request.member_id)
-    .eq('year', year)
-    .single()
-
-  if (!balanceError && balance) {
-    // 연차 복구 로직 (사용일수 감소)
-    const newUsedDays = Math.max(0, Number(balance.used_days) - Number(request.requested_days))
-    
-    const { error: refundError } = await adminClient
+  const daysToRefund = calculateDeductedDays(request.leave_type, request.leave_portion, Number(request.requested_days))
+  
+  if (daysToRefund > 0) {
+    const { data: balance, error: balanceError } = await adminClient
       .from('leave_balances')
-      .update({ 
-        used_days: newUsedDays,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', balance.id)
+      .select('*')
+      .eq('store_id', storeId)
+      .eq('member_id', request.member_id)
+      .eq('year', year)
+      .single()
 
-    if (refundError) {
-      // 보상 트랜잭션: 연차 복구 실패 시 취소 상태를 다시 approved로 롤백
-      console.error('Error refunding leave balance, rolling back status:', refundError)
-      await adminClient
-        .from('leave_requests')
-        .update({ 
-          status: 'approved',
-          // 원래 승인자 정보 유지가 베스트지만, 데이터가 없으므로 현재 사용자 유지
-        })
-        .eq('id', requestId)
+    if (!balanceError && balance) {
+      // 연차 복구 로직 (사용일수 감소)
+      const newUsedDays = Math.max(0, Number(balance.used_days) - daysToRefund)
       
-      return { error: '연차 복구 중 오류가 발생하여 취소가 실패했습니다.' }
+      const { error: refundError } = await adminClient
+        .from('leave_balances')
+        .update({ 
+          used_days: newUsedDays,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', balance.id)
+
+      if (refundError) {
+        // 보상 트랜잭션: 연차 복구 실패 시 취소 상태를 다시 approved로 롤백
+        console.error('Error refunding leave balance, rolling back status:', refundError)
+        await adminClient
+          .from('leave_requests')
+          .update({ 
+            status: 'approved',
+            // 원래 승인자 정보 유지가 베스트지만, 데이터가 없으므로 현재 사용자 유지
+          })
+          .eq('id', requestId)
+        
+        return { error: '연차 복구 중 오류가 발생하여 취소가 실패했습니다.' }
+      }
     }
   }
 
