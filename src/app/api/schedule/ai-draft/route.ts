@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     // 날짜별 요일 파악하여 closed 날짜 강제 제외 리스트 만들기
     const closedDates: string[] = []
-    let currDate = new Date(startDate)
+    const currDate = new Date(startDate)
     const endObj = new Date(endDate)
     const dateToDayMap: Record<string, string> = {}
 

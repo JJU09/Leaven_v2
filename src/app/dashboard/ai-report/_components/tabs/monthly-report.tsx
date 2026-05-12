@@ -113,7 +113,7 @@ export function MonthlyReport({ storeId }: { storeId: string }) {
           </div>
           <h3 className="text-lg font-medium mb-2">월간 리포트가 없습니다</h3>
           <p className="text-muted-foreground max-w-md mb-6 leading-relaxed">
-            상단의 '리포트 생성하기' 버튼을 눌러<br/>
+            상단의 {"'리포트 생성하기'"} 버튼을 눌러<br/>
             해당 월의 데이터 기반 AI 분석 결과를 확인하세요.
           </p>
         </div>

@@ -139,7 +139,7 @@ export function usePayroll(storeId: string | undefined, year: number, month: num
             const [startH, startM] = sched.start_time.split(':').map(Number);
             const [endH, endM] = sched.end_time.split(':').map(Number);
             
-            let startMinutes = startH * 60 + startM;
+            const startMinutes = startH * 60 + startM;
             let endMinutes = endH * 60 + endM;
             
             if (endMinutes < startMinutes) endMinutes += 24 * 60;

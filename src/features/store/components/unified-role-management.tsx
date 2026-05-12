@@ -153,18 +153,23 @@ export function UnifiedRoleManagement({ storeId, roles }: UnifiedRoleManagementP
         })
         .finally(() => setLoading(false))
     }
-  }, [selectedRole])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRole?.id])
 
   // Update selectedRole when roles list changes (e.g. after add/delete)
   useEffect(() => {
     if (selectedRole) {
       const updated = roles.find(r => r.id === selectedRole.id)
-      if (updated) setSelectedRole(updated)
-      else if (roles.length > 0) setSelectedRole(roles[0])
-      else setSelectedRole(null)
+      if (updated && (updated.name !== selectedRole.name || updated.color !== selectedRole.color || updated.parent_id !== selectedRole.parent_id)) {
+        setSelectedRole(updated)
+      } else if (!updated) {
+        if (roles.length > 0) setSelectedRole(roles[0])
+        else setSelectedRole(null)
+      }
     } else if (roles.length > 0) {
       setSelectedRole(roles[0])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roles])
 
   const handleCreateRole = async () => {

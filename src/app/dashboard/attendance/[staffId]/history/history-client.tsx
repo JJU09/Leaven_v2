@@ -65,8 +65,8 @@ export function HistoryClientPage({ storeId, staffId }: HistoryClientPageProps) 
       const sch = data.schedules.find(s => s.plan_date === dateStr)
 
       let status: DayAttendance['status'] = 'off'
-      let inTime = att?.clock_in_time || null
-      let outTime = att?.clock_out_time || null
+      const inTime = att?.clock_in_time || null
+      const outTime = att?.clock_out_time || null
       let worked_minutes = null
 
       if (inTime && outTime) {

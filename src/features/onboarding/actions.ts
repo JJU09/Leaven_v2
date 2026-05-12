@@ -369,7 +369,7 @@ export async function joinStoreByCode(code: string, name: string, phone: string,
 
   // 5. 가입 요청 (Pending Approval) - 매칭된 직원이 없을 경우
   // V2 스키마: role_id가 필수이므로 매장의 기본 '미지정' 직급을 찾아 연결
-  let { data: defaultRole } = await supabase
+  const { data: defaultRole } = await supabase
     .from('store_roles')
     .select('id')
     .eq('store_id', storeId)

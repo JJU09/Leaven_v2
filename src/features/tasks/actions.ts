@@ -810,7 +810,7 @@ export async function createPersonalDashboardTask(input: {
   }
 
   let taskStartTime = null;
-  let taskEndTime = null;
+  const taskEndTime = null;
 
   if (input.task_type === 'scheduled' && input.start_time) {
     // 이미 UTC 문자열이면 그대로 사용, 'HH:mm' 형태면 변환
@@ -952,7 +952,7 @@ export async function getDashboardTasks(storeId: string, date: string) {
     
     // 2. 내 역할의 플레이북(가이드라인) 조회 (is_routine = true)
     // 기존 is_template 플래그는 마이그레이션으로 인해 오염되었을 수 있으므로 is_routine 사용
-    let templateQuery = supabase
+    const templateQuery = supabase
         .from('tasks')
         .select('*')
         .eq('store_id', storeId)

@@ -663,7 +663,7 @@ export function LeaveClientPage({
             <Button disabled={submitLoading || !requestDraft.reason.trim()} className="flex-2 h-12 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]" onClick={async () => {
               setSubmitLoading(true);
               try {
-                let days = differenceInDays(parseISO(requestDraft.endDate), parseISO(requestDraft.startDate)) + 1;
+                const days = differenceInDays(parseISO(requestDraft.endDate), parseISO(requestDraft.startDate)) + 1;
                 const res = await createLeaveRequest(storeId, requestDraft.memberId, requestDraft.leaveType, requestDraft.startDate, requestDraft.endDate, days, requestDraft.reason, requestDraft.attachmentUrl);
                 if (res.error) toast.error(res.error); else { toast.success('신청이 완료되었습니다.'); setIsRequestModalOpen(false); fetchData(); }
               } catch(e) { toast.error('오류가 발생했습니다.'); } finally { setSubmitLoading(false); }

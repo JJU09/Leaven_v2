@@ -124,7 +124,7 @@ export async function inviteStaff(storeId: string, formData: FormData) {
   // 4. 멤버 추가 (초대 상태)
   // roleId가 없으면 staff 역할 찾아서 넣어야 함 (기본값)
   let targetRoleId = roleId
-  let targetRoleName = 'staff' // Legacy fallback
+  const targetRoleName = 'staff' // Legacy fallback
   
   if (!targetRoleId || targetRoleId === 'null') {
     const { data: defaultRole } = await supabase

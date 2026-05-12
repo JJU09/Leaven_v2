@@ -48,7 +48,7 @@ export async function sendContract(params: CreateDocumentFromTemplateParams) {
     }
   })
 
-  let validRequesterLabels = new Set<string>()
+  const validRequesterLabels = new Set<string>()
   if (templateRes.ok) {
     const templateData = await templateRes.json()
     if (templateData.requesterInputs && Array.isArray(templateData.requesterInputs)) {

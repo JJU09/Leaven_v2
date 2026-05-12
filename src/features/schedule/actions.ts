@@ -152,7 +152,7 @@ export async function createSchedule(storeId: string, formData: FormData) {
   }
 
   let createdCount = 0
-  let createdSchedules = []
+  const createdSchedules = []
 
   for (const date of targetDates) {
     // 스키마에 맞게 plan_date, start_time, end_time 설정
