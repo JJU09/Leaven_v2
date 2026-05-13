@@ -190,7 +190,7 @@ export function CalendarHeader({
           <>
             {/* 역할(Role) 필터 토글 칩 */}
         <div className="flex gap-1.5 flex-wrap">
-          {roles.slice(0, 4).map(r => {
+          {roles.map(r => {
             const isActive = activeRoleIds.includes(r.id)
             return (
               <button

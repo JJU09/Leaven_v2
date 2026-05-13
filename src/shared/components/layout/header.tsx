@@ -2,15 +2,16 @@
 
 import * as React from 'react'
 import { Button } from '@/components/ui/button'
-import { MessageSquarePlus } from 'lucide-react'
+import { MessageSquarePlus, Sparkles } from 'lucide-react'
 import { FeedbackModal } from '@/shared/components/feedback/feedback-modal'
 
 interface HeaderProps {
   storeName: string
   storeId?: string
+  onOpenAiChat?: () => void
 }
 
-export function Header({ storeName, storeId }: HeaderProps) {
+export function Header({ storeName, storeId, onOpenAiChat }: HeaderProps) {
   const [isFeedbackOpen, setIsFeedbackOpen] = React.useState(false)
 
   return (
@@ -22,22 +23,24 @@ export function Header({ storeName, storeId }: HeaderProps) {
       <div className="ml-auto flex items-center gap-2">
         <Button
           variant="ghost"
-          size="sm"
-          className="hidden sm:flex items-center gap-2 text-muted-foreground hover:text-foreground"
-          onClick={() => setIsFeedbackOpen(true)}
-        >
-          <MessageSquarePlus className="w-4 h-4" />
-          <span>의견 보내기</span>
-        </Button>
-        <Button
-          variant="ghost"
           size="icon"
-          className="flex sm:hidden text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground"
           onClick={() => setIsFeedbackOpen(true)}
-          title="의견 보내기"
+          title="버그 제보 / 건의"
         >
           <MessageSquarePlus className="w-4 h-4" />
         </Button>
+        {onOpenAiChat && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-primary hover:text-primary/80 hover:bg-primary/10"
+            onClick={onOpenAiChat}
+            title="AI에게 묻기"
+          >
+            <Sparkles className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       <FeedbackModal 

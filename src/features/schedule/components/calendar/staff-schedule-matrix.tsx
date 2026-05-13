@@ -159,24 +159,39 @@ export function StaffScheduleMatrix({
                         const start = sch.start_time?.includes('T') ? new Date(sch.start_time) : new Date(`${sch.plan_date}T${sch.start_time}`)
                         const end = sch.end_time?.includes('T') ? new Date(sch.end_time) : new Date(`${sch.plan_date}T${sch.end_time}`)
                         
-                        const isActuallyOnLeave = approvedLeaves.some((leave: any) => {
+                        // [모바일 뷰] 휴가 정보만 덧붙이고 본래 스케줄을 유지합니다
+                        const matchingLeave = approvedLeaves.find((leave: any) => {
                           const schDateOnly = sch.plan_date
                           return leave.member_id === staff.id && 
                                  schDateOnly >= leave.start_date && 
                                  schDateOnly <= leave.end_date
                         })
 
-                        const currentType = isActuallyOnLeave ? 'leave' : sch.schedule_type
-                        const isLeave = currentType === 'leave'
-                                const scheduleColor = isLeave ? '#64748b' : roleColor
+                        const currentType = sch.schedule_type
+                        const scheduleColor = roleColor
                                 
-                                const typeLabelMap: Record<string, string> = {
-                                  'regular': '근무',
-                                  'leave': '휴가',
-                                  'training': '교육',
-                                  'etc': '기타'
-                                }
-                                const displayTitle = typeLabelMap[currentType] || '근무'
+                        const typeLabelMap: Record<string, string> = {
+                          'regular': '근무',
+                          'training': '교육',
+                          'etc': '기타'
+                        }
+                        const displayTitle = typeLabelMap[currentType] || '근무'
+                        
+                        let leaveText = '';
+                        if (matchingLeave) {
+                          if (matchingLeave.leave_portion === 'am') leaveText = '오전반차';
+                          else if (matchingLeave.leave_portion === 'pm') leaveText = '오후반차';
+                          else {
+                            switch (matchingLeave.leave_type) {
+                              case 'annual': leaveText = '연차'; break;
+                              case 'sick': leaveText = '병가'; break;
+                              case 'replacement': leaveText = '대체휴무'; break;
+                              case 'unpaid': leaveText = '무급휴가'; break;
+                              case 'special': leaveText = '특별휴가'; break;
+                              default: leaveText = '휴가'; break;
+                            }
+                          }
+                        }
 
                           return (
                             <div 
@@ -194,24 +209,24 @@ export function StaffScheduleMatrix({
                                   style={{ 
                                     height: '10px',
                                     backgroundColor: scheduleColor,
-                                    opacity: isLeave ? 0.4 : 1 
+                                    opacity: 1 
                                   }} 
                                 />
-                                <span className={cn(
-                                  "text-[13px] font-semibold truncate leading-none", 
-                                  isLeave ? "text-slate-600 line-through decoration-slate-400" : "text-[#1a1a1a]"
-                                )}>
+                                <span className="text-[13px] font-semibold truncate leading-none text-[#1a1a1a]">
                                   {displayTitle}
                                 </span>
+                                {leaveText && (
+                                  <span className="text-[10px] bg-black/5 text-black/60 px-1 py-0.5 rounded leading-none shrink-0 font-medium">
+                                    {leaveText}
+                                  </span>
+                                )}
                               </div>
 
                               {/* 우측 시간 */}
                               <div className="shrink-0 flex items-center">
-                                {!isLeave && (
-                                  <span className="text-[11px] font-medium leading-none" style={{ color: scheduleColor }}>
-                                    {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
-                                  </span>
-                                )}
+                                <span className="text-[11px] font-medium leading-none" style={{ color: scheduleColor }}>
+                                  {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
+                                </span>
                               </div>
                             </div>
                           )
@@ -316,37 +331,65 @@ export function StaffScheduleMatrix({
                                 const start = sch.start_time?.includes('T') ? new Date(sch.start_time) : new Date(`${sch.plan_date}T${sch.start_time}`)
                                 const end = sch.end_time?.includes('T') ? new Date(sch.end_time) : new Date(`${sch.plan_date}T${sch.end_time}`)
                                 
-                                // [기획자 핵심 로직] SSOT 기반 휴가 실시간 렌더링
-                                const isActuallyOnLeave = approvedLeaves.some((leave: any) => {
+                                // [기획자 핵심 로직] 휴가 배지 추가 및 스케줄 본래 색상 유지
+                                const matchingLeave = approvedLeaves.find((leave: any) => {
                                   // leave_requests의 start_date, end_date는 "YYYY-MM-DD" 문자열임
-                                  // sch.start_time은 UTC ISO 문자열임. 비교를 위해 날짜만 추출
                                   const schDateOnly = sch.plan_date;
                                   return leave.member_id === staff.id && 
                                          schDateOnly >= leave.start_date && 
                                          schDateOnly <= leave.end_date;
                                 });
 
-                                const currentType = isActuallyOnLeave ? 'leave' : sch.schedule_type;
-                                const isLeave = currentType === 'leave'
+                                const currentType = sch.schedule_type;
                                 
-                                // 색상 동적 결정: 휴가는 무조건 회색, 나머지는 본래 색상(또는 직급 색상)
-                                const scheduleColor = isLeave ? '#64748b' : (sch.color || roleColor)
+                                // 색상 동적 결정: 휴가여부와 상관없이 본래 색상(또는 직급 색상) 유지
+                                const scheduleColor = sch.color || roleColor
                                 
-                                // 타이틀 동적 결정: 휴가 기록이 있으면 강제로 '휴가' 표시
                                 const typeLabelMap: Record<string, string> = {
                                   'regular': '근무',
-                                  'leave': '휴가',
                                   'training': '교육',
                                   'etc': '기타'
                                 }
                                 const displayTitle = typeLabelMap[currentType] || sch.title || '근무'
 
+                                // 배지 정보 생성
+                                let leaveBadge = null;
+                                if (matchingLeave) {
+                                  let text = '';
+                                  let colorClass = '';
+                                  const type = matchingLeave.leave_type;
+                                  const portion = matchingLeave.leave_portion || 'full';
+
+                                  if (portion === 'am') text = '[오전반차]';
+                                  else if (portion === 'pm') text = '[오후반차]';
+                                  else {
+                                    switch (type) {
+                                      case 'annual': text = '[연차]'; break;
+                                      case 'sick': text = '[병가]'; break;
+                                      case 'unpaid': text = '[무급휴가]'; break;
+                                      case 'special': text = '[특별휴가]'; break;
+                                      case 'replacement': text = '[대체휴무]'; break;
+                                      default: text = '[휴가]'; break;
+                                    }
+                                  }
+
+                                  if (type === 'annual' || type === 'replacement') {
+                                    colorClass = 'bg-blue-100 text-blue-700';
+                                  } else if (type === 'sick') {
+                                    colorClass = 'bg-red-100 text-red-700';
+                                  } else {
+                                    colorClass = 'bg-slate-100 text-slate-700';
+                                  }
+
+                                  leaveBadge = { text, colorClass };
+                                }
+
                                 return (
                                       <div 
                                         key={sch.id}
-                                        draggable={canManage && !isLeave}
+                                        draggable={canManage}
                                         onDragStart={(e) => {
-                                          if (!canManage || isLeave) return
+                                          if (!canManage) return
                                           e.dataTransfer.setData('text/plain', JSON.stringify({
                                             scheduleId: sch.id,
                                             sourceStaffId: staff.id
@@ -362,22 +405,26 @@ export function StaffScheduleMatrix({
                                         }}
                                         className={cn(
                                           "px-2 py-1.5 rounded-md text-[11px] font-medium transition-all hover:scale-[1.02] shadow-sm border border-black/5 text-left cursor-pointer flex flex-col justify-center",
-                                          isLeave ? "h-full min-h-[50px] items-center text-center opacity-90 hover:opacity-100" : "",
-                                          canManage && !isLeave ? "active:cursor-grabbing cursor-grab" : ""
+                                          canManage ? "active:cursor-grabbing cursor-grab" : ""
                                         )}
                                         style={{ 
-                                          backgroundColor: hexToRgba(scheduleColor, isLeave ? 0.15 : 0.1), 
+                                          backgroundColor: hexToRgba(scheduleColor, 0.1), 
                                           color: '#1a1a1a',
-                                          borderLeft: isLeave ? 'none' : `3px solid ${scheduleColor}`
+                                          borderLeft: `3px solid ${scheduleColor}`
                                         }}
                                       >
-                                          {!isLeave && (
-                                            <div className="font-semibold text-[10px] opacity-70 mb-0.5" style={{ color: scheduleColor }}>
-                                              {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
-                                            </div>
+                                        <div className="font-semibold text-[10px] opacity-70 truncate mb-0.5" style={{ color: scheduleColor }}>
+                                          {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
+                                        </div>
+                                        <div className="flex items-center gap-1 min-w-0">
+                                          <span className="truncate text-[#1a1a1a] shrink-0">
+                                            {displayTitle}
+                                          </span>
+                                          {leaveBadge && (
+                                            <span className={cn("px-1 py-[1px] rounded-[3px] font-semibold text-[8px] shrink-0 leading-none", leaveBadge.colorClass)}>
+                                              {leaveBadge.text}
+                                            </span>
                                           )}
-                                        <div className={cn("truncate text-[#1a1a1a]", isLeave && "font-bold text-[12px] tracking-wide")} style={isLeave ? { color: scheduleColor } : {}}>
-                                          {displayTitle}
                                         </div>
                                       </div>
                                 )

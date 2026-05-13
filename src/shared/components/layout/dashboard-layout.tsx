@@ -11,6 +11,13 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { setCurrentStore } from '@/features/store/actions'
 import { MobileBottomNav } from '@/shared/components/layout/mobile-bottom-nav'
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { AiChat } from '@/shared/components/ai-chat/ai-chat'
+import { useAiChat } from '@/shared/components/ai-chat/use-ai-chat'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -49,11 +56,34 @@ export function DashboardClientLayout({
   staffList,
   permissions = {},
 }: DashboardLayoutProps) {
+  const [isAiChatOpen, setIsAiChatOpen] = React.useState(false)
+  const [isDesktop, setIsDesktop] = React.useState(true)
+  
+  // 글로벌하게 상태를 유지하기 위해 Layout에서 훅을 호출
+  const aiChatState = useAiChat(storeId || '')
+
+  const toggleAiChat = React.useCallback(() => {
+    setIsAiChatOpen((prev) => !prev)
+  }, [])
+
+  React.useEffect(() => {
+    const checkIsDesktop = () => {
+      setIsDesktop(window.innerWidth >= 1024) // lg breakpoint (1024px)
+    }
+    
+    // 초기 체크
+    checkIsDesktop()
+    
+    // 리사이즈 이벤트 리스너 추가
+    window.addEventListener('resize', checkIsDesktop)
+    return () => window.removeEventListener('resize', checkIsDesktop)
+  }, [])
+
   return (
     <div className="h-screen w-full bg-background overflow-hidden flex">
       {/* Mobile Layout (Hidden on LG and above) */}
       <div className="flex flex-col h-full w-full lg:hidden pb-16 relative">
-        <Header storeName={storeName} storeId={storeId} />
+        <Header storeName={storeName} storeId={storeId} onOpenAiChat={storeId ? toggleAiChat : undefined} />
         <main className="flex-1 overflow-auto bg-muted/5 hide-scrollbar">
           {children}
         </main>
@@ -61,9 +91,9 @@ export function DashboardClientLayout({
       </div>
 
       {/* Desktop Layout (Discord Style) */}
-      <div className="hidden lg:flex h-full w-full">
+      <div className="hidden lg:flex h-full w-full relative">
         {/* 1. Store List Sidebar (Fixed Width) */}
-        <div className="w-18 flex-none border-r bg-muted/10 flex flex-col items-center py-4 space-y-4 overflow-y-auto hide-scrollbar z-10">
+        <div className="w-18 flex-none border-r bg-muted/10 flex flex-col items-center py-4 space-y-4 overflow-y-auto hide-scrollbar z-20">
           {/* Home Button (Workspace Switcher / Bypass) */}
           <Link href="/home?bypass=true" className="group relative flex items-center justify-center w-full">
             <div className={cn(
@@ -145,12 +175,39 @@ export function DashboardClientLayout({
 
         {/* 3. Main Content */}
         <div className="flex-1 h-full min-w-0 flex flex-col overflow-hidden relative">
-          <Header storeName={storeName} storeId={storeId} />
+          <Header storeName={storeName} storeId={storeId} onOpenAiChat={storeId ? toggleAiChat : undefined} />
           <main className="flex-1 overflow-auto p-6 bg-muted/5">
             {children}
           </main>
         </div>
+
+        {/* 4. Desktop AI Chat Panel (Discord member list style) */}
+        {storeId && isAiChatOpen && (
+          <div className="w-[350px] flex-none border-l bg-background h-full overflow-hidden flex flex-col animate-in slide-in-from-right-8 duration-200 z-10 shadow-sm">
+            <div className="h-14 border-b flex items-center px-4 shrink-0 bg-background">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                AI 매니저
+              </h3>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <AiChat storeId={storeId} {...aiChatState} />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Mobile AI Chat Panel (Sheet) */}
+      {storeId && !isDesktop && (
+        <Sheet open={isAiChatOpen} onOpenChange={setIsAiChatOpen}>
+          <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
+            <SheetTitle className="sr-only">AI 매니저 채팅</SheetTitle>
+            <div className="flex-1 overflow-hidden">
+              <AiChat storeId={storeId} {...aiChatState} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   )
 }

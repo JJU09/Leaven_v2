@@ -350,8 +350,9 @@ export function PayrollDetailPageClient({ initialRecord }: PayrollDetailPageClie
                           overrides={record.overrides || []}
                           isLocked={!isDraft}
                           onOverrideSubmit={async (override) => {
+                            const fieldName = override.field as keyof Omit<typeof currentDeductions, 'totalDeduction' | 'netPay'>;
                             const newTotal = currentDeductions.totalDeduction 
-                              - currentDeductions[override.field] 
+                              - currentDeductions[fieldName] 
                               + override.overriddenValue;
                             const newNetPay = record.gross_pay - newTotal;
 

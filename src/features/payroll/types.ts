@@ -15,9 +15,11 @@ export interface DeductionResult {
 }
 
 export type DeductionOverrideKey = keyof Omit<DeductionResult, 'totalDeduction' | 'netPay'>;
+export type AllowanceOverrideKey = "overtime_pay" | "weekly_holiday_pay";
+export type PayrollOverrideKey = DeductionOverrideKey | AllowanceOverrideKey;
 
 export interface DeductionOverride {
-  field: DeductionOverrideKey;
+  field: PayrollOverrideKey;
   originalValue: number;
   overriddenValue: number;
   reason: string;

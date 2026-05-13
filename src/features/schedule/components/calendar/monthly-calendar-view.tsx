@@ -203,16 +203,8 @@ export function MonthlyCalendarView({
                       const roleInfo = staff ? getStaffRoleInfo(staff) : null
                       const roleColor = roleInfo?.color || '#534AB7'
                       
-                      const isActuallyOnLeave = approvedLeaves.some((leave: any) => {
-                        const schDateOnly = sch.plan_date
-                        return leave.member_id === staffId && 
-                               schDateOnly >= leave.start_date && 
-                               schDateOnly <= leave.end_date
-                      })
-
-                      const currentType = isActuallyOnLeave ? 'leave' : sch.schedule_type
-                      const isLeave = currentType === 'leave'
-                      const scheduleColor = isLeave ? '#64748b' : roleColor
+                      // 모바일 뷰에서는 점 색상을 원래 직급 색상으로 유지합니다.
+                      const scheduleColor = roleColor;
 
                       return (
                         <div 
@@ -238,47 +230,74 @@ export function MonthlyCalendarView({
                       const roleColor = roleInfo?.color || '#534AB7'
                       const safeName = staff?.name || '직원'
 
-                      // [기획자 핵심 로직] SSOT 기반 휴가 실시간 렌더링
-                      const isActuallyOnLeave = approvedLeaves.some((leave: any) => {
+                      // [기획자 핵심 로직] 휴가 배지 추가 및 스케줄 본래 색상 유지
+                      const matchingLeave = approvedLeaves.find((leave: any) => {
                         const schDateOnly = sch.plan_date;
                         return leave.member_id === staffId && 
                                schDateOnly >= leave.start_date && 
                                schDateOnly <= leave.end_date;
                       });
 
-                      const currentType = isActuallyOnLeave ? 'leave' : sch.schedule_type;
+                      const currentType = sch.schedule_type;
+                      const isTraining = currentType === 'training';
+                      const isEtc = currentType === 'etc';
                       
-                      const isLeave = currentType === 'leave'
-                      const isTraining = currentType === 'training'
-                      const isEtc = currentType === 'etc'
-                      
-                      // 색상 동적 결정: 휴가는 무조건 회색, 나머지는 본래 색상(또는 직급 색상)
-                      const scheduleColor = isLeave ? '#64748b' : roleColor
+                      // 색상: 휴가여부와 상관없이 본래 직급 색상 유지
+                      const scheduleColor = roleColor;
                       
                       // 타이틀 동적 결정
                       const typeLabelMap: Record<string, string> = {
                         'regular': '근무',
-                        'leave': '휴가',
                         'training': '교육',
                         'etc': '기타'
                       }
                       
-                      let displayTitle = isActuallyOnLeave ? '휴가' : (typeLabelMap[currentType] || '근무')
+                      let displayTitle = typeLabelMap[currentType] || '근무';
                       
-                      if (!isActuallyOnLeave) {
-                        if (isTraining && !displayTitle.includes('[교육]')) {
-                          displayTitle = displayTitle === '교육' ? '교육' : `[교육] ${displayTitle}`
-                        } else if (isEtc && !displayTitle.includes('[기타]')) {
-                          displayTitle = displayTitle === '기타' ? '기타' : `[기타] ${displayTitle}`
+                      if (isTraining && !displayTitle.includes('[교육]')) {
+                        displayTitle = displayTitle === '교육' ? '교육' : `[교육] ${displayTitle}`;
+                      } else if (isEtc && !displayTitle.includes('[기타]')) {
+                        displayTitle = displayTitle === '기타' ? '기타' : `[기타] ${displayTitle}`;
+                      }
+
+                      // 배지 정보 생성
+                      let leaveBadge = null;
+                      if (matchingLeave) {
+                        let text = '';
+                        let colorClass = '';
+                        const type = matchingLeave.leave_type;
+                        const portion = matchingLeave.leave_portion || 'full';
+
+                        if (portion === 'am') text = '[오전반차]';
+                        else if (portion === 'pm') text = '[오후반차]';
+                        else {
+                          switch (type) {
+                            case 'annual': text = '[연차]'; break;
+                            case 'sick': text = '[병가]'; break;
+                            case 'unpaid': text = '[무급휴가]'; break;
+                            case 'special': text = '[특별휴가]'; break;
+                            case 'replacement': text = '[대체휴무]'; break;
+                            default: text = '[휴가]'; break;
+                          }
                         }
+
+                        if (type === 'annual' || type === 'replacement') {
+                          colorClass = 'bg-blue-100 text-blue-700';
+                        } else if (type === 'sick') {
+                          colorClass = 'bg-red-100 text-red-700';
+                        } else {
+                          colorClass = 'bg-slate-100 text-slate-700';
+                        }
+
+                        leaveBadge = { text, colorClass };
                       }
 
                       return (
                         <div
                           key={sch.id}
-                          draggable={canManage && !isLeave}
+                          draggable={canManage}
                           onDragStart={(e) => {
-                            if (!canManage || isLeave) return
+                            if (!canManage) return
                             e.stopPropagation()
                             e.dataTransfer.setData('text/plain', JSON.stringify({
                               scheduleId: sch.id,
@@ -294,8 +313,8 @@ export function MonthlyCalendarView({
                             if (staff) onScheduleClick(sch, staff)
                           }}
                           className={cn(
-                            "px-1.5 py-1 rounded text-[10px] truncate transition-transform hover:scale-[1.02] cursor-pointer shadow-sm border border-black/5",
-                            canManage && !isLeave && "active:cursor-grabbing cursor-grab"
+                            "px-1.5 py-1 rounded text-[10px] truncate transition-transform hover:scale-[1.02] cursor-pointer shadow-sm border border-black/5 flex items-center",
+                            canManage && "active:cursor-grabbing cursor-grab"
                           )}
                           style={{ 
                             backgroundColor: hexToRgba(scheduleColor, 0.1), 
@@ -304,14 +323,14 @@ export function MonthlyCalendarView({
                           }}
                           title={`${safeName} - ${displayTitle}`}
                         >
-                          <span className="font-semibold" style={{ color: scheduleColor }}>{safeName}</span> 
-                          {!isLeave && (
-                            <span className="opacity-80 ml-1 text-[9px]">
-                              {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
+                          <span className="font-semibold shrink-0" style={{ color: scheduleColor }}>{safeName}</span> 
+                          <span className="opacity-80 ml-1 text-[9px] shrink-0">
+                            {sch.start_time?.includes('T') ? format(new Date(sch.start_time), 'HH:mm') : sch.start_time?.substring(0, 5)} - {sch.end_time?.includes('T') ? format(new Date(sch.end_time), 'HH:mm') : sch.end_time?.substring(0, 5)}
+                          </span>
+                          {leaveBadge && (
+                            <span className={cn("ml-1 px-1 py-[1px] rounded-[3px] font-semibold text-[8px] shrink-0 leading-none", leaveBadge.colorClass)}>
+                              {leaveBadge.text}
                             </span>
-                          )}
-                          {isLeave && (
-                            <span className="opacity-80 ml-1 font-medium">{displayTitle}</span>
                           )}
                         </div>
                       )

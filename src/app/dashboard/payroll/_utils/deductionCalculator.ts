@@ -75,7 +75,10 @@ export function applyOverrides(
 
   const result = { ...base };
   for (const override of overrides) {
-    result[override.field] = override.overriddenValue;
+    if (override.field in result) {
+      const field = override.field as keyof Omit<DeductionResult, 'totalDeduction' | 'netPay'>;
+      result[field] = override.overriddenValue;
+    }
   }
   
   result.totalDeduction =

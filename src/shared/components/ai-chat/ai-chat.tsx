@@ -1,7 +1,7 @@
 'use client'
 
-import { useAiChat, ChatMessage as ChatMessageType } from '../../_hooks/use-ai-chat'
-import { ChatMessage } from '../shared/chat-message'
+import { useAiChat, ChatMessage as ChatMessageType } from './use-ai-chat'
+import { ChatMessage } from './chat-message'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -14,23 +14,31 @@ const QUICK_QUESTIONS = [
   "업무 완료율이 낮은 이유가 뭐야?"
 ]
 
-export function AiChat({ storeId }: { storeId: string }) {
-  const { messages, input, setInput, isLoading, sendMessage, messagesEndRef } = useAiChat(storeId)
+interface AiChatProps {
+  storeId: string
+  messages: any[]
+  input: string
+  setInput: (value: string) => void
+  isLoading: boolean
+  sendMessage: (content: string) => void
+  messagesEndRef: React.RefObject<HTMLDivElement | null>
+}
 
+export function AiChat({ storeId, messages, input, setInput, isLoading, sendMessage, messagesEndRef }: AiChatProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     sendMessage(input)
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-16rem)] max-h-[800px] border rounded-xl overflow-hidden bg-background">
+    <div className="flex flex-col h-full border-none overflow-hidden bg-background">
       {/* Context Bar */}
-      <div className="bg-muted/30 border-b px-4 py-2.5 flex items-center gap-3 overflow-x-auto hide-scrollbar">
-        <span className="text-xs font-medium text-muted-foreground shrink-0 flex items-center gap-1.5">
+      <div className="bg-muted/30 border-b px-4 py-2.5 flex flex-col items-start gap-2">
+        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" />
           참조 데이터 (날짜별 동적 조회):
         </span>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-1.5 w-full">
           {['출퇴근 현황', '자산 상태', '미결제 거래처', '업무 완료율'].map((tag, i) => (
             <span key={i} className="text-[10px] bg-background border px-2 py-0.5 rounded-full text-muted-foreground whitespace-nowrap">
               {tag}

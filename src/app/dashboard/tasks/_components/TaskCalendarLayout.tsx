@@ -98,7 +98,7 @@ export function TaskCalendarLayout({
             modifiers={modifiers}
             className="w-full"
             classNames={{
-              months: "w-full",
+              months: "relative w-full",
               month: "w-full",
               table: "w-full",
               head_row: "flex justify-between w-full mt-2",

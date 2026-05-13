@@ -3,6 +3,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { format, isSameDay } from 'date-fns'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
 interface DailyTimelineViewProps {
   currentDate: Date
@@ -299,12 +300,11 @@ export function DailyTimelineView({
                 const leaveEndStr = leave.end_date.split('T')[0]
                 return currentStr >= leaveStartStr && currentStr <= leaveEndStr
               })
-              const isStaffOnLeave = !!staffLeave
 
               return (
-                <div key={staff.id} className={`flex border-b border-black/5 group transition-colors h-[50px] lg:h-[60px] ${isStaffOnLeave ? 'bg-[#f5f5f5] grayscale opacity-70' : 'hover:bg-black/[0.02]'}`}>
+                <div key={staff.id} className={`flex border-b border-black/5 group transition-colors h-[50px] lg:h-[60px] hover:bg-black/[0.02]`}>
                   {/* Staff Info Column */}
-                  <div className={`w-[120px] lg:w-[150px] shrink-0 border-r border-black/10 sticky left-0 z-10 flex items-center px-2 lg:px-4 gap-2 lg:gap-3 transition-colors ${isStaffOnLeave ? 'bg-[#f5f5f5]' : 'bg-white group-hover:bg-[#fbfbfb]'}`}>
+                  <div className={`w-[120px] lg:w-[150px] shrink-0 border-r border-black/10 sticky left-0 z-10 flex items-center px-2 lg:px-4 gap-2 lg:gap-3 transition-colors bg-white group-hover:bg-[#fbfbfb]`}>
                     <div 
                       className="w-7 h-7 lg:w-8 lg:h-8 shrink-0 rounded-full flex items-center justify-center text-[11px] lg:text-[12px] font-bold"
                       style={{ backgroundColor: hexToRgba(roleColor, 0.15), color: roleColor }}
@@ -314,7 +314,11 @@ export function DailyTimelineView({
                     <div className="flex flex-col min-w-0">
                       <span className="text-[12px] lg:text-[13px] font-semibold text-[#1a1a1a] truncate flex items-center">
                         <span className="truncate">{staff.name}</span>
-                        {isStaffOnLeave && <span className="ml-1 text-[9px] bg-black/10 px-1 py-0.5 rounded text-black/60 shrink-0">휴가</span>}
+                        {staffLeave && (
+                          <span className="ml-1 text-[9px] bg-black/10 px-1 py-0.5 rounded text-black/60 shrink-0">
+                            {staffLeave.leave_portion === 'am' ? '오전반차' : staffLeave.leave_portion === 'pm' ? '오후반차' : '휴가'}
+                          </span>
+                        )}
                       </span>
                       <span className="text-[10px] lg:text-[11px] text-[#6b6b6b] truncate">{roleInfo?.name || '역할 없음'}</span>
                     </div>
@@ -325,7 +329,7 @@ export function DailyTimelineView({
                     id={`track-${staff.id}`}
                     className="flex flex-1 relative min-w-0"
                     onMouseDown={(e) => {
-                      if (!canManage || isStaffOnLeave) return
+                      if (!canManage) return
                       // Only trigger create on background grid
                       if ((e.target as HTMLElement).id === `track-${staff.id}` || (e.target as HTMLElement).classList.contains('bg-grid-cell')) {
                         const rect = e.currentTarget.getBoundingClientRect()
@@ -345,12 +349,10 @@ export function DailyTimelineView({
                     {hours.slice(0, -1).map(hour => (
                       <div 
                         key={`cell-${staff.id}-${hour}`}
-                        className={`flex-1 border-r border-black/5 transition-colors bg-grid-cell ${isStaffOnLeave ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-black/5'}`}
+                        className={`flex-1 border-r border-black/5 transition-colors bg-grid-cell cursor-pointer hover:bg-black/5`}
                         onClick={() => {
                           if (draggedRef.current) return
-                          if (!isStaffOnLeave) {
-                            onCellClick(staff, currentDate, hour)
-                          }
+                          onCellClick(staff, currentDate, hour)
                         }}
                       />
                     ))}
@@ -364,21 +366,6 @@ export function DailyTimelineView({
                           width: `${Math.abs(interactionState!.currentPx - interactionState!.startPx)}px`,
                         }}
                       />
-                    )}
-
-                    {/* Leave Overlay Block */}
-                    {isStaffOnLeave && (
-                      <div 
-                        className="absolute inset-y-1 rounded-md bg-black/5 border border-black/10 flex items-center justify-center z-0 pointer-events-none"
-                        style={{ left: 10, right: 10 }}
-                      >
-                        <span className="text-[12px] font-medium text-[#6b6b6b]">
-                          {staffLeave.leave_type === 'annual' ? '연차휴가' : 
-                           staffLeave.leave_type === 'sick' ? '병가' : 
-                           staffLeave.leave_type === 'half_am' ? '오전반차' :
-                           staffLeave.leave_type === 'half_pm' ? '오후반차' : '휴가'}
-                        </span>
-                      </div>
                     )}
 
                     {/* Schedule Blocks */}
@@ -461,11 +448,29 @@ export function DailyTimelineView({
                             onScheduleClick(sch, staff)
                           }}
                         >
-                          <div className="text-[10px] font-bold truncate leading-tight select-none">
-                            {sch.schedule_type === 'leave' ? '휴가' : sch.schedule_type === 'training' ? '교육' : sch.schedule_type === 'etc' ? '기타' : '근무'}
-                          </div>
-                          <div className="text-[9px] opacity-80 truncate leading-tight hidden md:block select-none">
+                          <div className="text-[9px] opacity-80 truncate leading-tight hidden md:block select-none mb-0.5">
                             {format(new Date(sch.start_time), 'HH:mm')} - {format(new Date(sch.end_time), 'HH:mm')}
+                          </div>
+                          <div className="flex items-center gap-1 min-w-0">
+                            <div className="text-[10px] font-bold truncate leading-tight select-none shrink-0">
+                              {sch.schedule_type === 'training' ? '교육' : sch.schedule_type === 'etc' ? '기타' : '근무'}
+                            </div>
+                            {staffLeave && (
+                              <span className={cn(
+                                "px-1 py-[1px] rounded-[3px] font-semibold text-[8px] shrink-0 leading-none",
+                                (staffLeave.leave_type === 'annual' || staffLeave.leave_type === 'replacement') ? 'bg-blue-100 text-blue-700' :
+                                staffLeave.leave_type === 'sick' ? 'bg-red-100 text-red-700' :
+                                'bg-slate-100 text-slate-700'
+                              )}>
+                                {staffLeave.leave_portion === 'am' ? '[오전반차]' : 
+                                 staffLeave.leave_portion === 'pm' ? '[오후반차]' : 
+                                 staffLeave.leave_type === 'annual' ? '[연차]' : 
+                                 staffLeave.leave_type === 'sick' ? '[병가]' : 
+                                 staffLeave.leave_type === 'replacement' ? '[대체휴무]' : 
+                                 staffLeave.leave_type === 'unpaid' ? '[무급휴가]' : 
+                                 staffLeave.leave_type === 'special' ? '[특별휴가]' : '[휴가]'}
+                              </span>
+                            )}
                           </div>
 
                           {/* Resize Handles */}

@@ -135,10 +135,10 @@ export default async function UnifiedSchedulePage() {
     }
   }) || []
 
-  // 승인된 휴가 데이터 조회
+  // 승인된 휴가 데이터 조회 (leave_portion 포함)
   const { data: approvedLeaves } = await supabase
     .from('leave_requests')
-    .select('id, member_id, start_date, end_date, leave_type, reason')
+    .select('id, member_id, start_date, end_date, leave_type, leave_portion, reason')
     .eq('store_id', member.store_id)
     .eq('status', 'approved')
 
