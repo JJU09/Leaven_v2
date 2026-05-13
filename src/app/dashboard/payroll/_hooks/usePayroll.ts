@@ -10,14 +10,17 @@ export interface PayrollRecordWithStaff extends PayrollRecord {
     user_id: string;
     role_id: string;
     name: string | null;
+    phone: string | null;
     wage_type: WageType;
     base_hourly_wage: number;
     base_daily_wage: number;
     base_monthly_wage: number;
     base_yearly_wage: number;
+    joined_at: string;
     profiles: {
       full_name: string;
       avatar_url: string | null;
+      phone: string | null;
     } | null;
     store_roles: {
       name: string;
@@ -79,14 +82,17 @@ export function usePayroll(storeId: string | undefined, year: number, month: num
               user_id,
               role_id,
               name,
+              phone,
               wage_type,
               base_hourly_wage,
               base_daily_wage,
               base_monthly_wage,
               base_yearly_wage,
+              joined_at,
               profiles:user_id (
                 full_name,
-                avatar_url
+                avatar_url,
+                phone
               ),
               store_roles:role_id (
                 name,
@@ -112,6 +118,28 @@ export function usePayroll(storeId: string | undefined, year: number, month: num
 
       if (data) {
         data = data.filter((record: any) => record.store_members?.store_roles?.hierarchy_level !== 100);
+        
+        // overrides 별도 조회 (안전한 관계 매핑)
+        const recordIds = data.map((r: any) => r.id);
+        if (recordIds.length > 0) {
+          const { data: overrides } = await supabase
+            .from("deduction_overrides")
+            .select("*")
+            .in("payroll_entry_id", recordIds);
+
+          // 가져온 overrides를 각 레코드에 매핑
+          data.forEach((record: any) => {
+            const recordOverrides = overrides?.filter(o => o.payroll_entry_id === record.id) || [];
+            record.overrides = recordOverrides.map((o: any) => ({
+              field: o.field,
+              originalValue: o.original_value,
+              overriddenValue: o.overridden_value,
+              reason: o.reason,
+              overriddenBy: o.overridden_by,
+              overriddenAt: o.created_at,
+            }));
+          });
+        }
       }
 
       // 삭제됨: useQuery 내부에서의 DB 수정(Insert/Update) 동기화 로직은 안티패턴이므로 별도 Mutation 훅으로 분리 예정.

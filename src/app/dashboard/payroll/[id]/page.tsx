@@ -26,14 +26,17 @@ export default async function PayrollDetailPage({
         user_id,
         role_id,
         name,
+        phone,
         wage_type,
         base_hourly_wage,
         base_daily_wage,
         base_monthly_wage,
         base_yearly_wage,
+        joined_at,
         profiles:user_id (
           full_name,
-          avatar_url
+          avatar_url,
+          phone
         ),
         store_roles:role_id (
           name,
@@ -43,6 +46,31 @@ export default async function PayrollDetailPage({
     `)
     .eq("id", id)
     .single();
+
+  if (error) {
+    console.error("Failed to fetch payroll record:", error);
+  }
+
+  // deduction_overrides는 관계 매핑 이름 이슈 방지를 위해 안전하게 별도로 조회 후 병합
+  if (record) {
+    const { data: overrides, error: overridesError } = await supabase
+      .from("deduction_overrides")
+      .select("*")
+      .eq("payroll_entry_id", id);
+      
+    if (overridesError) {
+      console.error("Failed to fetch overrides:", overridesError);
+    }
+
+    record.overrides = (overrides || []).map((o: any) => ({
+      field: o.field,
+      originalValue: o.original_value,
+      overriddenValue: o.overridden_value,
+      reason: o.reason,
+      overriddenBy: o.overridden_by,
+      overriddenAt: o.created_at,
+    }));
+  }
 
   if (error || !record) {
     return (

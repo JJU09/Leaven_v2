@@ -2,16 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { format, subMonths, addMonths } from "date-fns";
-import { ko } from "date-fns/locale";
 import { usePayroll, PayrollRecordWithStaff } from "../_hooks/usePayroll";
 import { useConfirmPayroll, useMarkPayrollPaid, useSyncPayrollDrafts } from "../_hooks/usePayrollMutations";
 import { PayrollSummaryCards } from "./PayrollSummaryCards";
 import { PayrollTable } from "./PayrollTable";
-import { PayrollPrintView } from "./PayrollPrintView";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, FileText, CheckCircle, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import dynamic from 'next/dynamic';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const PayrollPDFPreview = dynamic(
+  () => import("./PayrollPDFPreview"),
+  { ssr: false }
+);
 
 interface PayrollPageClientProps {
   storeId: string;
@@ -57,7 +62,7 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
   // Dialog State
-  const [printMode, setPrintMode] = useState(false);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [printRecords, setPrintRecords] = useState<PayrollRecordWithStaff[]>([]);
 
   // Filtering
@@ -82,13 +87,7 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
   const handlePrint = (ids: string[]) => {
     const toPrint = records.filter(r => ids.includes(r.id));
     setPrintRecords(toPrint);
-    setPrintMode(true);
-    
-    // setTimeout to allow React to render the print view before calling window.print
-    setTimeout(() => {
-      window.print();
-      setPrintMode(false);
-    }, 100);
+    setPdfModalOpen(true);
   };
 
   if (!isMounted) return null; // Hydration 불일치 방지 (클라이언트 사이드 마운트 전 렌더링 스킵)
@@ -96,7 +95,7 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
 
   return (
     <>
-      <div className={`flex h-full flex-col gap-6 p-6 ${printMode ? 'hidden' : ''}`}>
+      <div className="flex h-full flex-col gap-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -180,9 +179,22 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
         )}
       </div>
 
-      {printMode && (
-        <PayrollPrintView records={printRecords} storeName={storeName} />
-      )}
+      <Dialog open={pdfModalOpen} onOpenChange={setPdfModalOpen}>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle>급여 명세서 미리보기 ({printRecords.length}명)</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {pdfModalOpen && printRecords.length > 0 && (
+              <PayrollPDFPreview 
+                records={printRecords} 
+                storeName={storeName} 
+                fileName={`급여명세서_${format(currentDate, "yyyy년MM월")}_${printRecords.length}명.pdf`} 
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -223,28 +223,19 @@ export function useSyncPayrollDrafts() {
   });
 }
 
-export interface UpdateOverridePayload {
+export interface UpdatePayrollRecordPayload {
   id: string; // payroll_record.id
   override: Omit<DeductionOverride, 'overriddenBy' | 'overriddenAt'>;
-  newDeductions: {
-    income_tax: number;
-    local_income_tax: number;
-    national_pension: number;
-    health_insurance: number;
-    employment_insurance: number;
-    long_term_care: number;
-    total_deduction: number;
-    net_pay: number;
-  };
+  updatedFields: Partial<PayrollRecord>;
 }
 
-export function useUpdatePayrollDeduction(storeId: string, year: number, month: number) {
+export function useUpdatePayrollRecord(storeId: string, year: number, month: number) {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const queryKey = ["payroll", storeId, year, month];
 
   return useMutation({
-    mutationFn: async ({ id, override, newDeductions }: UpdateOverridePayload) => {
+    mutationFn: async ({ id, override, updatedFields }: UpdatePayrollRecordPayload) => {
       // 1. 현재 사용자 정보 조회
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -256,14 +247,14 @@ export function useUpdatePayrollDeduction(storeId: string, year: number, month: 
       const { error: updateError } = await supabase
         .from("payroll_records")
         .update({
-          ...newDeductions,
+          ...updatedFields,
           updated_at: new Date().toISOString(),
         })
         .eq("id", id);
 
       if (updateError) throw updateError;
 
-      // 4. deduction_overrides 추가
+      // 4. deduction_overrides 추가 (수당 변경도 이 테이블을 함께 사용)
       const { error: overrideError } = await supabase
         .from("deduction_overrides")
         .insert({
@@ -279,7 +270,7 @@ export function useUpdatePayrollDeduction(storeId: string, year: number, month: 
 
       return { id };
     },
-    onMutate: async ({ id, newDeductions }) => {
+    onMutate: async ({ id, updatedFields }) => {
       await queryClient.cancelQueries({ queryKey });
       const previousData = queryClient.getQueryData<{ records: any[] }>(queryKey);
 
@@ -291,9 +282,9 @@ export function useUpdatePayrollDeduction(storeId: string, year: number, month: 
             record.id === id
               ? {
                   ...record,
-                  ...newDeductions,
+                  ...updatedFields,
                   // 여기서 overrides 배열에도 임시로 추가해주는 것이 이상적이나,
-                  // 서버에서 다시 fetch해오므로 여기선 기본 항목과 total/net 만 우선 반영
+                  // 서버에서 다시 fetch해오므로 여기선 기본 항목들만 우선 반영
                 }
               : record
           ),
