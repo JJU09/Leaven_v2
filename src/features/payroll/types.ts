@@ -3,6 +3,28 @@ import { Database } from "@/lib/supabase/database.types";
 export type WageType = Database["public"]["Enums"]["wage_type"];
 export type PayrollStatus = Database["public"]["Enums"]["payroll_status"];
 
+export interface DeductionResult {
+  nationalPension: number;
+  healthInsurance: number;
+  longTermCare: number;
+  employmentInsurance: number;
+  incomeTax: number;
+  localIncomeTax: number;
+  totalDeduction: number;
+  netPay: number;
+}
+
+export type DeductionOverrideKey = keyof Omit<DeductionResult, 'totalDeduction' | 'netPay'>;
+
+export interface DeductionOverride {
+  field: DeductionOverrideKey;
+  originalValue: number;
+  overriddenValue: number;
+  reason: string;
+  overriddenBy: string;
+  overriddenAt: string;
+}
+
 export interface PayrollRecord {
   id: string;
   store_id: string;
@@ -29,6 +51,8 @@ export interface PayrollRecord {
   
   total_deduction: number;
   net_pay: number;
+  
+  overrides?: DeductionOverride[];
   
   status: PayrollStatus;
   confirmed_at: string | null;

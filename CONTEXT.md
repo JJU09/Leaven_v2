@@ -14,6 +14,8 @@
 *   **Vendor (거래처)**: 매장과 거래하는 외부 업체. 거래 내역(`Transactions`)과 은행 정보(`Bank`)를 포함합니다.
 *   **Contract (근로계약)**: ModuSign과 연동되는 직원의 전자 근로계약.
 *   **Payroll (급여)**: 시급/일급/연봉 등 다양한 급여 체계(`Wage Type`)를 바탕으로 계산되는 급여 정보.
+    * `GrossPay` (세전총액), `NetPay` (실지급액), `Deduction` (공제액) 개념을 포함합니다.
+    * `Confirm` (급여 확정) 시 변경 불가능한 스냅샷 데이터로 보존됩니다.
 *   **AI Report (AI 리포트)**: 매장 운영 현황을 일간/주간/월간 단위로 요약해주는 지능형 보고서.
 
 ## Architecture & Data Flow

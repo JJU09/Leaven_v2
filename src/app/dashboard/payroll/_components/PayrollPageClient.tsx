@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, subMonths, addMonths } from "date-fns";
 import { ko } from "date-fns/locale";
 import { usePayroll, PayrollRecordWithStaff } from "../_hooks/usePayroll";
-import { useConfirmPayroll, useMarkPayrollPaid } from "../_hooks/usePayrollMutations";
+import { useConfirmPayroll, useMarkPayrollPaid, useSyncPayrollDrafts } from "../_hooks/usePayrollMutations";
 import { PayrollSummaryCards } from "./PayrollSummaryCards";
 import { PayrollTable } from "./PayrollTable";
 import { PayrollPrintView } from "./PayrollPrintView";
@@ -20,12 +20,26 @@ interface PayrollPageClientProps {
 
 export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps) {
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
 
   const { data: payrollData, isLoading } = usePayroll(storeId, year, month);
+  const syncPayrollMutation = useSyncPayrollDrafts();
+
+  // 매장이 선택되고 관리자 권한이 있는 경우 진입 시 한 번만 sync를 실행하여 draft 레코드를 동기화합니다.
+  useEffect(() => {
+    if (storeId && year && month && payrollData && !Array.isArray(payrollData) && payrollData.hasManageSalaryPerm) {
+      syncPayrollMutation.mutate({ storeId, year, month });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId, year, month, !Array.isArray(payrollData) ? payrollData?.hasManageSalaryPerm : false]);
   
   // Array 반환 (초안 생성 전 등)과 Object 반환 분기 처리
   const records = Array.isArray(payrollData) 
@@ -77,6 +91,7 @@ export function PayrollPageClient({ storeId, storeName }: PayrollPageClientProps
     }, 100);
   };
 
+  if (!isMounted) return null; // Hydration 불일치 방지 (클라이언트 사이드 마운트 전 렌더링 스킵)
   if (!storeId) return null;
 
   return (

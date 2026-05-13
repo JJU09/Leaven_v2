@@ -9,11 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, FileText, CheckCircle } from "lucide-react";
+import { ArrowLeft, FileText, CheckCircle, HelpCircle } from "lucide-react";
 import { PayrollRecordWithStaff } from "../../_hooks/usePayroll";
-import { useConfirmPayroll } from "../../_hooks/usePayrollMutations";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useConfirmPayroll, useUpdatePayrollDeduction } from "../../_hooks/usePayrollMutations";
 import { useState } from "react";
 import { PayrollConfirmDialog } from "../../_components/PayrollConfirmDialog";
+import { DeductionResult, DeductionOverride } from "@/features/payroll/types";
+import { DEDUCTION_RATES } from "../../_utils/deductionCalculator";
 
 interface PayrollDetailPageClientProps {
   initialRecord: PayrollRecordWithStaff;
@@ -25,6 +33,7 @@ export function PayrollDetailPageClient({ initialRecord }: PayrollDetailPageClie
   const [printMode, setPrintMode] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const confirmMutation = useConfirmPayroll(record.store_id, record.period_year, record.period_month);
+  const updateDeductionMutation = useUpdatePayrollDeduction(record.store_id, record.period_year, record.period_month);
 
   const profile = record.store_members?.profiles;
   const manualName = record.store_members?.name;
@@ -42,14 +51,20 @@ export function PayrollDetailPageClient({ initialRecord }: PayrollDetailPageClie
     return map[type] || type;
   };
 
-  const deductions = {
-    income_tax: record.income_tax,
-    local_income_tax: record.local_income_tax,
-    national_pension: record.national_pension,
-    health_insurance: record.health_insurance,
-    employment_insurance: record.employment_insurance,
-    long_term_care: record.long_term_care,
+  const currentDeductions: DeductionResult = {
+    nationalPension: record.national_pension,
+    healthInsurance: record.health_insurance,
+    longTermCare: record.long_term_care,
+    employmentInsurance: record.employment_insurance,
+    incomeTax: record.income_tax,
+    localIncomeTax: record.local_income_tax,
+    totalDeduction: record.total_deduction,
+    netPay: record.net_pay,
   };
+
+  // 임시로 원래 값과 동일하게 세팅. 실제로는 계산 헬퍼(`calculateDeductions`)를 통해 얻은 초기 계산값이 필요하지만
+  // 우선 에러 방지를 위해 현재 값과 같게 둡니다.
+  const baseDeductions: DeductionResult = { ...currentDeductions };
 
   const executeConfirm = async () => {
     await confirmMutation.mutateAsync([record.id]);
@@ -191,7 +206,57 @@ export function PayrollDetailPageClient({ initialRecord }: PayrollDetailPageClie
                   {/* 공제 항목 */}
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium text-sm">공제 내역</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">공제 내역</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent 
+                              className="w-[95vw] sm:w-[560px] max-w-[95vw] sm:max-w-none p-0 overflow-hidden z-[100]" 
+                              side="bottom" 
+                              align="end"
+                              avoidCollisions={true}
+                            >
+                              <div className="flex flex-col w-full text-xs leading-relaxed break-keep">
+                                {/* 상단 제목 영역 (전체 너비) */}
+                                <div className="w-full text-center border-b border-white/10 p-3 pb-2 mb-1">
+                                  <span className="font-semibold text-sm">공제액 계산 방식</span>
+                                </div>
+                                
+                                {/* 하단 2단 컬럼 영역 */}
+                                <div className="px-4 pb-4 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <div className="flex flex-col gap-2">
+                                    <p className="font-medium opacity-100">월 60시간 미만 근무 시</p>
+                                    <div className="bg-white/5 p-3 rounded-md flex-1">
+                                      <p className="opacity-90 font-medium">소득세 {parseFloat((DEDUCTION_RATES.SIMPLE_INCOME_TAX * 100).toFixed(3))}% 적용</p>
+                                      <p className="opacity-60 text-[11px] mt-1">(소득세 3% + 지방소득세 {parseFloat(((DEDUCTION_RATES.SIMPLE_INCOME_TAX * 100) - 3).toFixed(3))}%)</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-2">
+                                    <p className="font-medium opacity-100">월 60시간 이상 근무 시</p>
+                                    <div className="bg-white/5 p-3 rounded-md flex-1 space-y-2">
+                                      <p className="opacity-90">
+                                        4대보험 가입 대상으로 분류되어 아래 요율이 자동 적용됩니다.
+                                      </p>
+                                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 opacity-70 text-[11px]">
+                                        <div>• 국민연금: {parseFloat((DEDUCTION_RATES.NATIONAL_PENSION * 100).toFixed(3))}%</div>
+                                        <div>• 건강보험: {parseFloat((DEDUCTION_RATES.HEALTH_INSURANCE * 100).toFixed(3))}%</div>
+                                        <div>• 장기요양: {parseFloat((DEDUCTION_RATES.LONG_TERM_CARE / DEDUCTION_RATES.HEALTH_INSURANCE * 100).toFixed(2))}%</div>
+                                        <div>• 고용보험: {parseFloat((DEDUCTION_RATES.EMPLOYMENT_INSURANCE * 100).toFixed(3))}%</div>
+                                        <div>• 소득세: 간이세액</div>
+                                        <div>• 지방소득: {parseFloat((DEDUCTION_RATES.LOCAL_INCOME_TAX_RATIO * 100).toFixed(3))}%</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      
                       {isDraft && (
                         <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                           금액을 클릭하여 수정
@@ -200,20 +265,43 @@ export function PayrollDetailPageClient({ initialRecord }: PayrollDetailPageClie
                     </div>
                     
                     <DeductionEditor
-                      storeId={record.store_id}
-                      year={record.period_year}
-                      month={record.period_month}
-                      recordId={record.id}
-                      grossPay={record.gross_pay}
-                      initialDeductions={deductions}
-                      disabled={!isDraft}
-                      onChange={({ deductions, total_deduction, net_pay }) => {
-                        setRecord((prev) => ({
-                          ...prev,
-                          ...deductions,
-                          total_deduction,
-                          net_pay,
-                        }));
+                      baseDeductions={baseDeductions}
+                      currentDeductions={currentDeductions}
+                      overrides={record.overrides || []}
+                      isLocked={!isDraft}
+                      onOverrideSubmit={async (override) => {
+                        const newTotal = currentDeductions.totalDeduction 
+                          - currentDeductions[override.field] 
+                          + override.overriddenValue;
+                        const newNetPay = record.gross_pay - newTotal;
+
+                        // UI 낙관적 업데이트를 위해 새 deduction 객체 구성
+                        const newDeductions = {
+                          national_pension: override.field === 'nationalPension' ? override.overriddenValue : record.national_pension,
+                          health_insurance: override.field === 'healthInsurance' ? override.overriddenValue : record.health_insurance,
+                          long_term_care: override.field === 'longTermCare' ? override.overriddenValue : record.long_term_care,
+                          employment_insurance: override.field === 'employmentInsurance' ? override.overriddenValue : record.employment_insurance,
+                          income_tax: override.field === 'incomeTax' ? override.overriddenValue : record.income_tax,
+                          local_income_tax: override.field === 'localIncomeTax' ? override.overriddenValue : record.local_income_tax,
+                          total_deduction: newTotal,
+                          net_pay: newNetPay
+                        };
+
+                        try {
+                          await updateDeductionMutation.mutateAsync({
+                            id: record.id,
+                            override,
+                            newDeductions,
+                          });
+
+                          setRecord((prev) => ({
+                            ...prev,
+                            ...newDeductions,
+                            overrides: [...(prev.overrides || []), { ...override, overriddenBy: "me", overriddenAt: new Date().toISOString() }]
+                          }));
+                        } catch (error) {
+                          console.error("Failed to update deduction", error);
+                        }
                       }}
                     />
 
