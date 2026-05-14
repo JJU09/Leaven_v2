@@ -61,14 +61,14 @@
 | **Styling/UI** | Tailwind CSS v4, shadcn/ui, Radix UI | 일관된 디자인 시스템 구축, 빠른 반복 개발 속도 |
 | **폼 검증** | React Hook Form 7.x + Zod 4.x | 복잡한 직원 등록·급여 설정 폼의 유효성 검증을 타입 안전하게 처리 |
 | **Backend/DB** | Supabase 2.x (PostgreSQL + Auth) | RLS 기반 멀티테넌시 격리, Auth 통합, SSR 환경 지원(`@supabase/ssr`) |
-| **인터랙션** | dnd-kit 6.x, FullCalendar 6.x | 칸반 업무 보드 드래그 앤 드롭, 일간/월간 캘린더 기반 스케줄링 UX |
+| **인터랙션** | dnd-kit 6.x, FullCalendar 6.x | 업무 체크리스트 항목의 드래그 앤 드롭 순서 변경, 일간/월간 캘린더 기반 스케줄링 UX |
 | **날짜 처리** | date-fns 4.x, date-fns-tz | 주휴수당·휴게시간 계산 등 복잡한 날짜 연산 및 타임존 처리 |
-| **AI** | LiteLLM + OpenAI SDK 6.x (호환 클라이언트) | LiteLLM 프록시를 통해 다양한 LLM을 단일 인터페이스로 호출. OpenAI SDK는 LiteLLM의 OpenAI 호환 엔드포인트 연동용으로 사용 |
+| **AI** | LiteLLM + OpenAI SDK 6.x (호환 클라이언트) | LiteLLM을 통해 `gemini/gemini-2.5-flash-preview` 모델 호출. OpenAI 호환 인터페이스로 모델 교체 없이 프로바이더 전환 가능한 구조 |
 | **알림 UX** | Sonner (토스트) | 비동기 작업 결과(승인/반려, 저장 완료 등)의 논블로킹 피드백 |
 | **전자계약** | 모두싸인 API | 고용형태별 근로계약서 자동 생성 → 카카오톡/이메일 발송 → 서명 자동화 |
 | **결제** | Toss Payments / Stripe | 국내(토스) + 글로벌(Stripe) 동시 대응하는 확장형 결제 구조 |
 | **인프라** | Vercel, AWS Lambda, AWS S3 | 웹 배포(Vercel), 배치 작업(Lambda 서버리스), 파일 저장(S3) |
-| **알림** | 카카오 알림톡 | 계약서 발송, 보증 만료, 계약 갱신 등 운영 알림 |
+| **알림** | 카카오 알림톡 | 계약서 발송, 보증 만료, 계약 갱신 등 운영 알림 (구현 예정) |
 
 ---
 
@@ -97,9 +97,9 @@ FullCalendar 기반으로 구글 캘린더 수준의 스케줄 UX 구현. 매장
 
 직원 출퇴근 기록 및 수정 요청 결재 플로우, 연차 잔여일 관리 및 휴가 신청 승인/반려 시스템.
 
-### ✅ 칸반 기반 업무 & 인수인계
+### ✅ 업무 관리 & 인수인계
 
-dnd-kit 기반 드래그 앤 드롭 업무 보드. 교대 인수인계 리포트를 AI가 요약하여 다음 근무자에게 전달.
+dnd-kit 기반 드래그 앤 드롭으로 업무 체크리스트 순서를 직접 조정할 수 있는 목록형 업무 관리. 교대 인수인계 리포트를 AI가 요약하여 다음 근무자에게 전달.
 
 ![업무 관리](./docs/screenshot-tasks.png)
 
@@ -117,8 +117,8 @@ dnd-kit 기반 드래그 앤 드롭 업무 보드. 교대 인수인계 리포트
 |---|---|
 | 스케줄 자동 추천 | 과거 패턴 기반 다음 주 근무표 초안 생성 |
 | 인수인계 자동 요약 | 교대 기록을 AI가 요약하여 다음 근무자에게 전달 |
-| 주간 운영 리포트 | 근무 현황·비용·특이사항 자동 리포트 생성 |
-| 만료 알림 | 비품 보증·거래처·근로계약 만료 D-30/D-7 알림톡 발송 |
+| 일간/주간/월간 운영 리포트 | 근무 현황·비용·특이사항 자동 리포트 생성 |
+| 만료 알림 | 비품 보증·거래처·근로계약 만료 D-30/D-7 알림 (카카오 알림톡 연동 예정) |
 
 ### 📋 구독 결제 (Phase 6 예정)
 
@@ -142,7 +142,6 @@ graph TD
 
     NextApp -->|파일 저장| S3[AWS S3]
     NextApp -->|전자서명| Modusin[모두싸인 API]
-    NextApp -->|알림| Kakao[카카오 알림톡]
 
     subgraph Supabase
         SupabaseAuth[Auth / OAuth] --> SupabaseDB
@@ -220,8 +219,9 @@ cp .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# AI
-OPENAI_API_KEY=your_openai_api_key
+# AI (LiteLLM)
+LITELLM_BASE_URL=your_litellm_base_url
+LITELLM_API_KEY=your_litellm_api_key
 
 # 전자계약
 MODUSIGN_API_KEY=your_modusign_api_key
