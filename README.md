@@ -9,7 +9,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-06B6D4?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Vercel](https://img.shields.io/badge/Deployed-Vercel-000000?logo=vercel)](https://leaven-lake.vercel.app/)
 
-🔗 **라이브 데모:** https://leaven-lake.vercel.app/
+🔗 **라이브 데모:** https://leaven-v2.vercel.app/
 > 레포지토리명(`Leaven_v2`)은 서비스명 변경 이전의 개발 초기 명칭입니다.
 
 ---
