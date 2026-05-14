@@ -167,6 +167,12 @@ export function Sidebar({
           icon: Settings,
           isUpcoming: false
         }] : []),
+        ...(permissions.manage_store ? [{
+          title: '요금제 및 결제 관리',
+          href: '/dashboard/settings/billing',
+          icon: Calculator,
+          isUpcoming: false
+        }] : []),
       ]
     }] : [])
   ]

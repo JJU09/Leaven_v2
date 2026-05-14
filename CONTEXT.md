@@ -17,6 +17,8 @@
     * `GrossPay` (세전총액), `NetPay` (실지급액), `Deduction` (공제액) 개념을 포함합니다.
     * `Confirm` (급여 확정) 시 변경 불가능한 스냅샷 데이터로 보존됩니다.
 *   **AI Report (AI 리포트)**: 매장 운영 현황을 일간/주간/월간 단위로 요약해주는 지능형 보고서.
+*   **Subscription (구독)**: Store 단위로 적용되는 서비스 요금제(Free, Basic, Pro, Enterprise). Free 요금제는 직원 3명, 자산 5개 이하로 생성 개수가 제한됩니다.
+*   **Payment (결제)**: 토스페이먼츠 빌링키 기반의 정기결제. 결제 실패 시 3일의 유예 기간(Grace Period)이 부여되며, 미결제 시 Free 요금제로 강등됩니다.
 
 ## Architecture & Data Flow
 
